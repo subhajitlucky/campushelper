@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Campus Helper
+
+A centralized online platform for university students and staff to report, search, and claim lost or found items on campus. Built with Next.js, Tailwind CSS, shadcn/ui, Supabase, and more.
+
+## Features
+
+- Post lost or found items with images and details
+- Search and filter items by category, location, and date
+- Secure user authentication via Google
+- Claim system for connecting owners and finders
+- Admin panel for moderating posts
+- Responsive, mobile-friendly PWA
+
+## Tech Stack
+
+- **Frontend**: Next.js 15 + Tailwind CSS + shadcn/ui + Framer Motion
+- **Backend**: Next.js API Routes
+- **Database**: Supabase (PostgreSQL)
+- **ORM**: Prisma
+- **Auth**: NextAuth.js (Google Provider)
+- **File Upload**: Cloudinary
+- **Validation**: Zod
+- **Deployment**: Vercel + Supabase Cloud
 
 ## Getting Started
 
-First, run the development server:
+1. Clone the repository:
+   ```bash
+   git clone <your-repo-url>
+   cd campushelper
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project Structure
 
-## Learn More
+- `src/app/` - Next.js app router pages and API routes
+- `src/components/` - Reusable UI components
+- `src/lib/` - Utility functions and configurations
+- `roadmap.md` - Project development roadmap
 
-To learn more about Next.js, take a look at the following resources:
+## Contributing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Follow the roadmap in `roadmap.md` for development phases.
+2. Ensure code follows the project's style and validation rules.
+3. Test changes thoroughly before submitting.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is licensed under the MIT License.
