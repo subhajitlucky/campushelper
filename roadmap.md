@@ -5,12 +5,12 @@ A comprehensive roadmap for building the Campus Helper project, a centralized pl
 ## Phase 1 — Setup & UI
 - 🟦 **Step 1:** Create Next.js 15 project *(complete; project scaffolded)*
 - 🟦 **Step 2:** Set up Tailwind CSS and shadcn/ui component library *(complete; installed and tested)*
-- 🟦 **Step 3:** Build homepage layout (header, footer, primary sections) *(complete; hero + highlights drafted)*
+- 🟦 **Step 3:** Build homepage layout (header, footer, primary sections) *(complete; fully responsive hero + highlights)*
 - ☐ **Step 4:** Implement "Post Lost/Found" form UI (frontend-only)
 
 ## Phase 2 — Backend & Database
-- ☐ **Step 5:** Configure Prisma and connect to Supabase PostgreSQL
-- ☐ **Step 6:** Define Prisma schema for `User`, `Item`, and supporting models
+- 🟦 **Step 5:** Configure Prisma and connect to Supabase PostgreSQL *(complete; Session pooler configured)*
+- 🟦 **Step 6:** Define Prisma schema for `User`, `Item`, and supporting models *(complete; User, Item, Claim, Comment models with relations)*
 - ☐ **Step 7:** Build API routes for item CRUD operations
 - ☐ **Step 8:** Display items on homepage via server/client data fetching
 

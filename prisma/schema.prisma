@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  name              String?  // Username/display name (from Google or manual input)
+  avatar            String?  // Profile picture URL (from Google or uploaded)
+  
+  // Authentication
+  googleId          String?  @unique  // For Google OAuth (optional, if user logs in via Google)
+  password          String?  // Hashed password for manual login (if not using OAuth)
+  emailVerified     DateTime?
+  
+  // User Type / Role
+  role              Role     @default(USER)  // USER, ADMIN, MODERATOR
+  
+  // Soft Delete
+  isActive          Boolean  @default(true)  // Mark as inactive instead of deleting
+  
+  // Relations
+  itemsPosted       Item[]   @relation("itemsPosted")  // Items this user posted (lost items)
+  itemsClaimed      Item[]   @relation("itemsClaimed") // Items this user has claimed (found items)
+  comments          Comment[]
+  claims            Claim[]
+  
+  // Metadata
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  lastLoginAt       DateTime?
+}
+
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+model Item {
+  id                String   @id @default(cuid())
+  title             String   // Item name (e.g., "Red iPhone 15")
+  description       String   // Detailed description
+  itemType          ItemType // LOST or FOUND
+  status            ItemStatus @default(LOST) // Current state of item
+  location          String   // Where lost/found
+  images            String[] // Array of image URLs
+  
+  // Relations
+  postedById        String
+  postedBy          User     @relation("itemsPosted", fields: [postedById], references: [id])
+  
+  claimedById       String?
+  claimedBy         User?    @relation("itemsClaimed", fields: [claimedById], references: [id])
+  
+  comments          Comment[]
+  claims            Claim[]
+  
+  // Metadata
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  resolvedAt        DateTime?
+}
+
+enum ItemType {
+  LOST   // User lost this item
+  FOUND  // User found this item
+}
+
+enum ItemStatus {
+  LOST       // Actively being searched for
+  FOUND      // Item was found
+  CLAIMED    // Someone claimed it
+  RESOLVED   // Successfully returned
+}
+
+model Comment {
+  id                String   @id @default(cuid())
+  message           String   // Comment text
+  images            String[] // Optional proof pictures in comments
+  
+  // Relations
+  itemId            String
+  item              Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Claim {
+  id                String   @id @default(cuid())
+  claimType         ClaimType // FOUND_IT or OWN_IT
+  status            ClaimStatus @default(PENDING) // PENDING, APPROVED, REJECTED
+  message           String?  // Optional explanation/proof from claimer
+  
+  // Relations
+  itemId            String
+  item              Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  resolvedAt        DateTime? // When approved or rejected
+}
+
+enum ClaimType {
+  FOUND_IT // Finder claiming they found the item
+  OWN_IT   // Owner claiming they own the found item
+}
+
+enum ClaimStatus {
+  PENDING   // Waiting for item poster to review
+  APPROVED  // Claim approved, exchange can happen
+  REJECTED  // Claim rejected by item poster
+}
