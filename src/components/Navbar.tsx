@@ -36,7 +36,7 @@ export default function Navbar() {
             </Button>
           ))}
           <Button variant="outline" asChild>
-            <Link href="/login">Login / Sign Up</Link>
+            <Link href="/auth/login">Login / Sign Up</Link>
           </Button>
         </div>
 
@@ -65,7 +65,7 @@ export default function Navbar() {
               </Button>
             ))}
             <Button variant="outline" className="justify-start" asChild>
-              <Link href="/login" onClick={closeMenu}>
+              <Link href="/auth/login" onClick={closeMenu}>
                 Login / Sign Up
               </Link>
             </Button>

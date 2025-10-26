@@ -1,0 +1,1110 @@
+# Campus Helper - Complete 100-Step Roadmap (Phase 1 to 8)
+
+A hyper-detailed roadmap from project inception to production. Each step is marked with completion status.
+
+**Legend**: ✅ = Completed | ☐ = Not Started | 🟨 = In Progress
+
+---
+
+## **PHASE 1: SETUP & UI (Steps 1-18)**
+
+### **1.1: Project Initialization (Steps 1-5)**
+
+**✅ Step 1**: Create Next.js 15 project with TypeScript.
+- Command: `npx create-next-app@latest campushelper --typescript`
+- Status: COMPLETE ✅
+
+**✅ Step 2**: Initialize git repository and create initial commit.
+- Status: COMPLETE ✅
+
+**✅ Step 3**: Set up Tailwind CSS for styling.
+- Installed during Next.js setup
+- Status: COMPLETE ✅
+
+**✅ Step 4**: Install shadcn/ui component library.
+- Command: `npx shadcn-ui@latest init`
+- Status: COMPLETE ✅
+
+**✅ Step 5**: Create initial folder structure (`src/components`, `src/lib`, `src/app/api`).
+- Status: COMPLETE ✅
+
+### **1.2: Core UI Components (Steps 6-12)**
+
+**✅ Step 6**: Build Button component from shadcn/ui.
+- File: `src/components/ui/button.tsx`
+- Status: COMPLETE ✅
+
+**✅ Step 7**: Build Input component from shadcn/ui.
+- File: `src/components/ui/input.tsx`
+- Status: COMPLETE ✅
+
+**✅ Step 8**: Build Label component from shadcn/ui.
+- File: `src/components/ui/label.tsx`
+- Status: COMPLETE ✅
+
+**✅ Step 9**: Build Card component from shadcn/ui.
+- File: `src/components/ui/card.tsx`
+- Status: COMPLETE ✅
+
+**✅ Step 10**: Build Form component from shadcn/ui.
+- File: `src/components/ui/form.tsx`
+- Status: COMPLETE ✅
+
+**✅ Step 11**: Create Navbar component with navigation.
+- File: `src/components/Navbar.tsx`
+- Features: Logo, nav items, mobile menu, login button
+- Status: COMPLETE ✅
+
+**✅ Step 12**: Create Footer component.
+- File: `src/components/Footer.tsx`
+- Status: COMPLETE ✅
+
+### **1.3: Homepage & Layout (Steps 13-18)**
+
+**✅ Step 13**: Create root layout with Navbar, Footer, children.
+- File: `src/app/layout.tsx`
+- Status: COMPLETE ✅
+
+**✅ Step 14**: Create homepage with hero section.
+- File: `src/app/page.tsx`
+- Features: Hero banner, value prop, CTA buttons
+- Status: COMPLETE ✅
+
+**✅ Step 15**: Add "Latest Updates" section to homepage.
+- Shows trending/recent items
+- Card-based layout
+- Status: COMPLETE ✅
+
+**✅ Step 16**: Add "How It Works" section to homepage.
+- 3-step process: Report, Verify, Reconnect
+- Status: COMPLETE ✅
+
+**✅ Step 17**: Ensure homepage is fully responsive.
+- Mobile, tablet, desktop views
+- Status: COMPLETE ✅
+
+**✅ Step 18**: Test homepage in browser and verify all sections render.
+- Command: `npm run dev` and visit localhost:3000
+- Status: COMPLETE ✅
+
+---
+
+## **PHASE 2: DATABASE & SCHEMA (Steps 19-36)**
+
+### **2.1: Prisma Setup (Steps 19-25)**
+
+**✅ Step 19**: Install Prisma ORM.
+- Command: `npm install @prisma/client prisma`
+- Status: COMPLETE ✅
+
+**✅ Step 20**: Initialize Prisma project.
+- Command: `npx prisma init`
+- Creates `schema.prisma` and `.env` file
+- Status: COMPLETE ✅
+
+**✅ Step 21**: Set up Supabase PostgreSQL database.
+- Create account at supabase.com
+- Create new project and database
+- Get connection string
+- Status: COMPLETE ✅
+
+**✅ Step 22**: Configure DATABASE_URL in `.env`.
+- Add Supabase PostgreSQL connection string
+- Status: COMPLETE ✅
+
+**✅ Step 23**: Set Prisma datasource to PostgreSQL.
+- File: `prisma/schema.prisma`
+- Status: COMPLETE ✅
+
+**✅ Step 24**: Generate Prisma client.
+- Command: `npx prisma generate`
+- File: `src/generated/prisma/`
+- Status: COMPLETE ✅
+
+**✅ Step 25**: Create Prisma singleton instance.
+- File: `src/lib/prisma.ts`
+- For optimal performance in development
+- Status: COMPLETE ✅
+
+### **2.2: Database Schema Models (Steps 26-33)**
+
+**✅ Step 26**: Create User model in schema.
+- Fields: id, email, name, avatar, googleId, password, role, isActive, timestamps
+- Status: COMPLETE ✅
+
+**✅ Step 27**: Add Role enum (USER, ADMIN, MODERATOR) to schema.
+- Status: COMPLETE ✅
+
+**✅ Step 28**: Create Item model in schema.
+- Fields: id, title, description, itemType, status, location, images, timestamps
+- Relations: postedBy, claimedBy
+- Status: COMPLETE ✅
+
+**✅ Step 29**: Add ItemType enum (LOST, FOUND) to schema.
+- Status: COMPLETE ✅
+
+**✅ Step 30**: Add ItemStatus enum (LOST, FOUND, CLAIMED, RESOLVED) to schema.
+- Status: COMPLETE ✅
+
+**✅ Step 31**: Create Comment model in schema.
+- Fields: id, message, images, timestamps
+- Relations: item, user
+- Status: COMPLETE ✅
+
+**✅ Step 32**: Create Claim model in schema.
+- Fields: id, claimType, status, message, timestamps
+- Relations: item, user
+- Status: COMPLETE ✅
+
+**✅ Step 33**: Add Claim-related enums (ClaimType, ClaimStatus) to schema.
+- ClaimType: FOUND_IT, OWN_IT
+- ClaimStatus: PENDING, APPROVED, REJECTED
+- Status: COMPLETE ✅
+
+### **2.3: Migrations & Database Setup (Steps 34-36)**
+
+**✅ Step 34**: Run initial migration.
+- Command: `npx prisma migrate dev --name init`
+- Creates all tables in Supabase
+- Status: COMPLETE ✅
+
+**✅ Step 35**: Verify all tables created in Supabase console.
+- Check User, Item, Comment, Claim tables exist
+- Verify foreign keys and constraints
+- Status: COMPLETE ✅
+
+**✅ Step 36**: Test Prisma queries with Prisma Studio.
+- Command: `npx prisma studio`
+- Create sample data to test
+- Status: COMPLETE ✅
+
+---
+
+## **PHASE 3: AUTHENTICATION (Steps 37-61)**
+
+### **3.1: Basic Setup & Dependencies (Steps 37-40)**
+
+**✅ Step 37**: Install NextAuth.js and dependencies.
+- Command: `npm install next-auth bcryptjs jsonwebtoken`
+- Status: COMPLETE ✅
+
+**✅ Step 38**: Create NextAuth configuration file.
+- File: `src/lib/auth.ts`
+- Add CredentialsProvider configuration
+- Status: COMPLETE ✅
+
+**✅ Step 39**: Create NextAuth route handler.
+- File: `src/app/api/auth/[...nextauth]/route.ts`
+- Export handlers from auth.ts
+- Status: COMPLETE ✅
+
+**✅ Step 40**: Create environment variables for NextAuth.
+- Add to `.env.local`:
+  ```
+  NEXTAUTH_SECRET=<generate with: openssl rand -base64 32>
+  NEXTAUTH_URL=http://localhost:3000
+  ```
+- Status: COMPLETE ✅
+
+### **3.2: Signup Flow (Steps 41-48)**
+
+**✅ Step 41**: Create `/api/auth/signup/route.ts` file.
+- Status: COMPLETE ✅
+
+**✅ Step 42**: Implement signup POST handler with validation.
+- Validate email, password, name with Zod
+- Check if user exists
+- Hash password with bcrypt (salt rounds 12)
+- Status: COMPLETE ✅
+
+**✅ Step 43**: Create user in database on signup.
+- Save to Prisma: email, name, hashedPassword
+- Return 201 with user data (no password)
+- Status: COMPLETE ✅
+
+**✅ Step 44**: Create SignupForm component.
+- File: `src/components/SignupForm.tsx`
+- Fields: name, email, password, confirmPassword
+- Validation with Zod schema
+- Status: COMPLETE ✅
+
+**✅ Step 45**: Add all form fields to SignupForm.
+- Name input with validation
+- Email input with validation
+- Password input with strength indicator
+- Confirm password input
+- Submit button
+- Status: COMPLETE ✅
+
+**✅ Step 46**: Implement signup form submission handler.
+- POST to `/api/auth/signup`
+- Handle errors and show messages
+- Redirect to login on success
+- Status: COMPLETE ✅
+
+**✅ Step 47**: Add loading and error states to SignupForm.
+- Loading spinner while submitting
+- Error message display
+- Success notification
+- Disable submit while loading
+- Status: COMPLETE ✅
+
+**✅ Step 48**: Create `/auth/signup/page.tsx` page.
+- Render SignupForm component
+- Add link to login page
+- Centered layout
+- Status: COMPLETE ✅
+
+### **3.3: Login Flow (Steps 49-55)**
+
+**✅ Step 49**: Create LoginForm component.
+- File: `src/components/LoginForm.tsx`
+- Fields: email, password
+- Zod validation
+- Status: COMPLETE ✅
+
+**✅ Step 50**: Implement login form submission handler.
+- Use NextAuth `signIn('credentials', {...})`
+- Validate credentials with Prisma query
+- Compare password with bcrypt
+- Redirect on success
+- Status: COMPLETE ✅
+
+**✅ Step 51**: Add error handling to LoginForm.
+- Display "Invalid email or password"
+- Show other error messages
+- Error persistence across render
+- Status: COMPLETE ✅
+
+**✅ Step 52**: Create `/auth/login/page.tsx` page.
+- Render LoginForm component
+- Add link to signup page
+- Centered layout
+- Status: COMPLETE ✅
+
+**✅ Step 53**: Update CredentialsProvider in auth.ts.
+- Implement `authorize` callback
+- Query Prisma for user by email
+- Compare password with bcrypt.compare()
+- Return user object with id, email, name
+- Status: COMPLETE ✅
+
+**☐ Step 54**: Add JWT callbacks to NextAuth config.
+- `jwt` callback: include user id in token
+- `session` callback: add user data to session
+- Status: NOT STARTED ☐
+
+**☐ Step 55**: Test signup and login flow end-to-end.
+- Create account at /auth/signup
+- Login at /auth/login
+- Verify user stored in database
+- Verify session accessible
+- Status: NOT STARTED ☐
+
+### **3.4: Session Management (Steps 56-61)**
+
+**☐ Step 56**: Create SessionProvider wrapper component.
+- File: `src/app/providers.tsx`
+- Import SessionProvider from next-auth/react
+- Export component
+- Status: NOT STARTED ☐
+
+**☐ Step 57**: Wrap app with SessionProvider in layout.
+- File: `src/app/layout.tsx`
+- Import and use Providers component
+- Status: NOT STARTED ☐
+
+**☐ Step 58**: Update Navbar to show auth state.
+- Import useSession from next-auth/react
+- Show "Login" button if not authenticated
+- Show user name and "Logout" if authenticated
+- Status: NOT STARTED ☐
+
+**☐ Step 59**: Implement logout functionality in Navbar.
+- Import signOut from next-auth/react
+- Add signOut() handler to logout button
+- Redirect to home after logout
+- Status: NOT STARTED ☐
+
+**☐ Step 60**: Create middleware for protected routes.
+- File: `middleware.ts` in root
+- Use `withAuth` from next-auth/middleware
+- Protect routes: /dashboard, /post, /profile
+- Redirect to /auth/login if not authenticated
+- Status: NOT STARTED ☐
+
+**☐ Step 61**: Test session persistence across page reloads.
+- Login and reload page
+- Verify session persists
+- Logout and reload page
+- Verify session cleared
+- Status: NOT STARTED ☐
+
+---
+
+## **PHASE 4: ITEM CRUD APIs (Steps 62-86)**
+
+### **4.1: GET Items Endpoint (Steps 62-66)**
+
+**☐ Step 62**: Create `/api/items/route.ts` file.
+- Status: NOT STARTED ☐
+
+**☐ Step 63**: Define Zod schema for item validation.
+- title: string, min 3, max 100
+- description: string, min 10, max 2000
+- itemType: enum [LOST, FOUND]
+- location: string, min 3, max 200
+- images: array of URLs, default []
+- Status: NOT STARTED ☐
+
+**☐ Step 64**: Implement GET handler to fetch all items.
+- Query Prisma.item.findMany()
+- Include postedBy user details
+- Include comment/claim counts
+- Order by createdAt DESC
+- Return JSON array
+- Status: NOT STARTED ☐
+
+**☐ Step 65**: Add pagination to GET /api/items.
+- Query params: page=1, limit=20
+- Calculate skip: (page - 1) * limit
+- Return items, total, page, limit
+- Status: NOT STARTED ☐
+
+**☐ Step 66**: Test GET /api/items endpoint with Postman.
+- Fetch items list
+- Verify structure and fields
+- Test pagination
+- Status: NOT STARTED ☐
+
+### **4.2: POST Items Endpoint (Steps 67-71)**
+
+**☐ Step 67**: Implement POST handler in `/api/items/route.ts`.
+- Check authentication (session required)
+- Get current user from session
+- Status: NOT STARTED ☐
+
+**☐ Step 68**: Parse and validate POST request body.
+- Extract JSON from request
+- Validate with Zod schema
+- Return 400 if invalid
+- Status: NOT STARTED ☐
+
+**☐ Step 69**: Create item in database.
+- Call Prisma.item.create()
+- Set status based on itemType (LOST/FOUND)
+- Include postedById from current user
+- Include related data in response
+- Status: NOT STARTED ☐
+
+**☐ Step 70**: Add error handling to POST handler.
+- Try/catch for database errors
+- Return 401 if not authenticated
+- Return 500 for server errors
+- Status: NOT STARTED ☐
+
+**☐ Step 71**: Test POST /api/items endpoint.
+- Create test item via Postman
+- Verify item saved in database
+- Verify response includes item data
+- Test with invalid data (should fail)
+- Status: NOT STARTED ☐
+
+### **4.3: GET Single Item & Dynamic Routes (Steps 72-75)**
+
+**☐ Step 72**: Create `/api/items/[id]/route.ts` file.
+- Status: NOT STARTED ☐
+
+**☐ Step 73**: Implement GET handler for single item.
+- Extract id from params
+- Query Prisma.item.findUnique()
+- Include postedBy, comments, claims
+- Return 404 if not found
+- Status: NOT STARTED ☐
+
+**☐ Step 74**: Implement PUT handler to update item.
+- Verify user is item owner or admin
+- Validate new data with Zod schema
+- Update with Prisma.item.update()
+- Return updated item
+- Status: NOT STARTED ☐
+
+**☐ Step 75**: Implement DELETE handler (soft delete).
+- Verify user is item owner or admin
+- Set isActive: false instead of hard delete
+- Return success message
+- Status: NOT STARTED ☐
+
+### **4.4: Search & Filter Parameters (Steps 76-81)**
+
+**☐ Step 76**: Add search query parameter to GET /api/items.
+- Query param: `q` for search text
+- Search in title, description, location
+- Use Prisma `contains` with `insensitive` mode
+- Status: NOT STARTED ☐
+
+**☐ Step 77**: Add itemType filter to GET /api/items.
+- Query param: `type` (LOST or FOUND)
+- Filter results by itemType
+- Status: NOT STARTED ☐
+
+**☐ Step 78**: Add status filter to GET /api/items.
+- Query param: `status` (LOST, FOUND, CLAIMED, RESOLVED)
+- Filter results by status
+- Status: NOT STARTED ☐
+
+**☐ Step 79**: Add location filter to GET /api/items.
+- Query param: `location`
+- Partial match on location
+- Status: NOT STARTED ☐
+
+**☐ Step 80**: Add date range filter to GET /api/items.
+- Query params: `from` and `to` (ISO dates)
+- Filter by createdAt between dates
+- Status: NOT STARTED ☐
+
+**☐ Step 81**: Test all search and filter combinations.
+- Test each filter individually
+- Test multiple filters combined
+- Test pagination with filters
+- Verify results are accurate
+- Status: NOT STARTED ☐
+
+### **4.5: Comments API (Steps 82-84)**
+
+**☐ Step 82**: Create `/api/comments/route.ts` file.
+- POST handler to create comments
+- GET handler to fetch comments for an item
+- Status: NOT STARTED ☐
+
+**☐ Step 83**: Implement comment creation.
+- Validate: message, itemId, userId from session
+- Create in Prisma.comment.create()
+- Include user data in response
+- Status: NOT STARTED ☐
+
+**☐ Step 84**: Implement comment deletion `/api/comments/[id]`.
+- Verify user is comment author or admin
+- Delete from Prisma
+- Return success
+- Status: NOT STARTED ☐
+
+### **4.6: Claims API (Steps 85-86)**
+
+**☐ Step 85**: Create `/api/claims/route.ts` file.
+- POST handler to create claims
+- GET handler to fetch claims for an item
+- Status: NOT STARTED ☐
+
+**☐ Step 86**: Implement claim approval/rejection `/api/claims/[id]`.
+- PUT handler with status in body (APPROVED/REJECTED)
+- Verify user is item poster
+- Update claim status
+- Update item status if approved
+- Status: NOT STARTED ☐
+
+---
+
+## **PHASE 5: FRONTEND PAGES (Steps 87-113)**
+
+### **5.1: Post Item Page (Steps 87-95)**
+
+**☐ Step 87**: Create `src/components/PostItemForm.tsx` component.
+- Use react-hook-form with zodResolver
+- Create Zod schema for item posting
+- Status: NOT STARTED ☐
+
+**☐ Step 88**: Add form fields to PostItemForm.
+- Title input
+- Description textarea
+- Item type select (LOST/FOUND)
+- Location input
+- Status: NOT STARTED ☐
+
+**☐ Step 89**: Add image upload field placeholder.
+- File input for images (Cloudinary integration in Phase 6)
+- Store image URLs in form state
+- Show upload progress
+- Status: NOT STARTED ☐
+
+**☐ Step 90**: Implement form submission handler.
+- POST to `/api/items`
+- Handle success: redirect to item detail page
+- Handle error: show error message
+- Status: NOT STARTED ☐
+
+**☐ Step 91**: Add loading and error states to form.
+- Show spinner during submission
+- Disable submit button while loading
+- Display error messages
+- Show success notification
+- Status: NOT STARTED ☐
+
+**☐ Step 92**: Create `/app/post/page.tsx` page.
+- Render PostItemForm component
+- Add page title and description
+- Centered layout with form
+- Status: NOT STARTED ☐
+
+**☐ Step 93**: Add authentication check to /post page.
+- Redirect to login if not authenticated
+- Show user info
+- Status: NOT STARTED ☐
+
+**☐ Step 94**: Style PostItemForm with shadcn/ui components.
+- Use Button, Input, Textarea, Select from shadcn/ui
+- Add proper spacing and colors
+- Responsive on mobile/tablet/desktop
+- Status: NOT STARTED ☐
+
+**☐ Step 95**: Test post item flow end-to-end.
+- Login as test user
+- Navigate to /post
+- Fill form and submit
+- Verify item appears in database
+- Verify redirected to item detail
+- Status: NOT STARTED ☐
+
+### **5.2: Search/Browse Page (Steps 96-105)**
+
+**☐ Step 96**: Create `/app/search/page.tsx` file.
+- Add 'use client' directive
+- Status: NOT STARTED ☐
+
+**☐ Step 97**: Add state management for search.
+- useState for items, loading, query, filters
+- useState for itemType, status, page
+- Status: NOT STARTED ☐
+
+**☐ Step 98**: Create fetch items function.
+- Build query params from filters
+- Fetch from `/api/items?params`
+- Handle errors
+- Set items and loading state
+- Status: NOT STARTED ☐
+
+**☐ Step 99**: Call fetch function on component mount and filter changes.
+- useEffect hook
+- Refetch when query, itemType, page changes
+- Status: NOT STARTED ☐
+
+**☐ Step 100**: Add search input field to search page.
+- Text input for search query
+- onChange handler to update state
+- Status: NOT STARTED ☐
+
+**☐ Step 101**: Add filter dropdowns to search page.
+- Select for itemType (LOST/FOUND)
+- Select for status (LOST/FOUND/CLAIMED/RESOLVED)
+- Select for location (or autocomplete)
+- Status: NOT STARTED ☐
+
+**☐ Step 102**: Create items grid layout for results.
+- Display items as cards
+- Show image, title, location, date, status badge
+- Add "View Details" button for each item
+- Responsive grid (1 col mobile, 2 col tablet, 3 col desktop)
+- Status: NOT STARTED ☐
+
+**☐ Step 103**: Add loading skeleton in search page.
+- Show skeleton cards while loading
+- Improves UX
+- Status: NOT STARTED ☐
+
+**☐ Step 104**: Implement pagination controls.
+- Show current page and total pages
+- Previous/Next buttons
+- Jump to page input
+- Status: NOT STARTED ☐
+
+**☐ Step 105**: Test search flow end-to-end.
+- Navigate to /search
+- Verify items load
+- Test search (type text, results filter)
+- Test filters (select LOST/FOUND, etc.)
+- Test pagination
+- Status: NOT STARTED ☐
+
+### **5.3: Item Detail Page (Steps 106-113)**
+
+**☐ Step 106**: Create `/app/item/[id]/page.tsx` file.
+- Dynamic route for individual items
+- Status: NOT STARTED ☐
+
+**☐ Step 107**: Fetch item data on page load.
+- Server-side fetch from `/api/items/[id]`
+- Handle not found (404)
+- Status: NOT STARTED ☐
+
+**☐ Step 108**: Create `src/components/ItemDetail.tsx` component.
+- Display item title, description, location
+- Show item type and status badges
+- Show images (carousel)
+- Show posted by info (name, avatar, date)
+- Status: NOT STARTED ☐
+
+**☐ Step 109**: Add comments section to ItemDetail.
+- Fetch and display existing comments
+- Show comment author, date, message
+- Show delete button for comment author
+- Status: NOT STARTED ☐
+
+**☐ Step 110**: Add comment form to ItemDetail.
+- Show if logged in
+- Textarea for comment message
+- Submit button
+- Validation (min 1 char, max 1000)
+- Clear form after submit
+- Status: NOT STARTED ☐
+
+**☐ Step 111**: Add claim button to ItemDetail.
+- Show if logged in and not item owner
+- Click opens claim modal/form
+- Select claim type: FOUND_IT or OWN_IT
+- Add optional message field
+- Submit claim
+- Status: NOT STARTED ☐
+
+**☐ Step 112**: Add edit/delete buttons to ItemDetail.
+- Show if logged in as item owner or admin
+- Edit redirects to /post with pre-filled form
+- Delete removes item (soft delete)
+- Status: NOT STARTED ☐
+
+**☐ Step 113**: Test item detail page end-to-end.
+- Navigate to item detail
+- View item info and images
+- Add comment and verify appears
+- Make claim and verify in database
+- Edit item (if owner)
+- Delete item (if owner)
+- Status: NOT STARTED ☐
+
+### **5.4: User Dashboard Page (Steps 114-119)**
+
+**☐ Step 114**: Create `/app/dashboard/page.tsx` page.
+- Protected route (requires authentication)
+- Status: NOT STARTED ☐
+
+**☐ Step 115**: Add user's posted items section to dashboard.
+- Fetch items where postedById = user.id
+- Display as cards or table
+- Show: title, status, date posted, actions
+- Add edit and delete buttons
+- Status: NOT STARTED ☐
+
+**☐ Step 116**: Add user's claims section to dashboard.
+- Fetch claims where userId = user.id
+- Display as cards or table
+- Show: item title, claim type, status, date
+- Add view item and cancel claim buttons
+- Status: NOT STARTED ☐
+
+**☐ Step 117**: Add pending claims on user's items to dashboard.
+- Show claims made on user's posted items
+- Display claimant info, claim type, message
+- Add approve and reject buttons
+- Update item status on approval
+- Status: NOT STARTED ☐
+
+**☐ Step 118**: Add user profile section to dashboard.
+- Display user name, email, avatar
+- Add edit profile button
+- Show statistics (items posted, claims made, resolved)
+- Status: NOT STARTED ☐
+
+**☐ Step 119**: Test dashboard functionality end-to-end.
+- Login as test user
+- Navigate to /dashboard
+- Verify posted items show
+- Verify claims show
+- Verify pending claims show
+- Test edit/delete/approve/reject buttons
+- Status: NOT STARTED ☐
+
+---
+
+## **PHASE 6: IMAGE UPLOAD & OAUTH (Steps 120-133)**
+
+### **6.1: Cloudinary Integration (Steps 120-127)**
+
+**☐ Step 120**: Set up Cloudinary account.
+- Go to cloudinary.com and sign up
+- Create new project
+- Get Cloud Name, API Key, Upload Preset
+- Status: NOT STARTED ☐
+
+**☐ Step 121**: Add Cloudinary env variables.
+- Add to `.env.local`:
+  ```
+  NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
+  CLOUDINARY_API_KEY=your_api_key
+  CLOUDINARY_API_SECRET=your_api_secret
+  NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=your_preset
+  ```
+- Status: NOT STARTED ☐
+
+**☐ Step 122**: Create image upload utility `src/lib/uploadImage.ts`.
+- Function to upload file to Cloudinary
+- Return secure URL
+- Handle errors
+- Status: NOT STARTED ☐
+
+**☐ Step 123**: Integrate image upload to PostItemForm.
+- Add onChange handler to file input
+- Upload each selected image
+- Store URLs in form state
+- Show upload progress per image
+- Status: NOT STARTED ☐
+
+**☐ Step 124**: Add image preview to PostItemForm.
+- Display uploaded images as gallery
+- Add delete button for each image
+- Show upload status (loading, success, error)
+- Status: NOT STARTED ☐
+
+**☐ Step 125**: Update item creation API to store image URLs.
+- Accept images array in POST /api/items
+- Store URLs in item.images field
+- Status: NOT STARTED ☐
+
+**☐ Step 126**: Add image gallery/carousel to ItemDetail.
+- Display images in carousel
+- Add prev/next buttons
+- Show image count
+- Lazy load images
+- Status: NOT STARTED ☐
+
+**☐ Step 127**: Test image upload end-to-end.
+- Post item with images
+- Verify images upload to Cloudinary
+- Verify URLs stored in database
+- Verify images display in item detail
+- Test on multiple images
+- Status: NOT STARTED ☐
+
+### **6.2: Google OAuth Integration (Steps 128-133)**
+
+**☐ Step 128**: Set up Google Cloud Console.
+- Create new project in Google Cloud Console
+- Enable Google+ API
+- Create OAuth 2.0 credentials
+- Add redirect URIs: `http://localhost:3000/api/auth/callback/google`
+- Status: NOT STARTED ☐
+
+**☐ Step 129**: Add Google OAuth env variables.
+- Add to `.env.local`:
+  ```
+  GOOGLE_CLIENT_ID=your_client_id
+  GOOGLE_CLIENT_SECRET=your_client_secret
+  ```
+- Status: NOT STARTED ☐
+
+**☐ Step 130**: Install Google OAuth provider.
+- Command: `npm install next-auth@latest` (ensure updated)
+- Status: NOT STARTED ☐
+
+**☐ Step 131**: Add GoogleProvider to NextAuth config.
+- Import GoogleProvider in `src/lib/auth.ts`
+- Add to providers array with clientId and clientSecret
+- Add profile callback to map Google profile to Prisma user
+- Handle upsert (create or update user on login)
+- Store avatar from Google profile
+- Status: NOT STARTED ☐
+
+**☐ Step 132**: Add "Sign in with Google" button to LoginForm.
+- Import signIn from next-auth/react
+- Add button with onClick handler
+- Call `signIn('google')`
+- Status: NOT STARTED ☐
+
+**☐ Step 133**: Test Google OAuth flow end-to-end.
+- Click "Sign in with Google" button
+- Verify Google login page appears
+- Complete login in Google
+- Verify redirected to dashboard
+- Check user created in database with Google data
+- Check avatar from Google stored
+- Status: NOT STARTED ☐
+
+---
+
+## **PHASE 7: CLAIMS WORKFLOW & ADVANCED (Steps 134-145)**
+
+### **7.1: Claims System (Steps 134-138)**
+
+**☐ Step 134**: Verify claims API endpoints exist.
+- POST /api/claims to create claim
+- GET /api/claims to list claims
+- PUT /api/claims/[id] to approve/reject
+- Status: NOT STARTED ☐
+
+**☐ Step 135**: Add claim type modal to ItemDetail.
+- Modal opens on "Claim Item" click
+- Radio buttons for FOUND_IT or OWN_IT
+- Optional message textarea
+- Submit button
+- Status: NOT STARTED ☐
+
+**☐ Step 136**: Implement claim submission in ItemDetail.
+- POST to /api/claims with type and message
+- Handle success: show confirmation
+- Handle error: show error message
+- Update item status if needed
+- Disable claim button after claiming
+- Status: NOT STARTED ☐
+
+**☐ Step 137**: Add claims management to dashboard.
+- Show pending claims on user's items
+- Display claimant name, avatar, claim type
+- Show claim message
+- Add "Approve" and "Reject" buttons
+- Status: NOT STARTED ☐
+
+**☐ Step 138**: Implement approve/reject in dashboard.
+- PUT to /api/claims/[id] with status
+- Update item status on approval
+- Notify claimant (via UI for now)
+- Refresh claims list
+- Status: NOT STARTED ☐
+
+### **7.2: Comments Management (Steps 139-141)**
+
+**☐ Step 139**: Add comment delete functionality.
+- Show delete button only for comment author
+- DELETE /api/comments/[id]
+- Confirm before deleting
+- Remove from UI after delete
+- Status: NOT STARTED ☐
+
+**☐ Step 140**: Add comment edit functionality.
+- Show edit button for comment author
+- Edit mode: textarea + save/cancel buttons
+- PUT /api/comments/[id] to update
+- Status: NOT STARTED ☐
+
+**☐ Step 141**: Test comments management end-to-end.
+- Create comment
+- Edit comment
+- Delete comment
+- Verify database updates
+- Status: NOT STARTED ☐
+
+### **7.3: Admin Features (Steps 142-145)**
+
+**☐ Step 142**: Create admin dashboard page `/admin/dashboard`.
+- Show all items (with admin filter)
+- Show all users
+- Show all claims
+- Add moderation status
+- Status: NOT STARTED ☐
+
+**☐ Step 143**: Implement item moderation.
+- Admin can see all items including inactive
+- Admin can force delete items
+- Admin can flag items as spam
+- Status: NOT STARTED ☐
+
+**☐ Step 144**: Implement user moderation.
+- Admin can view user details
+- Admin can suspend users (isActive = false)
+- Admin can view user's items and claims
+- Status: NOT STARTED ☐
+
+**☐ Step 145**: Test admin features end-to-end.
+- Login as admin user
+- Access /admin/dashboard
+- Perform moderation actions
+- Verify changes reflected in system
+- Status: NOT STARTED ☐
+
+---
+
+## **PHASE 8: POLISH & TESTING (Steps 146-160)**
+
+### **8.1: Error Handling & Validation (Steps 146-150)**
+
+**☐ Step 146**: Add comprehensive API error responses.
+- Standardize error format: `{ error: string, code: string }`
+- Return appropriate HTTP status codes
+- All endpoints have try/catch
+- Status: NOT STARTED ☐
+
+**☐ Step 147**: Add form validation error messages.
+- Display validation errors under each field
+- Show clear, user-friendly messages
+- Real-time validation feedback
+- Status: NOT STARTED ☐
+
+**☐ Step 148**: Add API request error handling in components.
+- Catch fetch errors in all API calls
+- Show error toast/message to user
+- Log errors for debugging
+- Status: NOT STARTED ☐
+
+**☐ Step 149**: Add database error handling.
+- Handle unique constraint violations
+- Handle foreign key errors
+- Return meaningful error messages
+- Status: NOT STARTED ☐
+
+**☐ Step 150**: Test error scenarios.
+- Invalid form inputs
+- API errors (500, timeout)
+- Authentication errors (401, 403)
+- Not found errors (404)
+- Status: NOT STARTED ☐
+
+### **8.2: Loading States & Animations (Steps 151-154)**
+
+**☐ Step 151**: Add loading spinners to all async operations.
+- Fetch items: show skeleton cards
+- Form submission: show spinner on button
+- Image upload: show progress bar
+- API calls: show loading state
+- Status: NOT STARTED ☐
+
+**☐ Step 152**: Add toast notifications.
+- Install toast library (e.g., `react-hot-toast`)
+- Show success notifications
+- Show error notifications
+- Show info notifications
+- Status: NOT STARTED ☐
+
+**☐ Step 153**: Add smooth page transitions.
+- Add fade-in animations on page load
+- Smooth color transitions
+- Button hover effects
+- Status: NOT STARTED ☐
+
+**☐ Step 154**: Test loading and animation states.
+- Verify spinners show
+- Verify toasts appear
+- Verify animations smooth
+- Test on slow network (throttle in DevTools)
+- Status: NOT STARTED ☐
+
+### **8.3: Responsive Design Testing (Steps 155-157)**
+
+**☐ Step 155**: Test all pages on mobile (320px - 480px).
+- Test layout on actual phone or DevTools
+- Verify text is readable
+- Verify buttons are clickable (44px min)
+- Verify images scale correctly
+- Status: NOT STARTED ☐
+
+**☐ Step 156**: Test all pages on tablet (768px - 1024px).
+- Test layout on iPad or DevTools
+- Verify spacing is balanced
+- Verify forms are easy to use
+- Status: NOT STARTED ☐
+
+**☐ Step 157**: Test all pages on desktop (1440px+).
+- Test on large screens
+- Verify max-width constraints work
+- Verify spacing is balanced
+- Status: NOT STARTED ☐
+
+### **8.4: Accessibility (Steps 158-159)**
+
+**☐ Step 158**: Add alt text to all images.
+- Every image has descriptive alt text
+- Use semantic HTML (h1, h2, h3, etc.)
+- Add ARIA labels for buttons without text
+- Test color contrast (should be 4.5:1 for text)
+- Status: NOT STARTED ☐
+
+**☐ Step 159**: Test with keyboard only.
+- Navigate app using only Tab key
+- Verify all interactive elements are reachable
+- Test form submission with keyboard
+- Check focus indicators are visible
+- Status: NOT STARTED ☐
+
+### **8.5: Final Testing & Deployment (Steps 160-160)**
+
+**☐ Step 160**: End-to-end testing and deployment.
+- Test complete user journey:
+  1. Signup → Login → View home
+  2. Browse items → Search → Filter
+  3. Post new item with images
+  4. View item detail → Add comment → Make claim
+  5. Go to dashboard → Manage items/claims
+  6. Approve claim from other user
+  7. Logout
+- Verify all API calls work
+- Check database for correct data
+- Test on staging environment
+- Deploy to Vercel:
+  - Connect GitHub repo
+  - Set environment variables
+  - Deploy
+  - Test on live URL
+  - Monitor error logs
+- Get user feedback and iterate
+- Status: NOT STARTED ☐
+
+---
+
+## **SUMMARY STATISTICS**
+
+| Metric | Count |
+|--------|-------|
+| **Total Steps** | 160 |
+| **✅ Completed** | 36 |
+| **☐ Not Started** | 121 |
+| **🟨 In Progress** | 3 |
+| **Completion %** | 22.5% |
+
+---
+
+## **Progress by Phase**
+
+| Phase | Steps | Status |
+|-------|-------|--------|
+| Phase 1: Setup & UI | 1-18 | ✅ 100% Complete |
+| Phase 2: Database | 19-36 | ✅ 100% Complete |
+| Phase 3: Authentication | 37-61 | 🟨 5% (1/25 done) |
+| Phase 4: Item APIs | 62-86 | ☐ 0% (0/25 done) |
+| Phase 5: Frontend Pages | 87-113 | ☐ 0% (0/27 done) |
+| Phase 6: Image & OAuth | 114-133 | ☐ 0% (0/20 done) |
+| Phase 7: Claims & Advanced | 134-145 | ☐ 0% (0/12 done) |
+| Phase 8: Polish & Testing | 146-160 | ☐ 0% (0/15 done) |
+
+---
+
+## **Next Immediate Actions (Priority Order)**
+
+### **🔴 CRITICAL - Do These First:**
+1. **Step 37-40**: Install NextAuth and create initial config
+2. **Step 41-47**: Complete SignupForm component
+3. **Step 49-59**: Build LoginForm and login page
+4. **Step 56-61**: Add SessionProvider and test auth flow
+
+### **🟠 HIGH - Do After Auth:**
+5. **Step 62-86**: Build all item CRUD APIs
+6. **Step 87-105**: Build post and search pages
+
+### **🟡 MEDIUM - Do After APIs:**
+7. **Step 106-119**: Build item detail and dashboard pages
+8. **Step 120-133**: Add image upload and Google OAuth
+
+---
+
+## **How to Use This Roadmap**
+
+1. **Read this entire document** to understand full scope
+2. **Start at Step 37** (next not-done step in Phase 3)
+3. **Complete ONE step at a time** - don't skip
+4. **Test after every 2-3 steps** to catch issues early
+5. **Commit to git** after completing each phase
+6. **Update .env variables** as needed for each phase
+7. **Refer back to this doc** for context and dependencies
+8. **Mark steps as done** by changing ☐ to ✅
+
+---
+
+**Last Updated**: October 26, 2025  
+**Current Phase**: 3 (Authentication)  
+**Next Step**: 37 - Install NextAuth and dependencies
+
