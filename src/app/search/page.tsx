@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface Item {
   id: string;
@@ -29,7 +29,6 @@ export default function SearchPage() {
   // Main search state
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
-  const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<SearchFilters>({
     search: '',
     itemType: '',
@@ -45,7 +44,7 @@ export default function SearchPage() {
   const [total, setTotal] = useState(0);
 
   // Fetch items from API
-  const fetchItems = async (searchParams?: Partial<SearchFilters>, page: number = 1) => {
+  const fetchItems = useCallback(async (searchParams?: Partial<SearchFilters>, page: number = 1) => {
     setLoading(true);
     
     try {
@@ -86,6 +85,17 @@ export default function SearchPage() {
     } finally {
       setLoading(false);
     }
+  }, [filters]); // Only depend on filters, page is passed as parameter
+
+  // Fetch items on component mount and when filters change
+  useEffect(() => {
+    fetchItems(undefined, currentPage); // Pass current page
+  }, [fetchItems, currentPage]); // Re-fetch when fetchItems changes or page changes
+
+  // Function to update filters and reset page
+  const updateFilters = (newFilters: Partial<SearchFilters>) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+    setCurrentPage(1); // Reset to first page when filters change
   };
 
   return (

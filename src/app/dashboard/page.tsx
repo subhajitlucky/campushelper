@@ -1,80 +1,137 @@
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Search, Plus, Package, MessageSquare, CheckCircle } from "lucide-react";
 
 /**
  * Dashboard Page
- *
- * PURPOSE:
- * - Main dashboard for authenticated users
- * - Shows user's items, claims, and quick actions
- * - Server Component (fetches data directly from Prisma)
  */
-export default async function DashboardPage() {
-  // TODO: Fix auth() export in lib/auth.ts
-  // const session = await auth();
-
-  // if (!session?.user) {
-  //   redirect('/auth/login');
-  // }
-
+export default function DashboardPage() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Welcome to your Dashboard!
-        </h1>
-        <p className="text-gray-600 mt-2">
-          Manage your lost & found items from your dashboard
-        </p>
-      </div>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="container mx-auto px-4">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            Dashboard
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Manage your lost & found items and track your activity
+          </p>
+        </div>
 
-      {/* Main Content - Placeholder */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Dashboard Coming Soon</CardTitle>
-          <CardDescription>
-            The dashboard is being set up. You can already sign up and login!
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p>Authentication is working. Try signing up and logging in.</p>
-        </CardContent>
-      </Card>
+        {/* Quick Stats */}
+        <div className="grid gap-6 mb-8 sm:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">My Items</CardTitle>
+              <Package className="h-4 w-4 text-gray-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">0</div>
+              <p className="text-xs text-gray-600">Items posted</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Claims Made</CardTitle>
+              <MessageSquare className="h-4 w-4 text-gray-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">0</div>
+              <p className="text-xs text-gray-600">Claims submitted</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Resolved</CardTitle>
+              <CheckCircle className="h-4 w-4 text-gray-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">0</div>
+              <p className="text-xs text-gray-600">Items resolved</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">This Week</CardTitle>
+              <Search className="h-4 w-4 text-gray-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">0</div>
+              <p className="text-xs text-gray-600">New items found</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>
+              Get started with common tasks
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Button asChild className="flex-1">
+                <Link href="/post">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Post New Item
+                </Link>
+              </Button>
+              <Button variant="outline" asChild className="flex-1">
+                <Link href="/search">
+                  <Search className="mr-2 h-4 w-4" />
+                  Search Items
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Activity */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Recent Items</CardTitle>
+              <CardDescription>
+                Items you&apos;ve posted recently
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-gray-500">
+                <Package className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                <p>No items posted yet</p>
+                <Button asChild className="mt-4">
+                  <Link href="/post">Post Your First Item</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Claims</CardTitle>
+              <CardDescription>
+                Claims you&apos;ve made on items
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-gray-500">
+                <MessageSquare className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                <p>No claims made yet</p>
+                <Button variant="outline" asChild className="mt-4">
+                  <Link href="/search">Browse Items to Claim</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
-
-/*
-SERVER COMPONENT BENEFITS:
-
-1. Direct Database Access:
-   - No API calls needed (faster)
-   - Prisma runs directly in this component
-   - No hydration overhead
-
-2. Security:
-   - Server-side auth check (auth())
-   - Middleware already protects this route
-   - Double protection for sensitive data
-
-3. Performance:
-   - Data fetched on server
-   - Result pre-rendered as HTML
-   - Smaller client bundle size
-
-DATA FLOW:
-
-1. auth() → Gets session from NextAuth
-2. Prisma queries → Fetch user's items/claims
-3. Pass to Client Components → For interactivity
-4. Render → User sees their dashboard
-
-WHY NOT CLIENT COMPONENT?
-- Would need useEffect + API calls
-- More complex state management
-- Slower initial load
-- Server components are better for data fetching
-*/

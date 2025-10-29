@@ -582,10 +582,10 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Set items and loading state
 - Status: COMPLETE ✅
 
-**☐ Step 99**: Call fetch function on component mount and filter changes.
+**✅ Step 99**: Call fetch function on component mount and filter changes.
 - useEffect hook
 - Refetch when query, itemType, page changes
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 100**: Add search input field to search page.
 - Text input for search query
