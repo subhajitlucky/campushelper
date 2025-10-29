@@ -497,12 +497,12 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - GET handler to fetch claims for an item
 - Status: COMPLETE ✅
 
-**☐ Step 86**: Implement claim approval/rejection `/api/claims/[id]`.
+**✅ Step 86**: Implement claim approval/rejection `/api/claims/[id]`.
 - PUT handler with status in body (APPROVED/REJECTED)
 - Verify user is item poster
 - Update claim status
 - Update item status if approved
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 ---
 
