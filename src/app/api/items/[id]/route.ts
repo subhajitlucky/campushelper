@@ -302,25 +302,140 @@ export async function PUT(
 
 /**
  * DELETE /api/items/[id]
- * Soft delete item (Step 75: Implementation ready)
+ * Soft delete item (Step 75: Complete implementation)
  */
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: _id } = await params;
+    // Step 75: Check authentication
+    const session = await auth();
     
-    // TODO: Implement DELETE logic in Step 75
-    return NextResponse.json(
-      { error: 'DELETE /api/items/[id] not yet implemented' },
-      { status: 501 }
-    );
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Authentication required. Please log in to delete an item.' },
+        { status: 401 }
+      );
+    }
+
+    // Step 75: Extract and validate ID from params
+    const { id } = await params;
+    
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Item ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Step 75: Verify user is item owner or admin/moderator
+    const existingItem = await prisma.item.findUnique({
+      where: { id },
+      select: { 
+        postedById: true, 
+        status: true,
+        title: true,
+        postedBy: { select: { role: true } } 
+      }
+    });
+
+    if (!existingItem) {
+      return NextResponse.json(
+        { error: 'Item not found' },
+        { status: 404 }
+      );
+    }
+
+    // Step 75: Check if item is already resolved
+    if (existingItem.status === 'RESOLVED') {
+      return NextResponse.json(
+        { error: 'Item is already resolved' },
+        { status: 400 }
+      );
+    }
+
+    // Authorization check: owner or admin/moderator
+    const userRole = session.user.role;
+    const isOwner = existingItem.postedById === session.user.id;
+    const isAdmin = userRole === 'ADMIN' || userRole === 'MODERATOR';
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json(
+        { error: 'You can only delete items you own or you need admin/moderator permissions' },
+        { status: 403 }
+      );
+    }
+
+    // Step 75: Soft delete by setting status to RESOLVED
+    try {
+      const deletedItem = await prisma.item.update({
+        where: { id },
+        data: {
+          status: 'RESOLVED',
+          resolvedAt: new Date()
+        },
+        include: {
+          // Include postedBy user details
+          postedBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+            }
+          },
+          // Include claimedBy user details if item is claimed
+          claimedBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+            }
+          },
+          // Include comments and claims counts
+          comments: {
+            select: {
+              id: true,
+            }
+          },
+          claims: {
+            select: {
+              id: true,
+            }
+          }
+        }
+      });
+
+      // Transform response to include counts
+      const responseItem = {
+        ...deletedItem,
+        commentCount: deletedItem.comments.length,
+        claimCount: deletedItem.claims.length,
+        // Remove the arrays we only used for counting
+        comments: undefined,
+        claims: undefined,
+      };
+
+      return NextResponse.json({
+        item: responseItem,
+        message: `Item "${existingItem.title}" has been successfully resolved`
+      });
+
+    } catch (dbError) {
+      console.error('Database error deleting item:', dbError);
+      return NextResponse.json(
+        { error: 'Failed to delete item in database' },
+        { status: 500 }
+      );
+    }
 
   } catch (error) {
-    console.error('Error deleting item:', error);
+    // Step 75: General error handling
+    console.error('Unexpected error deleting item:', error);
     return NextResponse.json(
-      { error: 'Failed to delete item' },
+      { error: 'An unexpected error occurred while deleting the item' },
       { status: 500 }
     );
   }
