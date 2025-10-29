@@ -570,10 +570,10 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Add 'use client' directive
 - Status: COMPLETE ✅
 
-**☐ Step 97**: Add state management for search.
+**✅ Step 97**: Add state management for search.
 - useState for items, loading, query, filters
 - useState for itemType, status, page
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 98**: Create fetch items function.
 - Build query params from filters
