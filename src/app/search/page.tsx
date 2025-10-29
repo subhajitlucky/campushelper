@@ -104,9 +104,55 @@ export default function SearchPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Search Items</h1>
         <p className="text-gray-600 mb-8">Search and browse lost and found items on campus.</p>
         
-        {/* Search and filters will go here */}
+        {/* Search and filters */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <p className="text-gray-500">Search functionality coming soon...</p>
+          <div className="space-y-4">
+            {/* Search Input */}
+            <div>
+              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+                Search Items
+              </label>
+              <input
+                type="text"
+                id="search"
+                placeholder="Search by title, description, or location..."
+                value={filters.search}
+                onChange={(e) => updateFilters({ search: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            {/* Quick Filter Buttons */}
+            <div className="flex flex-wrap gap-2">
+              <span className="text-sm font-medium text-gray-700 mr-2">Quick Filters:</span>
+              <button
+                onClick={() => updateFilters({ itemType: 'LOST' })}
+                className={`px-3 py-1 rounded-full text-sm border ${
+                  filters.itemType === 'LOST'
+                    ? 'bg-red-100 text-red-800 border-red-300'
+                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                Lost Items
+              </button>
+              <button
+                onClick={() => updateFilters({ itemType: 'FOUND' })}
+                className={`px-3 py-1 rounded-full text-sm border ${
+                  filters.itemType === 'FOUND'
+                    ? 'bg-green-100 text-green-800 border-green-300'
+                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                Found Items
+              </button>
+              <button
+                onClick={() => updateFilters({ itemType: '', status: '' })}
+                className="px-3 py-1 rounded-full text-sm border bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
+              >
+                Clear Filters
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Items display */}

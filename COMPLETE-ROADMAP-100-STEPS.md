@@ -587,10 +587,10 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Refetch when query, itemType, page changes
 - Status: COMPLETE ✅
 
-**☐ Step 100**: Add search input field to search page.
+**✅ Step 100**: Add search input field to search page.
 - Text input for search query
-- onChange handler to update state
-- Status: NOT STARTED ☐
+- Filter by item type (LOST/FOUND)
+- Status: COMPLETE ✅
 
 **☐ Step 101**: Add filter dropdowns to search page.
 - Select for itemType (LOST/FOUND)
