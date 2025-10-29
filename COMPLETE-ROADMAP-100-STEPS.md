@@ -605,10 +605,10 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Responsive grid (1 col mobile, 2 col tablet, 3 col desktop)
 - Status: COMPLETE ✅
 
-**☐ Step 103**: Add loading skeleton in search page.
+**✅ Step 103**: Add loading skeleton in search page.
 - Show skeleton cards while loading
 - Improves UX
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 104**: Implement pagination controls.
 - Show current page and total pages

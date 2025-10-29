@@ -222,9 +222,44 @@ export default function SearchPage() {
           
           <div className="p-6">
             {loading ? (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <p className="mt-2 text-gray-600">Loading items...</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} className="bg-white rounded-lg border shadow-sm overflow-hidden">
+                    {/* Card Header Skeleton */}
+                    <div className="p-4 border-b bg-gray-50">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="h-5 bg-gray-200 rounded animate-pulse flex-1 mr-2"></div>
+                        <div className="h-6 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+                      </div>
+                      <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
+                    </div>
+
+                    {/* Card Body Skeleton */}
+                    <div className="p-4">
+                      <div className="space-y-2 mb-4">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center">
+                          <div className="h-4 w-4 bg-gray-200 rounded animate-pulse mr-2"></div>
+                          <div className="h-4 bg-gray-200 rounded animate-pulse flex-1"></div>
+                        </div>
+                        <div className="flex items-center">
+                          <div className="h-4 w-4 bg-gray-200 rounded animate-pulse mr-2"></div>
+                          <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3"></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card Footer Skeleton */}
+                    <div className="p-4 bg-gray-50 border-t">
+                      <div className="h-9 bg-gray-200 rounded animate-pulse w-full"></div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : items.length === 0 ? (
               <div className="text-center py-8">
