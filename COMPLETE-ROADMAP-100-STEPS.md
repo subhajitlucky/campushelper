@@ -478,17 +478,17 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - GET handler to fetch comments for an item
 - Status: COMPLETE ✅
 
-**☐ Step 83**: Implement comment creation.
+**✅ Step 83**: Implement comment creation.
 - Validate: message, itemId, userId from session
 - Create in Prisma.comment.create()
 - Include user data in response
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅ (Implemented in Step 82)
 
-**☐ Step 84**: Implement comment deletion `/api/comments/[id]`.
+**✅ Step 84**: Implement comment deletion `/api/comments/[id]`.
 - Verify user is comment author or admin
 - Delete from Prisma
 - Return success
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 ### **4.6: Claims API (Steps 85-86)**
 
