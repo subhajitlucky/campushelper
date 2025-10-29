@@ -449,10 +449,10 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Filter results by itemType
 - Status: COMPLETE ✅
 
-**☐ Step 78**: Add status filter to GET /api/items.
+**✅ Step 78**: Add status filter to GET /api/items.
 - Query param: `status` (LOST, FOUND, CLAIMED, RESOLVED)
 - Filter results by status
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 79**: Add location filter to GET /api/items.
 - Query param: `location`

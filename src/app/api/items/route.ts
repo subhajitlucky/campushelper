@@ -30,17 +30,19 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    const { page, limit, search, itemType } = queryParams;
+    const { page, limit, search, itemType, status } = queryParams;
     const skip = (page - 1) * limit;
 
-    // Step 77: Fetch items with search and itemType filter functionality
+    // Step 78: Fetch items with search, itemType, and status filter functionality
     const items = await prisma.item.findMany({
       skip,
       take: limit,
       where: {
-        status: {
-          not: 'DELETED' // Exclude deleted items by default
-        },
+        // Status filtering: use specific status if provided, otherwise exclude deleted
+        ...(status ? 
+          { status: status } : 
+          { status: { not: 'DELETED' } }
+        ),
         ...(itemType && {
           itemType: itemType // Filter by LOST or FOUND
         }),
@@ -114,12 +116,14 @@ export async function GET(request: NextRequest) {
       claims: undefined,
     }));
 
-    // Get total count for pagination (respecting search and itemType conditions)
+    // Get total count for pagination (respecting search, itemType, and status conditions)
     const total = await prisma.item.count({
       where: {
-        status: {
-          not: 'DELETED' // Exclude deleted items by default
-        },
+        // Status filtering: use specific status if provided, otherwise exclude deleted
+        ...(status ? 
+          { status: status } : 
+          { status: { not: 'DELETED' } }
+        ),
         ...(itemType && {
           itemType: itemType // Filter by LOST or FOUND
         }),
@@ -160,7 +164,8 @@ export async function GET(request: NextRequest) {
       },
       filters: {
         search: search || null, // Include search term in response
-        itemType: itemType || null // Include itemType filter in response
+        itemType: itemType || null, // Include itemType filter in response
+        status: status || null // Include status filter in response
       }
     });
 
