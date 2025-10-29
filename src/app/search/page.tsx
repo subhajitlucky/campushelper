@@ -231,26 +231,75 @@ export default function SearchPage() {
                 <p className="text-gray-500">No items found. Try adjusting your search or filters.</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {items.map((item) => (
-                  <div key={item.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-lg font-medium text-gray-900">{item.title}</h3>
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        item.itemType === 'LOST' 
-                          ? 'bg-red-100 text-red-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {item.itemType}
-                      </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {items.map((item) => {
+                  const getStatusColor = (status: string) => {
+                    switch (status) {
+                      case 'LOST': return 'bg-red-100 text-red-800 border-red-200';
+                      case 'FOUND': return 'bg-green-100 text-green-800 border-green-200';
+                      case 'CLAIMED': return 'bg-blue-100 text-blue-800 border-blue-200';
+                      case 'RESOLVED': return 'bg-purple-100 text-purple-800 border-purple-200';
+                      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+                    }
+                  };
+
+                  const formatDate = (dateString: string) => {
+                    return new Date(dateString).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    });
+                  };
+
+                  return (
+                    <div key={item.id} className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+                      {/* Card Header */}
+                      <div className="p-4 border-b bg-gray-50">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">{item.title}</h3>
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(item.status)} ml-2 flex-shrink-0`}>
+                            {item.status}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">{formatDate(item.createdAt)}</p>
+                      </div>
+
+                      {/* Card Body */}
+                      <div className="p-4">
+                        <p className="text-gray-600 mb-4 line-clamp-3 text-sm">{item.description}</p>
+                        
+                        {/* Item Details */}
+                        <div className="space-y-2">
+                          <div className="flex items-center text-sm text-gray-500">
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            {item.location}
+                          </div>
+                          
+                          <div className="flex items-center text-sm text-gray-500">
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            Posted by {item.postedBy.name || 'Anonymous'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card Footer */}
+                      <div className="p-4 bg-gray-50 border-t">
+                        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          View Details
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-gray-600 mb-2 line-clamp-2">{item.description}</p>
-                    <div className="flex justify-between text-sm text-gray-500">
-                      <span>📍 {item.location}</span>
-                      <span>👤 {item.postedBy.name || item.postedBy.email}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

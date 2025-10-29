@@ -598,12 +598,12 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Select for location (or autocomplete)
 - Status: COMPLETE ✅
 
-**☐ Step 102**: Create items grid layout for results.
+**✅ Step 102**: Create items grid layout for results.
 - Display items as cards
 - Show image, title, location, date, status badge
 - Add "View Details" button for each item
 - Responsive grid (1 col mobile, 2 col tablet, 3 col desktop)
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 103**: Add loading skeleton in search page.
 - Show skeleton cards while loading
