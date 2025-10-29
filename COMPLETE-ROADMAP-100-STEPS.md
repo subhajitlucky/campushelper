@@ -412,15 +412,15 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 
 ### **4.3: GET Single Item & Dynamic Routes (Steps 72-75)**
 
-**☐ Step 72**: Create `/api/items/[id]/route.ts` file.
-- Status: NOT STARTED ☐
+**✅ Step 72**: Create `/api/items/[id]/route.ts` file.
+- Status: COMPLETE ✅
 
-**☐ Step 73**: Implement GET handler for single item.
+**✅ Step 73**: Implement GET handler for single item.
 - Extract id from params
 - Query Prisma.item.findUnique()
 - Include postedBy, comments, claims
 - Return 404 if not found
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 74**: Implement PUT handler to update item.
 - Verify user is item owner or admin
