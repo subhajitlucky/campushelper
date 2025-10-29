@@ -75,7 +75,7 @@ export const itemsQuerySchema = z.object({
     .optional(),
   
   status: z
-    .enum(['LOST', 'FOUND', 'CLAIMED', 'RESOLVED'])
+    .enum(['LOST', 'FOUND', 'CLAIMED', 'RESOLVED', 'DELETED'])
     .optional(),
   
   location: z
@@ -99,7 +99,7 @@ export type ItemsQueryInput = z.infer<typeof itemsQuerySchema>;
 // Response schemas (for API responses)
 export const itemResponseSchema = baseItemSchema.extend({
   id: z.string(),
-  status: z.enum(['LOST', 'FOUND', 'CLAIMED', 'RESOLVED']),
+  status: z.enum(['LOST', 'FOUND', 'CLAIMED', 'RESOLVED', 'DELETED']),
   postedById: z.string(),
   claimedById: z.string().nullable(),
   createdAt: z.date(),

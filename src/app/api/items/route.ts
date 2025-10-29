@@ -15,10 +15,15 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const skip = (page - 1) * limit;
 
-    // Fetch items with related data
+    // Fetch items with related data (exclude deleted items)
     const items = await prisma.item.findMany({
       skip,
       take: limit,
+      where: {
+        status: {
+          not: 'DELETED' // Exclude deleted items by default
+        }
+      },
       orderBy: {
         createdAt: 'desc'
       },

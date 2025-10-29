@@ -78,6 +78,7 @@ enum ItemStatus {
   FOUND      // Item was found
   CLAIMED    // Someone claimed it
   RESOLVED   // Successfully returned
+  DELETED    // Item no longer active (soft delete)
 }
 
 model Comment {

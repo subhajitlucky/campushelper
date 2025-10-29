@@ -347,10 +347,10 @@ export async function DELETE(
       );
     }
 
-    // Step 75: Check if item is already resolved
-    if (existingItem.status === 'RESOLVED') {
+    // Step 75: Check if item is already deleted
+    if (existingItem.status === 'DELETED') {
       return NextResponse.json(
-        { error: 'Item is already resolved' },
+        { error: 'Item is already deleted' },
         { status: 400 }
       );
     }
@@ -367,12 +367,12 @@ export async function DELETE(
       );
     }
 
-    // Step 75: Soft delete by setting status to RESOLVED
+    // Step 75: Soft delete by setting status to DELETED
     try {
       const deletedItem = await prisma.item.update({
         where: { id },
         data: {
-          status: 'RESOLVED',
+          status: 'DELETED',
           resolvedAt: new Date()
         },
         include: {
