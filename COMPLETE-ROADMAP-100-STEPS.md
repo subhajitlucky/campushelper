@@ -575,12 +575,12 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - useState for itemType, status, page
 - Status: COMPLETE ✅
 
-**☐ Step 98**: Create fetch items function.
+**✅ Step 98**: Create fetch items function.
 - Build query params from filters
 - Fetch from `/api/items?params`
 - Handle errors
 - Set items and loading state
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 99**: Call fetch function on component mount and filter changes.
 - useEffect hook
