@@ -3,7 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from './prisma';
 import bcrypt from 'bcryptjs';
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const handler = NextAuth({
     providers: [
         CredentialsProvider({
             name: 'credentials',
@@ -35,8 +35,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     ],
     callbacks: {
         async jwt({ token, user }) {
-
-
             if (user) {
                 token.id = user.id;
                 token.role = user.role;
@@ -45,14 +43,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return token;
         },
         async session({ session, token }) {
-
             if (session.user) {
                 session.user.id = token.id as string;
                 session.user.role = token.role as string;
             }
 
-
             return session;
         },
     },
 });
+
+export const auth = handler;
+
+export { handler as GET, handler as POST };
+export default handler;
