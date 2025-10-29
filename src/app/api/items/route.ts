@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { createItemSchema } from '@/lib/schemas/item';
+import { createItemSchema, itemsQuerySchema } from '@/lib/schemas/item';
 
 /**
  * GET /api/items
@@ -9,20 +9,60 @@ import { createItemSchema } from '@/lib/schemas/item';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Parse query parameters
+    // Step 76: Parse and validate query parameters using Zod schema
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    
+    let queryParams;
+    try {
+      // Convert searchParams to plain object for Zod validation
+      const paramsObject = Object.fromEntries(searchParams.entries());
+      queryParams = itemsQuerySchema.parse(paramsObject);
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ZodError') {
+        return NextResponse.json(
+          { 
+            error: 'Invalid query parameters',
+            details: error.message 
+          },
+          { status: 400 }
+        );
+      }
+      throw error;
+    }
+
+    const { page, limit, search } = queryParams;
     const skip = (page - 1) * limit;
 
-    // Fetch items with related data (exclude deleted items)
+    // Step 76: Fetch items with search functionality
     const items = await prisma.item.findMany({
       skip,
       take: limit,
       where: {
         status: {
           not: 'DELETED' // Exclude deleted items by default
-        }
+        },
+        ...(search && {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: 'insensitive'
+              }
+            },
+            {
+              description: {
+                contains: search,
+                mode: 'insensitive'
+              }
+            },
+            {
+              location: {
+                contains: search,
+                mode: 'insensitive'
+              }
+            }
+          ]
+        })
       },
       orderBy: {
         createdAt: 'desc'
@@ -71,8 +111,36 @@ export async function GET(request: NextRequest) {
       claims: undefined,
     }));
 
-    // Get total count for pagination
-    const total = await prisma.item.count();
+    // Get total count for pagination (respecting search conditions)
+    const total = await prisma.item.count({
+      where: {
+        status: {
+          not: 'DELETED' // Exclude deleted items by default
+        },
+        ...(search && {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: 'insensitive'
+              }
+            },
+            {
+              description: {
+                contains: search,
+                mode: 'insensitive'
+              }
+            },
+            {
+              location: {
+                contains: search,
+                mode: 'insensitive'
+              }
+            }
+          ]
+        })
+      }
+    });
 
     return NextResponse.json({
       items: transformedItems,
@@ -83,7 +151,8 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(total / limit),
         hasNextPage: page < Math.ceil(total / limit),
         hasPrevPage: page > 1,
-      }
+      },
+      search: search || null // Include search term in response for frontend
     });
 
   } catch (error) {

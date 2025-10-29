@@ -429,19 +429,20 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Return updated item
 - Status: COMPLETE ✅
 
-**☐ Step 75**: Implement DELETE handler (soft delete).
+**✅ Step 75**: Implement DELETE handler (soft delete).
 - Verify user is item owner or admin
 - Set isActive: false instead of hard delete
 - Return success message
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
+
 
 ### **4.4: Search & Filter Parameters (Steps 76-81)**
 
-**☐ Step 76**: Add search query parameter to GET /api/items.
+**✅ Step 76**: Add search query parameter to GET /api/items.
 - Query param: `q` for search text
 - Search in title, description, location
 - Use Prisma `contains` with `insensitive` mode
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 77**: Add itemType filter to GET /api/items.
 - Query param: `type` (LOST or FOUND)
