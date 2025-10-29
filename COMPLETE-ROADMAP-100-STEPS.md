@@ -510,10 +510,10 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 
 ### **5.1: Post Item Page (Steps 87-95)**
 
-**☐ Step 87**: Create `src/components/PostItemForm.tsx` component.
+**✅ Step 87**: Create `src/components/PostItemForm.tsx` component.
 - Use react-hook-form with zodResolver
 - Create Zod schema for item posting
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 88**: Add form fields to PostItemForm.
 - Title input
