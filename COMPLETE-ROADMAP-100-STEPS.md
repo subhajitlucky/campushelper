@@ -616,13 +616,13 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Jump to page input
 - Status: COMPLETE ✅
 
-**☐ Step 105**: Test search flow end-to-end.
+**✅ Step 105**: Test search flow end-to-end.
 - Navigate to /search
 - Verify items load
 - Test search (type text, results filter)
 - Test filters (select LOST/FOUND, etc.)
 - Test pagination
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 ### **5.3: Item Detail Page (Steps 106-113)**
 
