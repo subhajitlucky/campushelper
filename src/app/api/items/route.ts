@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { createItemSchema } from '@/lib/schemas/item';
 
 /**
  * GET /api/items
@@ -91,30 +92,117 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/items
- * Create a new item (for future implementation)
+ * Create a new item (Steps 67-70: Authentication, Validation, Database Creation, Error Handling)
  */
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    // Check authentication
+    // Step 67: Check authentication (session required)
     const session = await auth();
     
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: 'Authentication required. Please log in to create an item.' },
         { status: 401 }
       );
     }
 
-    // TODO: Implement POST logic in Step 67
-    return NextResponse.json(
-      { error: 'POST /api/items not yet implemented' },
-      { status: 501 }
-    );
+    // Step 68: Parse and validate POST request body
+    let requestBody;
+    try {
+      requestBody = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+
+    // Validate with Zod schema (Step 68: Validate with Zod schema)
+    let validatedData;
+    try {
+      validatedData = createItemSchema.parse(requestBody);
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ZodError') {
+        return NextResponse.json(
+          { 
+            error: 'Validation failed',
+            details: error.message 
+          },
+          { status: 400 }
+        );
+      }
+      throw error; // Re-throw unexpected errors
+    }
+
+    // Step 69: Create item in database
+    try {
+      // Set status based on itemType
+      const status = validatedData.itemType === 'LOST' ? 'LOST' : 'FOUND';
+      
+      // Create item in database
+      const newItem = await prisma.item.create({
+        data: {
+          title: validatedData.title,
+          description: validatedData.description,
+          itemType: validatedData.itemType,
+          status: status,
+          location: validatedData.location,
+          images: validatedData.images.filter(image => image && image.trim() !== '') as string[],
+          postedById: session.user.id,
+        },
+        include: {
+          // Include postedBy user details in response
+          postedBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+            }
+          },
+          // Include counts for comments and claims
+          comments: {
+            select: {
+              id: true,
+            }
+          },
+          claims: {
+            select: {
+              id: true,
+            }
+          }
+        }
+      });
+
+      // Transform response to include counts
+      const responseItem = {
+        ...newItem,
+        commentCount: newItem.comments.length,
+        claimCount: newItem.claims.length,
+        // Remove the arrays we only used for counting
+        comments: undefined,
+        claims: undefined,
+      };
+
+      // Step 70: Return success response
+      return NextResponse.json({
+        item: responseItem,
+        message: 'Item created successfully'
+      }, { status: 201 });
+
+    } catch (dbError) {
+      console.error('Database error creating item:', dbError);
+      return NextResponse.json(
+        { error: 'Failed to save item to database' },
+        { status: 500 }
+      );
+    }
 
   } catch (error) {
-    console.error('Error creating item:', error);
+    // Step 70: General error handling
+    console.error('Unexpected error creating item:', error);
     return NextResponse.json(
-      { error: 'Failed to create item' },
+      { error: 'An unexpected error occurred while creating the item' },
       { status: 500 }
     );
   }
