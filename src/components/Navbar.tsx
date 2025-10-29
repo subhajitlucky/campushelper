@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import { Menu, X, User, LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -14,9 +15,15 @@ const navItems = [
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { data: session, status } = useSession();
 
   const toggleMenu = () => setIsMenuOpen((prev) => !prev);
   const closeMenu = () => setIsMenuOpen(false);
+
+  const handleLogout = () => {
+    signOut({ callbackUrl: "/" });
+    closeMenu();
+  };
 
   return (
     <nav className="border-b bg-white">
@@ -35,9 +42,30 @@ export default function Navbar() {
               <Link href={item.href}>{item.label}</Link>
             </Button>
           ))}
-          <Button variant="outline" asChild>
-            <Link href="/auth/login">Login / Sign Up</Link>
-          </Button>
+          
+          {status === 'loading' ? (
+            <Button variant="outline" disabled>
+              <User className="size-4 mr-2" />
+              Loading...
+            </Button>
+          ) : session?.user ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-700">
+                Welcome, {session.user.name || session.user.email}
+              </span>
+              <Button variant="outline" onClick={handleLogout}>
+                <LogOut className="size-4 mr-2" />
+                Logout
+              </Button>
+            </div>
+          ) : (
+            <Button variant="outline" asChild>
+              <Link href="/auth/login">
+                <User className="size-4 mr-2" />
+                Login / Sign Up
+              </Link>
+            </Button>
+          )}
         </div>
 
         <div className="md:hidden">
@@ -64,11 +92,30 @@ export default function Navbar() {
                 </Link>
               </Button>
             ))}
-            <Button variant="outline" className="justify-start" asChild>
-              <Link href="/auth/login" onClick={closeMenu}>
-                Login / Sign Up
-              </Link>
-            </Button>
+            
+            {status === 'loading' ? (
+              <Button variant="outline" className="justify-start" disabled>
+                <User className="size-4 mr-2" />
+                Loading...
+              </Button>
+            ) : session?.user ? (
+              <>
+                <div className="px-2 py-1 text-sm text-gray-600">
+                  Welcome, {session.user.name || session.user.email}
+                </div>
+                <Button variant="outline" className="justify-start" onClick={handleLogout}>
+                  <LogOut className="size-4 mr-2" />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" className="justify-start" asChild>
+                <Link href="/auth/login" onClick={closeMenu}>
+                  <User className="size-4 mr-2" />
+                  Login / Sign Up
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
       )}
