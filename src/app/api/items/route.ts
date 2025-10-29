@@ -30,10 +30,10 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    const { page, limit, search } = queryParams;
+    const { page, limit, search, itemType } = queryParams;
     const skip = (page - 1) * limit;
 
-    // Step 76: Fetch items with search functionality
+    // Step 77: Fetch items with search and itemType filter functionality
     const items = await prisma.item.findMany({
       skip,
       take: limit,
@@ -41,6 +41,9 @@ export async function GET(request: NextRequest) {
         status: {
           not: 'DELETED' // Exclude deleted items by default
         },
+        ...(itemType && {
+          itemType: itemType // Filter by LOST or FOUND
+        }),
         ...(search && {
           OR: [
             {
@@ -111,12 +114,15 @@ export async function GET(request: NextRequest) {
       claims: undefined,
     }));
 
-    // Get total count for pagination (respecting search conditions)
+    // Get total count for pagination (respecting search and itemType conditions)
     const total = await prisma.item.count({
       where: {
         status: {
           not: 'DELETED' // Exclude deleted items by default
         },
+        ...(itemType && {
+          itemType: itemType // Filter by LOST or FOUND
+        }),
         ...(search && {
           OR: [
             {
@@ -152,7 +158,10 @@ export async function GET(request: NextRequest) {
         hasNextPage: page < Math.ceil(total / limit),
         hasPrevPage: page > 1,
       },
-      search: search || null // Include search term in response for frontend
+      filters: {
+        search: search || null, // Include search term in response
+        itemType: itemType || null // Include itemType filter in response
+      }
     });
 
   } catch (error) {

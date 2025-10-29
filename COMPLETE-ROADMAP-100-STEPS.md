@@ -444,10 +444,10 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Use Prisma `contains` with `insensitive` mode
 - Status: COMPLETE ✅
 
-**☐ Step 77**: Add itemType filter to GET /api/items.
+**✅ Step 77**: Add itemType filter to GET /api/items.
 - Query param: `type` (LOST or FOUND)
 - Filter results by itemType
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 78**: Add status filter to GET /api/items.
 - Query param: `status` (LOST, FOUND, CLAIMED, RESOLVED)
