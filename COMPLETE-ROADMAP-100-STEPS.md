@@ -473,10 +473,10 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 
 ### **4.5: Comments API (Steps 82-84)**
 
-**☐ Step 82**: Create `/api/comments/route.ts` file.
+**✅ Step 82**: Create `/api/comments/route.ts` file.
 - POST handler to create comments
 - GET handler to fetch comments for an item
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 83**: Implement comment creation.
 - Validate: message, itemId, userId from session
