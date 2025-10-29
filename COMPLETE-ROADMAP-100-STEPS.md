@@ -454,10 +454,10 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Filter results by status
 - Status: COMPLETE ✅
 
-**☐ Step 79**: Add location filter to GET /api/items.
+**✅ Step 79**: Add location filter to GET /api/items.
 - Query param: `location`
 - Partial match on location
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 80**: Add date range filter to GET /api/items.
 - Query params: `from` and `to` (ISO dates)

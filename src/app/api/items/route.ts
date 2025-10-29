@@ -30,10 +30,10 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    const { page, limit, search, itemType, status } = queryParams;
+    const { page, limit, search, itemType, status, location } = queryParams;
     const skip = (page - 1) * limit;
 
-    // Step 78: Fetch items with search, itemType, and status filter functionality
+    // Step 79: Fetch items with search, itemType, status, and location filter functionality
     const items = await prisma.item.findMany({
       skip,
       take: limit,
@@ -45,6 +45,12 @@ export async function GET(request: NextRequest) {
         ),
         ...(itemType && {
           itemType: itemType // Filter by LOST or FOUND
+        }),
+        ...(location && {
+          location: {
+            contains: location,
+            mode: 'insensitive' // Partial match, case-insensitive
+          }
         }),
         ...(search && {
           OR: [
@@ -116,7 +122,7 @@ export async function GET(request: NextRequest) {
       claims: undefined,
     }));
 
-    // Get total count for pagination (respecting search, itemType, and status conditions)
+    // Get total count for pagination (respecting search, itemType, status, and location conditions)
     const total = await prisma.item.count({
       where: {
         // Status filtering: use specific status if provided, otherwise exclude deleted
@@ -126,6 +132,12 @@ export async function GET(request: NextRequest) {
         ),
         ...(itemType && {
           itemType: itemType // Filter by LOST or FOUND
+        }),
+        ...(location && {
+          location: {
+            contains: location,
+            mode: 'insensitive' // Partial match, case-insensitive
+          }
         }),
         ...(search && {
           OR: [
@@ -165,7 +177,8 @@ export async function GET(request: NextRequest) {
       filters: {
         search: search || null, // Include search term in response
         itemType: itemType || null, // Include itemType filter in response
-        status: status || null // Include status filter in response
+        status: status || null, // Include status filter in response
+        location: location || null // Include location filter in response
       }
     });
 
