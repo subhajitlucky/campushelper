@@ -492,10 +492,10 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 
 ### **4.6: Claims API (Steps 85-86)**
 
-**☐ Step 85**: Create `/api/claims/route.ts` file.
+**✅ Step 85**: Create `/api/claims/route.ts` file.
 - POST handler to create claims
 - GET handler to fetch claims for an item
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 86**: Implement claim approval/rejection `/api/claims/[id]`.
 - PUT handler with status in body (APPROVED/REJECTED)
