@@ -30,10 +30,10 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    const { page, limit, search, itemType, status, location } = queryParams;
+    const { page, limit, search, itemType, status, location, from, to } = queryParams;
     const skip = (page - 1) * limit;
 
-    // Step 79: Fetch items with search, itemType, status, and location filter functionality
+    // Step 80: Fetch items with search, itemType, status, location, and date range filter functionality
     const items = await prisma.item.findMany({
       skip,
       take: limit,
@@ -50,6 +50,12 @@ export async function GET(request: NextRequest) {
           location: {
             contains: location,
             mode: 'insensitive' // Partial match, case-insensitive
+          }
+        }),
+        ...(from && to && {
+          createdAt: {
+            gte: new Date(from), // Greater than or equal to from date
+            lte: new Date(to)    // Less than or equal to to date
           }
         }),
         ...(search && {
@@ -122,7 +128,7 @@ export async function GET(request: NextRequest) {
       claims: undefined,
     }));
 
-    // Get total count for pagination (respecting search, itemType, status, and location conditions)
+    // Get total count for pagination (respecting search, itemType, status, location, and date conditions)
     const total = await prisma.item.count({
       where: {
         // Status filtering: use specific status if provided, otherwise exclude deleted
@@ -137,6 +143,12 @@ export async function GET(request: NextRequest) {
           location: {
             contains: location,
             mode: 'insensitive' // Partial match, case-insensitive
+          }
+        }),
+        ...(from && to && {
+          createdAt: {
+            gte: new Date(from), // Greater than or equal to from date
+            lte: new Date(to)    // Less than or equal to to date
           }
         }),
         ...(search && {
@@ -178,7 +190,9 @@ export async function GET(request: NextRequest) {
         search: search || null, // Include search term in response
         itemType: itemType || null, // Include itemType filter in response
         status: status || null, // Include status filter in response
-        location: location || null // Include location filter in response
+        location: location || null, // Include location filter in response
+        from: from || null, // Include from date filter in response
+        to: to || null // Include to date filter in response
       }
     });
 

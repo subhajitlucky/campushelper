@@ -89,6 +89,16 @@ export const itemsQuerySchema = z.object({
     .optional()
     .transform((val) => val?.trim())
     .refine((val) => !val || val.length >= 2, 'Search term must be at least 2 characters'),
+  
+  from: z
+    .string()
+    .optional()
+    .refine((val) => !val || !isNaN(Date.parse(val)), 'From date must be a valid ISO date'),
+  
+  to: z
+    .string()
+    .optional()
+    .refine((val) => !val || !isNaN(Date.parse(val)), 'To date must be a valid ISO date'),
 });
 
 // Type exports for TypeScript

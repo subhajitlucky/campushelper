@@ -459,10 +459,10 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Partial match on location
 - Status: COMPLETE ✅
 
-**☐ Step 80**: Add date range filter to GET /api/items.
+**✅ Step 80**: Add date range filter to GET /api/items.
 - Query params: `from` and `to` (ISO dates)
 - Filter by createdAt between dates
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 81**: Test all search and filter combinations.
 - Test each filter individually
