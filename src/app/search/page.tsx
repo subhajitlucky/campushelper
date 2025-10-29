@@ -122,6 +122,63 @@ export default function SearchPage() {
               />
             </div>
 
+            {/* Advanced Filter Dropdowns */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Item Type Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Item Type
+                </label>
+                <select
+                  value={filters.itemType}
+                  onChange={(e) => updateFilters({ itemType: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">All Types</option>
+                  <option value="LOST">Lost Items</option>
+                  <option value="FOUND">Found Items</option>
+                </select>
+              </div>
+
+              {/* Status Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status
+                </label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => updateFilters({ status: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="LOST">Lost</option>
+                  <option value="FOUND">Found</option>
+                  <option value="CLAIMED">Claimed</option>
+                  <option value="RESOLVED">Resolved</option>
+                </select>
+              </div>
+
+              {/* Location Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Location
+                </label>
+                <select
+                  value={filters.location}
+                  onChange={(e) => updateFilters({ location: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">All Locations</option>
+                  <option value="Library">Library</option>
+                  <option value="Engineering Building">Engineering Building</option>
+                  <option value="Cafeteria">Cafeteria</option>
+                  <option value="Student Center">Student Center</option>
+                  <option value="Gym">Gym</option>
+                  <option value="Main Hall">Main Hall</option>
+                </select>
+              </div>
+            </div>
+
             {/* Quick Filter Buttons */}
             <div className="flex flex-wrap gap-2">
               <span className="text-sm font-medium text-gray-700 mr-2">Quick Filters:</span>

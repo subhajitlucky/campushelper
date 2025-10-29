@@ -592,11 +592,11 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Filter by item type (LOST/FOUND)
 - Status: COMPLETE ✅
 
-**☐ Step 101**: Add filter dropdowns to search page.
+**✅ Step 101**: Add filter dropdowns to search page.
 - Select for itemType (LOST/FOUND)
 - Select for status (LOST/FOUND/CLAIMED/RESOLVED)
 - Select for location (or autocomplete)
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 102**: Create items grid layout for results.
 - Display items as cards
