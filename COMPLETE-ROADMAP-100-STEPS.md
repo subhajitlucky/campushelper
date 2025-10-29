@@ -422,12 +422,12 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Return 404 if not found
 - Status: COMPLETE ✅
 
-**☐ Step 74**: Implement PUT handler to update item.
+**✅ Step 74**: Implement PUT handler to update item.
 - Verify user is item owner or admin
 - Validate new data with Zod schema
 - Update with Prisma.item.update()
 - Return updated item
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 75**: Implement DELETE handler (soft delete).
 - Verify user is item owner or admin
