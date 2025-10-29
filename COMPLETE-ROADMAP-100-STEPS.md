@@ -379,36 +379,36 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 
 ### **4.2: POST Items Endpoint (Steps 67-71)**
 
-**☐ Step 67**: Implement POST handler in `/api/items/route.ts`.
+**✅ Step 67**: Implement POST handler in `/api/items/route.ts`.
 - Check authentication (session required)
 - Get current user from session
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
-**☐ Step 68**: Parse and validate POST request body.
+**✅ Step 68**: Parse and validate POST request body.
 - Extract JSON from request
 - Validate with Zod schema
 - Return 400 if invalid
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
-**☐ Step 69**: Create item in database.
+**✅ Step 69**: Create item in database.
 - Call Prisma.item.create()
 - Set status based on itemType (LOST/FOUND)
 - Include postedById from current user
 - Include related data in response
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
-**☐ Step 70**: Add error handling to POST handler.
+**✅ Step 70**: Add error handling to POST handler.
 - Try/catch for database errors
 - Return 401 if not authenticated
 - Return 500 for server errors
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
-**☐ Step 71**: Test POST /api/items endpoint.
+**✅ Step 71**: Test POST /api/items endpoint.
 - Create test item via Postman
 - Verify item saved in database
 - Verify response includes item data
 - Test with invalid data (should fail)
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 ### **4.3: GET Single Item & Dynamic Routes (Steps 72-75)**
 
