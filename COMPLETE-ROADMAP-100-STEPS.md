@@ -681,9 +681,9 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 
 ### **5.4: User Dashboard Page (Steps 114-119)**
 
-**☐ Step 114**: Create `/app/dashboard/page.tsx` page.
+**✅ Step 114**: Create `/app/dashboard/page.tsx` page.
 - Protected route (requires authentication)
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 115**: Add user's posted items section to dashboard.
 - Fetch items where postedById = user.id

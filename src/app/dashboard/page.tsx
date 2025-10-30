@@ -1,12 +1,85 @@
+'use client';
+
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Search, Plus, Package, MessageSquare, CheckCircle } from "lucide-react";
 
 /**
- * Dashboard Page
+ * Dashboard Page - Protected Route
  */
 export default function DashboardPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [userStats, setUserStats] = useState({
+    myItems: 0,
+    claimsMade: 0,
+    resolvedItems: 0,
+    thisWeek: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/login?callbackUrl=/dashboard');
+    }
+  }, [status, router]);
+
+  // Fetch user stats when authenticated
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user?.id) {
+      fetchUserStats();
+    }
+  }, [status, session?.user?.id]);
+
+  // For Step 114, let's keep it simple and just show placeholder stats
+  // We'll implement real data fetching in the next steps
+  const fetchUserStats = async () => {
+    try {
+      setLoading(true);
+      
+      // For now, keep placeholder values
+      // Real implementation will come in Step 115
+      setUserStats({
+        myItems: 0,
+        claimsMade: 0,
+        resolvedItems: 0,
+        thisWeek: 0
+      });
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Show loading while checking authentication or fetching data
+  if (status === 'loading' || (status === 'authenticated' && loading)) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600 mx-auto"></div>
+              <p className="text-gray-600">
+                {status === 'loading' ? 'Checking authentication...' : 'Loading dashboard...'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated
+  if (status === 'unauthenticated') {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
@@ -16,7 +89,7 @@ export default function DashboardPage() {
             Dashboard
           </h1>
           <p className="text-gray-600 mt-2">
-            Manage your lost & found items and track your activity
+            Welcome back, {session?.user?.name || 'User'}! Manage your lost & found items and track your activity.
           </p>
         </div>
 
@@ -28,7 +101,7 @@ export default function DashboardPage() {
               <Package className="h-4 w-4 text-gray-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{userStats.myItems}</div>
               <p className="text-xs text-gray-600">Items posted</p>
             </CardContent>
           </Card>
@@ -39,7 +112,7 @@ export default function DashboardPage() {
               <MessageSquare className="h-4 w-4 text-gray-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{userStats.claimsMade}</div>
               <p className="text-xs text-gray-600">Claims submitted</p>
             </CardContent>
           </Card>
@@ -50,7 +123,7 @@ export default function DashboardPage() {
               <CheckCircle className="h-4 w-4 text-gray-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{userStats.resolvedItems}</div>
               <p className="text-xs text-gray-600">Items resolved</p>
             </CardContent>
           </Card>
@@ -61,7 +134,7 @@ export default function DashboardPage() {
               <Search className="h-4 w-4 text-gray-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{userStats.thisWeek}</div>
               <p className="text-xs text-gray-600">New items found</p>
             </CardContent>
           </Card>
@@ -99,7 +172,7 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle>Your Recent Items</CardTitle>
               <CardDescription>
-                Items you&apos;ve posted recently
+                Items you've posted recently
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -117,7 +190,7 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle>Recent Claims</CardTitle>
               <CardDescription>
-                Claims you&apos;ve made on items
+                Claims you've made on items
               </CardDescription>
             </CardHeader>
             <CardContent>
