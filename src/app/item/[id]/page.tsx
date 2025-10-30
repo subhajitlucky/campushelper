@@ -1,10 +1,9 @@
 import { notFound } from 'next/navigation';
 import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
 
 /**
  * Dynamic Route: /item/[id]
- * Individual item detail page with server-side data fetching
+ * Individual item detail page with server-side data fetching via API
  */
 export default async function ItemDetailPage({
   params,
@@ -12,85 +11,45 @@ export default async function ItemDetailPage({
   params: Promise<{ id: string }>;
 }) {
   try {
-    // Step 106: Get authenticated session (optional for viewing)
+    // Step 107: Get authenticated session (optional for viewing)
     const session = await auth();
     const { id } = await params;
 
-    // Step 106: Validate ID parameter
+    // Step 107: Validate ID parameter
     if (!id) {
       notFound();
     }
 
-    // Step 106: Fetch item data from database
-    const item = await prisma.item.findUnique({
-      where: { 
-        id,
-        // Don't show deleted items unless admin/moderator
-        ...(session?.user?.role !== 'ADMIN' && session?.user?.role !== 'MODERATOR'
-          ? { status: { not: 'DELETED' } }
-          : {}
-        )
+    // Step 107: Fetch item data from our API endpoint
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/items/${id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      include: {
-        postedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-            role: true,
-          },
+      // Add authentication if user is logged in
+      ...(session?.user && {
+        headers: {
+          ...(session?.user && { 'Cookie': `authjs.session-token=${session.user.id}` }),
         },
-        claimedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-          },
-        },
-        _count: {
-          select: {
-            comments: true,
-            claims: true,
-          },
-        },
-      },
+      }),
     });
 
-    // Step 106: Handle item not found
-    if (!item) {
+    // Step 107: Handle API errors
+    if (!response.ok) {
+      if (response.status === 404) {
+        notFound();
+      }
+      throw new Error(`Failed to fetch item: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Step 107: Check if item exists in response
+    if (!data.item) {
       notFound();
     }
 
-    // Step 107: Transform data for display
-    const itemData = {
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      itemType: item.itemType,
-      status: item.status,
-      location: item.location,
-      images: item.images,
-      createdAt: item.createdAt.toISOString(),
-      updatedAt: item.updatedAt.toISOString(),
-      resolvedAt: item.resolvedAt?.toISOString() || null,
-      postedBy: {
-        id: item.postedBy.id,
-        name: item.postedBy.name,
-        email: item.postedBy.email,
-        avatar: item.postedBy.avatar,
-        role: item.postedBy.role,
-      },
-      claimedBy: item.claimedBy ? {
-        id: item.claimedBy.id,
-        name: item.claimedBy.name,
-        email: item.claimedBy.email,
-        avatar: item.claimedBy.avatar,
-      } : null,
-      commentCount: item._count.comments,
-      claimCount: item._count.claims,
-    };
+    const itemData = data.item;
 
     // Step 106: Render item detail page
     return (
@@ -146,7 +105,7 @@ export default async function ItemDetailPage({
                 <div className="bg-white rounded-lg shadow p-6">
                   <h2 className="text-lg font-semibold mb-4">Images</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {itemData.images.map((image, index) => (
+                    {itemData.images.map((image: string, index: number) => (
                       <div key={index} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                         <img
                           src={image}
@@ -170,7 +129,7 @@ export default async function ItemDetailPage({
                 <h3 className="text-lg font-semibold mb-4">Posted By</h3>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                    {itemData.postedBy.avatar ? (
+                    {itemData.postedBy?.avatar ? (
                       <img
                         src={itemData.postedBy.avatar}
                         alt={itemData.postedBy.name || 'User'}
@@ -178,16 +137,16 @@ export default async function ItemDetailPage({
                       />
                     ) : (
                       <span className="text-gray-600 font-medium">
-                        {(itemData.postedBy.name || 'U')[0].toUpperCase()}
+                        {(itemData.postedBy?.name || 'U')[0].toUpperCase()}
                       </span>
                     )}
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">
-                      {itemData.postedBy.name || 'Anonymous'}
+                      {itemData.postedBy?.name || 'Anonymous'}
                     </p>
                     <p className="text-sm text-gray-500">
-                      {itemData.postedBy.email}
+                      {itemData.postedBy?.email}
                     </p>
                   </div>
                 </div>
@@ -229,11 +188,11 @@ export default async function ItemDetailPage({
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Comments</span>
-                    <span className="font-medium">{itemData.commentCount}</span>
+                    <span className="font-medium">{itemData.commentCount || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Claims</span>
-                    <span className="font-medium">{itemData.claimCount}</span>
+                    <span className="font-medium">{itemData.claimCount || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Posted</span>

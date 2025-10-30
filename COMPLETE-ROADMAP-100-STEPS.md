@@ -630,10 +630,10 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Dynamic route for individual items
 - Status: COMPLETE ✅
 
-**☐ Step 107**: Fetch item data on page load.
+**✅ Step 107**: Fetch item data on page load.
 - Server-side fetch from `/api/items/[id]`
 - Handle not found (404)
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 108**: Create `src/components/ItemDetail.tsx` component.
 - Display item title, description, location
