@@ -1,10 +1,12 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, User, Mail, Calendar, Package, MessageSquare, CheckCircle } from "lucide-react";
+import EditProfileModal from "./EditProfileModal";
 
 interface UserProfileSectionProps {
   userStats: {
@@ -17,6 +19,7 @@ interface UserProfileSectionProps {
 
 export default function UserProfileSection({ userStats }: UserProfileSectionProps) {
   const { data: session } = useSession();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
   if (!session?.user) {
     return null;
@@ -34,11 +37,29 @@ export default function UserProfileSection({ userStats }: UserProfileSectionProp
     ? Math.round((userStats.resolvedItems / userStats.myItems) * 100) || 0
     : 0;
 
-  // Handle edit profile (placeholder for future implementation)
-  const handleEditProfile = () => {
-    // TODO: Implement edit profile functionality
-    // For now, just show a message - will replace with proper UI later
-    console.log('Edit profile functionality coming soon!');
+  // Handle profile update
+  const handleProfileUpdate = async (updatedData: { name: string }) => {
+    try {
+      // Make API call to update user profile
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      // On success, refresh the page to get updated session data
+      window.location.reload();
+      
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error; // Re-throw to be handled by modal
+    }
   };
 
   return (
@@ -90,7 +111,7 @@ export default function UserProfileSection({ userStats }: UserProfileSectionProp
             </div>
             
             {/* Edit Profile Button */}
-            <Button onClick={handleEditProfile} variant="outline" className="w-full">
+            <Button onClick={() => setIsEditModalOpen(true)} variant="outline" className="w-full">
               <Edit className="w-4 h-4 mr-2" />
               Edit Profile
             </Button>
@@ -168,6 +189,11 @@ export default function UserProfileSection({ userStats }: UserProfileSectionProp
           </div>
         </div>
       </CardContent>
+      <EditProfileModal 
+        isOpen={isEditModalOpen} 
+        onClose={() => setIsEditModalOpen(false)}
+        onProfileUpdate={handleProfileUpdate}
+      />
     </Card>
   );
 }
