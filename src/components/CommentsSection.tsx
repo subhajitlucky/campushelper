@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 
 interface Comment {
@@ -113,7 +114,7 @@ export default function CommentsSection({ itemId }: CommentsSectionProps) {
   };
 
   // Fetch comments
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/comments?itemId=${itemId}`);
@@ -131,7 +132,7 @@ export default function CommentsSection({ itemId }: CommentsSectionProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [itemId]);
 
   // Delete comment
   const deleteComment = async (commentId: string) => {
@@ -159,7 +160,7 @@ export default function CommentsSection({ itemId }: CommentsSectionProps) {
   // Load comments on component mount
   useEffect(() => {
     fetchComments();
-  }, [itemId]);
+  }, [itemId, fetchComments]);
 
   if (loading) {
     return (
@@ -293,10 +294,12 @@ export default function CommentsSection({ itemId }: CommentsSectionProps) {
                 {/* User Avatar */}
                 <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
                   {comment.user.avatar ? (
-                    <img
+                    <Image
                       src={comment.user.avatar}
                       alt={comment.user.name || 'User'}
-                      className="w-8 h-8 rounded-full"
+                      width={32}
+                      height={32}
+                      className="rounded-full object-cover"
                     />
                   ) : (
                     <span className="text-gray-600 text-sm font-medium">

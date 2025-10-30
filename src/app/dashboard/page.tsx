@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -33,15 +33,8 @@ export default function DashboardPage() {
     }
   }, [status, router]);
 
-  // Fetch user stats when authenticated
-  useEffect(() => {
-    if (status === 'authenticated' && session?.user?.id) {
-      fetchUserStats();
-    }
-  }, [status, session?.user?.id]);
-
   // Fetch real user stats from API
-  const fetchUserStats = async () => {
+  const fetchUserStats = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -89,7 +82,14 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user?.id]);
+
+  // Fetch user stats when authenticated
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user?.id) {
+      fetchUserStats();
+    }
+  }, [status, session?.user?.id, fetchUserStats]);
 
   // Show loading while checking authentication or fetching data
   if (status === 'loading' || (status === 'authenticated' && loading)) {

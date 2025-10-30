@@ -51,7 +51,7 @@ export default function Home() {
               </h1>
               
               <p className="text-base text-gray-600 mb-6 max-w-lg mx-auto lg:mx-0">
-                Post what you've lost, browse recent finds, and track resolved cases.
+                Post what you&apos;ve lost, browse recent finds, and track resolved cases.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
