@@ -648,13 +648,13 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Show delete button for comment author
 - Status: COMPLETE ✅
 
-**☐ Step 110**: Add comment form to ItemDetail.
+**✅ Step 110**: Add comment form to ItemDetail.
 - Show if logged in
 - Textarea for comment message
 - Submit button
 - Validation (min 1 char, max 1000)
 - Clear form after submit
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 111**: Add claim button to ItemDetail.
 - Show if logged in and not item owner

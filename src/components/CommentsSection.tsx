@@ -32,6 +32,82 @@ export default function CommentsSection({ itemId }: CommentsSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Step 110: Form state
+  const [formData, setFormData] = useState({
+    message: ''
+  });
+  const [formLoading, setFormLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Step 110: Form validation
+  const validateForm = () => {
+    const message = formData.message.trim();
+    if (message.length < 1) {
+      setFormError('Comment message is required');
+      return false;
+    }
+    if (message.length > 1000) {
+      setFormError('Comment message must be 1000 characters or less');
+      return false;
+    }
+    return true;
+  };
+
+  // Step 110: Submit comment
+  const submitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setFormLoading(true);
+    setFormError(null);
+
+    try {
+      const response = await fetch('/api/comments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: formData.message.trim(),
+          itemId: itemId,
+          images: [] // For now, no images in comments
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to post comment');
+      }
+
+      const data = await response.json();
+      
+      // Step 110: Clear form and add comment to list
+      setFormData({ message: '' });
+      
+      // Add new comment to the top of the list
+      setComments(prev => [data.comment, ...prev]);
+      
+    } catch (err) {
+      console.error('Error posting comment:', err);
+      setFormError('Failed to post comment. Please try again.');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  // Step 110: Handle form input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear form error when user starts typing
+    if (formError) {
+      setFormError(null);
+    }
+  };
 
   // Fetch comments
   const fetchComments = async () => {
@@ -127,6 +203,62 @@ export default function CommentsSection({ itemId }: CommentsSectionProps) {
         Comments ({comments.length})
       </h3>
       
+      {/* Step 110: Comment Form - Only show if logged in */}
+      {session?.user && (
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+          <h4 className="text-sm font-medium text-gray-900 mb-3">Add a Comment</h4>
+          <form onSubmit={submitComment}>
+            <div className="space-y-3">
+              <div>
+                <textarea
+                  name="message"
+                  value={formData.message}
+                  onChange={handleInputChange}
+                  placeholder="Write your comment here..."
+                  rows={3}
+                  maxLength={1000}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  disabled={formLoading}
+                />
+                <div className="flex justify-between items-center mt-1">
+                  {formError && (
+                    <p className="text-sm text-red-600">{formError}</p>
+                  )}
+                  <p className={`text-sm ml-auto ${
+                    formData.message.length > 1000 ? 'text-red-600' : 'text-gray-500'
+                  }`}>
+                    {formData.message.length}/1000
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={formLoading || !formData.message.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                >
+                  {formLoading ? 'Posting...' : 'Post Comment'}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      )}
+      
+      {/* Show login prompt if not logged in */}
+      {!session?.user && (
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg text-center">
+          <p className="text-gray-600 mb-3">Sign in to add a comment</p>
+          <a
+            href="/auth/login"
+            className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Sign In
+          </a>
+        </div>
+      )}
+      
+      {/* Comments List */}
       {comments.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <p>No comments yet. Be the first to comment!</p>
