@@ -41,10 +41,66 @@ interface ItemDetailProps {
 export default function ItemDetail({ item }: ItemDetailProps) {
   const { data: session } = useSession();
   const [isClaimsModalOpen, setIsClaimsModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [itemStatus, setItemStatus] = useState(item.status);
 
-  // Step 111: Check if current user is the item owner
+  // Step 112: Check permissions
   const isOwner = session?.user?.id === item.postedBy.id;
+  const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'MODERATOR';
+  const canEdit = isOwner || isAdmin;
   const isLoggedIn = !!session?.user;
+
+  // Step 112: Handle edit - redirect to post page with pre-filled data
+  const handleEdit = () => {
+    // Store item data in localStorage for the post form to pre-fill
+    const editData = {
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      itemType: item.itemType,
+      location: item.location,
+      images: item.images,
+      isEdit: true
+    };
+    
+    localStorage.setItem('editItem', JSON.stringify(editData));
+    window.location.href = '/post';
+  };
+
+  // Step 112: Handle delete with confirmation
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
+      return;
+    }
+
+    if (!confirm('This will permanently remove the item from public view. Continue?')) {
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      const response = await fetch(`/api/items/${item.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete item');
+      }
+
+      // Update local state to reflect deletion
+      setItemStatus('DELETED');
+      
+      // Show success message
+      alert('Item has been deleted successfully.');
+      
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      alert('Failed to delete item. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -66,13 +122,13 @@ export default function ItemDetail({ item }: ItemDetailProps) {
             
             {/* Status Badge */}
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-              item.status === 'LOST' ? 'bg-red-100 text-red-800' :
-              item.status === 'FOUND' ? 'bg-green-100 text-green-800' :
-              item.status === 'CLAIMED' ? 'bg-blue-100 text-blue-800' :
-              item.status === 'RESOLVED' ? 'bg-purple-100 text-purple-800' :
+              itemStatus === 'LOST' ? 'bg-red-100 text-red-800' :
+              itemStatus === 'FOUND' ? 'bg-green-100 text-green-800' :
+              itemStatus === 'CLAIMED' ? 'bg-blue-100 text-blue-800' :
+              itemStatus === 'RESOLVED' ? 'bg-purple-100 text-purple-800' :
               'bg-gray-100 text-gray-800'
             }`}>
-              {item.status}
+              {itemStatus}
             </span>
             
             {/* Location */}
@@ -81,6 +137,25 @@ export default function ItemDetail({ item }: ItemDetailProps) {
             </span>
           </div>
         </div>
+
+        {/* Show message if item is deleted */}
+        {itemStatus === 'DELETED' && (
+          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <p className="text-red-800 font-medium">
+                This item has been deleted and is no longer available.
+              </p>
+            </div>
+            {canEdit && (
+              <p className="text-red-600 text-sm mt-1">
+                Only admins/moderators can see deleted items.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid gap-8 lg:grid-cols-3">
@@ -115,8 +190,10 @@ export default function ItemDetail({ item }: ItemDetailProps) {
               </div>
             )}
 
-            {/* Step 109: Comments Section */}
-            <CommentsSection itemId={item.id} />
+            {/* Step 109: Comments Section - Hide if item is deleted */}
+            {itemStatus !== 'DELETED' && (
+              <CommentsSection itemId={item.id} />
+            )}
           </div>
 
           {/* Right Column - User Info & Actions */}
@@ -200,23 +277,41 @@ export default function ItemDetail({ item }: ItemDetailProps) {
               </div>
             </div>
 
-            {/* Step 111: Quick Actions */}
+            {/* Step 111 & 112: Actions */}
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold mb-4">Actions</h3>
               <div className="space-y-3">
+                {/* Step 112: Edit/Delete Buttons - Show if can edit */}
+                {canEdit && itemStatus !== 'DELETED' && (
+                  <>
+                    <button
+                      onClick={handleEdit}
+                      className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      Edit Item
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      disabled={isDeleting}
+                      className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isDeleting ? 'Deleting...' : 'Delete Item'}
+                    </button>
+                  </>
+                )}
+                
                 {/* Step 111: Claim Button - Show if logged in and not owner */}
-                {isLoggedIn && !isOwner && (
+                {isLoggedIn && !isOwner && itemStatus !== 'DELETED' && (
                   <button
                     onClick={() => setIsClaimsModalOpen(true)}
-                    disabled={item.status === 'DELETED'}
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    {item.status === 'DELETED' ? 'Item Deleted' : 'Claim Item'}
+                    Claim Item
                   </button>
                 )}
                 
                 {/* Show login prompt if not logged in */}
-                {!isLoggedIn && (
+                {!isLoggedIn && itemStatus !== 'DELETED' && (
                   <a
                     href="/auth/login"
                     className="block w-full px-4 py-2 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 transition-colors"
@@ -226,7 +321,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                 )}
                 
                 {/* Show owner message */}
-                {isLoggedIn && isOwner && (
+                {isLoggedIn && isOwner && itemStatus !== 'DELETED' && !canEdit && (
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-600">
                       This is your item
@@ -234,7 +329,6 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                   </div>
                 )}
                 
-                {/* TODO: Add edit/delete for owners */}
                 {/* TODO: Add share functionality */}
               </div>
             </div>

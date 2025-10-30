@@ -664,11 +664,11 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Submit claim
 - Status: COMPLETE ✅
 
-**☐ Step 112**: Add edit/delete buttons to ItemDetail.
+**✅ Step 112**: Add edit/delete buttons to ItemDetail.
 - Show if logged in as item owner or admin
 - Edit redirects to /post with pre-filled form
 - Delete removes item (soft delete)
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 113**: Test item detail page end-to-end.
 - Navigate to item detail
