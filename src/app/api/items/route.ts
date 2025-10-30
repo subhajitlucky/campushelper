@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    const { page, limit, search, itemType, status, location, from, to } = queryParams;
+    const { page, limit, search, itemType, status, location, from, to, postedById } = queryParams;
     const skip = (page - 1) * limit;
 
     // Step 80: Fetch items with search, itemType, status, location, and date range filter functionality
@@ -57,6 +57,9 @@ export async function GET(request: NextRequest) {
             gte: new Date(from), // Greater than or equal to from date
             lte: new Date(to)    // Less than or equal to to date
           }
+        }),
+        ...(postedById && {
+          postedById: postedById // Filter by user who posted the item
         }),
         ...(search && {
           OR: [
@@ -151,6 +154,9 @@ export async function GET(request: NextRequest) {
             lte: new Date(to)    // Less than or equal to to date
           }
         }),
+        ...(postedById && {
+          postedById: postedById // Filter by user who posted the item
+        }),
         ...(search && {
           OR: [
             {
@@ -192,7 +198,8 @@ export async function GET(request: NextRequest) {
         status: status || null, // Include status filter in response
         location: location || null, // Include location filter in response
         from: from || null, // Include from date filter in response
-        to: to || null // Include to date filter in response
+        to: to || null, // Include to date filter in response
+        postedById: postedById || null // Include postedById filter in response
       }
     });
 

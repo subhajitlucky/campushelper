@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Search, Plus, Package, MessageSquare, CheckCircle } from "lucide-react";
+import UserItemsSection from "@/components/UserItemsSection";
 
 /**
  * Dashboard Page - Protected Route
@@ -36,22 +37,40 @@ export default function DashboardPage() {
     }
   }, [status, session?.user?.id]);
 
-  // For Step 114, let's keep it simple and just show placeholder stats
-  // We'll implement real data fetching in the next steps
+  // Fetch real user stats from API
   const fetchUserStats = async () => {
     try {
       setLoading(true);
       
-      // For now, keep placeholder values
-      // Real implementation will come in Step 115
-      setUserStats({
-        myItems: 0,
-        claimsMade: 0,
-        resolvedItems: 0,
-        thisWeek: 0
-      });
+      // Fetch user's items using postedById filter
+      const itemsResponse = await fetch(`/api/items?postedById=${session?.user?.id}&limit=100`);
+      if (itemsResponse.ok) {
+        const itemsData = await itemsResponse.json();
+        const items = itemsData.items || [];
+        
+        // Calculate stats from real data
+        const myItems = items.length;
+        const resolvedItems = items.filter((item: any) => 
+          item.status === 'RESOLVED' || item.status === 'CLAIMED'
+        ).length;
+        
+        // Calculate this week's items
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        const thisWeek = items.filter((item: any) => 
+          new Date(item.createdAt) > oneWeekAgo
+        ).length;
+        
+        setUserStats({
+          myItems,
+          resolvedItems,
+          thisWeek,
+          claimsMade: 0 // We'll implement claims in Step 116
+        });
+      }
     } catch (error) {
       console.error('Error fetching user stats:', error);
+      // Keep default values on error
     } finally {
       setLoading(false);
     }
@@ -135,7 +154,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{userStats.thisWeek}</div>
-              <p className="text-xs text-gray-600">New items found</p>
+              <p className="text-xs text-gray-600">New items posted</p>
             </CardContent>
           </Card>
         </div>
@@ -166,26 +185,13 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Recent Activity */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Recent Items</CardTitle>
-              <CardDescription>
-                Items you've posted recently
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                <Package className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                <p>No items posted yet</p>
-                <Button asChild className="mt-4">
-                  <Link href="/post">Post Your First Item</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Step 115: User's Posted Items Section */}
+        <div className="mb-8">
+          <UserItemsSection userId={session?.user?.id || ''} />
+        </div>
 
+        {/* Recent Claims - Placeholder for Step 116 */}
+        <div className="grid gap-6 lg:grid-cols-1">
           <Card>
             <CardHeader>
               <CardTitle>Recent Claims</CardTitle>

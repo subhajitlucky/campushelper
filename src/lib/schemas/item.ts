@@ -99,6 +99,11 @@ export const itemsQuerySchema = z.object({
     .string()
     .optional()
     .refine((val) => !val || !isNaN(Date.parse(val)), 'To date must be a valid ISO date'),
+  
+  postedById: z
+    .string()
+    .optional()
+    .refine((val) => !val || val.length > 0, 'Posted by ID must not be empty'),
 });
 
 // Type exports for TypeScript

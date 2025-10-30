@@ -685,12 +685,12 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Protected route (requires authentication)
 - Status: COMPLETE ✅
 
-**☐ Step 115**: Add user's posted items section to dashboard.
+**✅ Step 115**: Add user's posted items section to dashboard.
 - Fetch items where postedById = user.id
 - Display as cards or table
 - Show: title, status, date posted, actions
 - Add edit and delete buttons
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 116**: Add user's claims section to dashboard.
 - Fetch claims where userId = user.id
