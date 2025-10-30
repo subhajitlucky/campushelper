@@ -50,9 +50,11 @@ export default function Navbar() {
             </Button>
           ) : session?.user ? (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-700">
-                Welcome, {session.user.name || session.user.email}
-              </span>
+              <Button variant="ghost" asChild className="p-2">
+                <Link href="/dashboard" title="Go to Dashboard">
+                  <User className="size-5 text-gray-700 hover:text-gray-900" />
+                </Link>
+              </Button>
               <Button variant="outline" onClick={handleLogout}>
                 <LogOut className="size-4 mr-2" />
                 Logout
@@ -100,9 +102,12 @@ export default function Navbar() {
               </Button>
             ) : session?.user ? (
               <>
-                <div className="px-2 py-1 text-sm text-gray-600">
-                  Welcome, {session.user.name || session.user.email}
-                </div>
+                <Button variant="ghost" className="justify-start" asChild>
+                  <Link href="/dashboard" onClick={closeMenu}>
+                    <User className="size-4 mr-2" />
+                    Dashboard
+                  </Link>
+                </Button>
                 <Button variant="outline" className="justify-start" onClick={handleLogout}>
                   <LogOut className="size-4 mr-2" />
                   Logout
