@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import CommentsSection from './CommentsSection';
 import ClaimsModal from './ClaimsModal';
@@ -43,6 +43,10 @@ export default function ItemDetail({ item }: ItemDetailProps) {
   const [isClaimsModalOpen, setIsClaimsModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [itemStatus, setItemStatus] = useState(item.status);
+  
+  // Fix: Add proper error/success state management
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   // Step 112: Check permissions
   const isOwner = session?.user?.id === item.postedBy.id;
@@ -78,6 +82,8 @@ export default function ItemDetail({ item }: ItemDetailProps) {
     }
 
     setIsDeleting(true);
+    setError(null);
+    setSuccess(null);
 
     try {
       const response = await fetch(`/api/items/${item.id}`, {
@@ -90,17 +96,26 @@ export default function ItemDetail({ item }: ItemDetailProps) {
 
       // Update local state to reflect deletion
       setItemStatus('DELETED');
-      
-      // Show success message
-      alert('Item has been deleted successfully.');
+      setSuccess('Item has been deleted successfully.');
       
     } catch (error) {
       console.error('Error deleting item:', error);
-      alert('Failed to delete item. Please try again.');
+      setError('Failed to delete item. Please try again.');
     } finally {
       setIsDeleting(false);
     }
   };
+
+  // Auto-clear messages after 5 seconds
+  useEffect(() => {
+    if (error || success) {
+      const timer = setTimeout(() => {
+        setError(null);
+        setSuccess(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, success]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -280,6 +295,30 @@ export default function ItemDetail({ item }: ItemDetailProps) {
             {/* Step 111 & 112: Actions */}
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold mb-4">Actions</h3>
+              
+              {/* Fix: Add error/success message display */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                </div>
+              )}
+              
+              {success && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <p className="text-sm text-green-700">{success}</p>
+                  </div>
+                </div>
+              )}
+              
               <div className="space-y-3">
                 {/* Step 112: Edit/Delete Buttons - Show if can edit */}
                 {canEdit && itemStatus !== 'DELETED' && (

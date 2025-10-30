@@ -40,6 +40,9 @@ export default function CommentsSection({ itemId }: CommentsSectionProps) {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Fix: Add delete error state
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   // Step 110: Form validation
   const validateForm = () => {
     const message = formData.message.trim();
@@ -149,7 +152,7 @@ export default function CommentsSection({ itemId }: CommentsSectionProps) {
       setComments(prev => prev.filter(comment => comment.id !== commentId));
     } catch (err) {
       console.error('Error deleting comment:', err);
-      alert('Failed to delete comment. Please try again.');
+      setDeleteError('Failed to delete comment. Please try again.');
     }
   };
 
@@ -265,6 +268,25 @@ export default function CommentsSection({ itemId }: CommentsSectionProps) {
         </div>
       ) : (
         <div className="space-y-4">
+          {/* Fix: Add delete error display */}
+          {deleteError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm text-red-700">{deleteError}</p>
+                <button
+                  onClick={() => setDeleteError(null)}
+                  className="ml-auto text-red-600 hover:text-red-800"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
           {comments.map((comment) => (
             <div key={comment.id} className="border-b border-gray-200 pb-4 last:border-b-0">
               <div className="flex items-start gap-3">
