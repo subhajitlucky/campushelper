@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Search, Plus, Package, MessageSquare, CheckCircle } from "lucide-react";
 import UserItemsSection from "@/components/UserItemsSection";
 import UserClaimsSection from "@/components/UserClaimsSection";
+import IncomingClaimsSection from "@/components/IncomingClaimsSection";
 
 /**
  * Dashboard Page - Protected Route
@@ -206,6 +207,11 @@ export default function DashboardPage() {
         {/* Step 116: User's Claims Section */}
         <div className="mb-8">
           <UserClaimsSection userId={session?.user?.id || ''} />
+        </div>
+
+        {/* Step 117: Incoming Claims Section */}
+        <div className="mb-8">
+          <IncomingClaimsSection userId={session?.user?.id || ''} />
         </div>
       </div>
     </div>

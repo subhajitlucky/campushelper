@@ -699,12 +699,12 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Add view item and cancel claim buttons
 - Status: COMPLETE ✅
 
-**☐ Step 117**: Add pending claims on user's items to dashboard.
+**✅ Step 117**: Add pending claims on user's items to dashboard.
 - Show claims made on user's posted items
 - Display claimant info, claim type, message
 - Add approve and reject buttons
 - Update item status on approval
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 118**: Add user profile section to dashboard.
 - Display user name, email, avatar
