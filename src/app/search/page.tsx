@@ -42,30 +42,25 @@ export default function SearchPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const limit = 20; // Items per page
 
   // Fetch items from API
-  const fetchItems = useCallback(async (searchParams?: Partial<SearchFilters>, page: number = 1) => {
-    setLoading(true);
-    
+  const fetchItems = useCallback(async (page?: number) => {
     try {
-      // Build query parameters
-      const params = new URLSearchParams();
-      params.set('page', page.toString());
-      params.set('limit', '20'); // 20 items per page
+      setLoading(true);
       
-      // Add filters if provided, otherwise use current filters
-      const activeFilters = searchParams || filters;
-      
-      if (activeFilters.search) params.set('q', activeFilters.search);
-      if (activeFilters.itemType) params.set('type', activeFilters.itemType);
-      if (activeFilters.status) params.set('status', activeFilters.status);
-      if (activeFilters.location) params.set('location', activeFilters.location);
-      if (activeFilters.from) params.set('from', activeFilters.from);
-      if (activeFilters.to) params.set('to', activeFilters.to);
+      const queryParams = new URLSearchParams({
+        page: (page || currentPage).toString(),
+        limit: limit.toString(),
+        ...(filters.search && { search: filters.search }),
+        ...(filters.itemType && { itemType: filters.itemType }),
+        ...(filters.status && { status: filters.status }),
+        ...(filters.location && { location: filters.location }),
+        ...(filters.from && { from: filters.from }),
+        ...(filters.to && { to: filters.to }),
+      });
 
-      // Fetch from API
-      const response = await fetch(`/api/items?${params.toString()}`);
-      
+      const response = await fetch(`/api/items?${queryParams.toString()}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch items: ${response.status}`);
       }
@@ -85,11 +80,11 @@ export default function SearchPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters]); // Only depend on filters, page is passed as parameter
+  }, [filters, currentPage, limit]); // Include all dependencies
 
   // Fetch items on component mount and when filters change
   useEffect(() => {
-    fetchItems(undefined, currentPage); // Pass current page
+    fetchItems(currentPage); // Pass current page
   }, [fetchItems, currentPage]); // Re-fetch when fetchItems changes or page changes
 
   // Function to update filters and reset page

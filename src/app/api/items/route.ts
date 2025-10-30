@@ -9,204 +9,182 @@ import { createItemSchema, itemsQuerySchema } from '@/lib/schemas/item';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Step 76: Parse and validate query parameters using Zod schema
     const { searchParams } = new URL(request.url);
-    
     let queryParams;
+    
     try {
-      // Convert searchParams to plain object for Zod validation
-      const paramsObject = Object.fromEntries(searchParams.entries());
-      queryParams = itemsQuerySchema.parse(paramsObject);
+      queryParams = itemsQuerySchema.parse(searchParams);
     } catch (error) {
-      if (error instanceof Error && error.name === 'ZodError') {
-        return NextResponse.json(
-          { 
-            error: 'Invalid query parameters',
-            details: error.message 
-          },
-          { status: 400 }
-        );
-      }
-      throw error;
+      console.error('Query validation error:', error);
+      return NextResponse.json(
+        { 
+          error: 'Invalid query parameters',
+          details: error instanceof Error ? error.message : 'Unknown validation error'
+        },
+        { status: 400 }
+      );
     }
 
     const { page, limit, search, itemType, status, location, from, to, postedById } = queryParams;
     const skip = (page - 1) * limit;
 
-    // Step 80: Fetch items with search, itemType, status, location, and date range filter functionality
-    const items = await prisma.item.findMany({
-      skip,
-      take: limit,
-      where: {
-        // Status filtering: use specific status if provided, otherwise exclude deleted
-        ...(status ? 
-          { status: status } : 
-          { status: { not: 'DELETED' } }
-        ),
-        ...(itemType && {
-          itemType: itemType // Filter by LOST or FOUND
-        }),
-        ...(location && {
-          location: {
-            contains: location,
-            mode: 'insensitive' // Partial match, case-insensitive
-          }
-        }),
-        ...(from && to && {
-          createdAt: {
-            gte: new Date(from), // Greater than or equal to from date
-            lte: new Date(to)    // Less than or equal to to date
-          }
-        }),
-        ...(postedById && {
-          postedById: postedById // Filter by user who posted the item
-        }),
-        ...(search && {
-          OR: [
-            {
-              title: {
-                contains: search,
-                mode: 'insensitive'
-              }
-            },
-            {
-              description: {
-                contains: search,
-                mode: 'insensitive'
-              }
-            },
-            {
-              location: {
-                contains: search,
-                mode: 'insensitive'
-              }
+    try {
+      const items = await prisma.item.findMany({
+        skip,
+        take: limit,
+        where: {
+          // Exclude deleted items by default unless specifically requested
+          ...(status ? { status } : { status: { not: 'DELETED' } }),
+          
+          ...(itemType && { itemType }),
+          ...(location && {
+            location: {
+              contains: location,
+              mode: 'insensitive'
             }
-          ]
-        })
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      include: {
-        // Include postedBy user details (excluding sensitive data)
-        postedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-          }
+          }),
+          ...(from && {
+            createdAt: {
+              gte: new Date(from)
+            }
+          }),
+          ...(to && {
+            createdAt: {
+              lte: new Date(to)
+            }
+          }),
+          ...(postedById && {
+            postedById: postedById
+          }),
+          ...(search && {
+            OR: [
+              {
+                title: {
+                  contains: search,
+                  mode: 'insensitive'
+                }
+              },
+              {
+                description: {
+                  contains: search,
+                  mode: 'insensitive'
+                }
+              },
+              {
+                location: {
+                  contains: search,
+                  mode: 'insensitive'
+                }
+              }
+            ]
+          })
         },
-        // Include claimedBy user details if item is claimed
-        claimedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-          }
+        orderBy: {
+          createdAt: 'desc'
         },
-        // Get count of comments for each item
-        comments: {
-          select: {
-            id: true,
-          }
+        include: {
+          // Include postedBy user details (excluding sensitive data)
+          postedBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            }
+          },
+          // Include claimedBy user details if item is claimed
+          claimedBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            }
+          },
         },
-        // Get count of claims for each item
-        claims: {
-          select: {
-            id: true,
-          }
+      });
+
+      const total = await prisma.item.count({
+        where: {
+          ...(status ? { status } : { status: { not: 'DELETED' } }),
+          ...(itemType && { itemType }),
+          ...(location && {
+            location: {
+              contains: location,
+              mode: 'insensitive'
+            }
+          }),
+          ...(from && {
+            createdAt: {
+              gte: new Date(from)
+            }
+          }),
+          ...(to && {
+            createdAt: {
+              lte: new Date(to)
+            }
+          }),
+          ...(postedById && {
+            postedById: postedById
+          }),
+          ...(search && {
+            OR: [
+              {
+                title: {
+                  contains: search,
+                  mode: 'insensitive'
+                }
+              },
+              {
+                description: {
+                  contains: search,
+                  mode: 'insensitive'
+                }
+              },
+              {
+                location: {
+                  contains: search,
+                  mode: 'insensitive'
+                }
+              }
+            ]
+          })
         }
-      }
-    });
+      });
 
-    // Transform data to include counts
-    const transformedItems = items.map(item => ({
-      ...item,
-      commentCount: item.comments.length,
-      claimCount: item.claims.length,
-      // Remove the arrays we only used for counting
-      comments: undefined,
-      claims: undefined,
-    }));
-
-    // Get total count for pagination (respecting search, itemType, status, location, and date conditions)
-    const total = await prisma.item.count({
-      where: {
-        // Status filtering: use specific status if provided, otherwise exclude deleted
-        ...(status ? 
-          { status: status } : 
-          { status: { not: 'DELETED' } }
-        ),
-        ...(itemType && {
-          itemType: itemType // Filter by LOST or FOUND
-        }),
-        ...(location && {
-          location: {
-            contains: location,
-            mode: 'insensitive' // Partial match, case-insensitive
-          }
-        }),
-        ...(from && to && {
-          createdAt: {
-            gte: new Date(from), // Greater than or equal to from date
-            lte: new Date(to)    // Less than or equal to to date
-          }
-        }),
-        ...(postedById && {
-          postedById: postedById // Filter by user who posted the item
-        }),
-        ...(search && {
-          OR: [
-            {
-              title: {
-                contains: search,
-                mode: 'insensitive'
-              }
-            },
-            {
-              description: {
-                contains: search,
-                mode: 'insensitive'
-              }
-            },
-            {
-              location: {
-                contains: search,
-                mode: 'insensitive'
-              }
-            }
-          ]
-        })
-      }
-    });
-
-    return NextResponse.json({
-      items: transformedItems,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-        hasNextPage: page < Math.ceil(total / limit),
-        hasPrevPage: page > 1,
-      },
-      filters: {
-        search: search || null, // Include search term in response
-        itemType: itemType || null, // Include itemType filter in response
-        status: status || null, // Include status filter in response
-        location: location || null, // Include location filter in response
-        from: from || null, // Include from date filter in response
-        to: to || null, // Include to date filter in response
-        postedById: postedById || null // Include postedById filter in response
-      }
-    });
-
+      return NextResponse.json({
+        items,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+        filters: {
+          search,
+          itemType,
+          status,
+          location,
+          from,
+          to,
+          postedById,
+        },
+      });
+    } catch (dbError) {
+      console.error('Database query error:', dbError);
+      return NextResponse.json(
+        { 
+          error: 'Database error',
+          message: dbError instanceof Error ? dbError.message : 'Unknown database error'
+        },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error('Error fetching items:', error);
+    console.error('Unexpected error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch items' },
+      { 
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
