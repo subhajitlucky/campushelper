@@ -670,14 +670,14 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Delete removes item (soft delete)
 - Status: COMPLETE ✅
 
-**☐ Step 113**: Test item detail page end-to-end.
+**✅ Step 113**: Test item detail page end-to-end.
 - Navigate to item detail
 - View item info and images
 - Add comment and verify appears
 - Make claim and verify in database
 - Edit item (if owner)
 - Delete item (if owner)
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 ### **5.4: User Dashboard Page (Steps 114-119)**
 
