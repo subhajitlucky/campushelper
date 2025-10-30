@@ -635,12 +635,12 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Handle not found (404)
 - Status: COMPLETE ✅
 
-**☐ Step 108**: Create `src/components/ItemDetail.tsx` component.
+**✅ Step 108**: Create `src/components/ItemDetail.tsx` component.
 - Display item title, description, location
 - Show item type and status badges
 - Show images (carousel)
 - Show posted by info (name, avatar, date)
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 109**: Add comments section to ItemDetail.
 - Fetch and display existing comments
