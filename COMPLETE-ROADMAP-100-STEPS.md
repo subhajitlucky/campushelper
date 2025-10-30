@@ -706,11 +706,11 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Update item status on approval
 - Status: COMPLETE ✅
 
-**☐ Step 118**: Add user profile section to dashboard.
+**✅ Step 118**: Add user profile section to dashboard.
 - Display user name, email, avatar
 - Add edit profile button
 - Show statistics (items posted, claims made, resolved)
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 119**: Test dashboard functionality end-to-end.
 - Login as test user

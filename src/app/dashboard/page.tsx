@@ -10,6 +10,7 @@ import { Search, Plus, Package, MessageSquare, CheckCircle } from "lucide-react"
 import UserItemsSection from "@/components/UserItemsSection";
 import UserClaimsSection from "@/components/UserClaimsSection";
 import IncomingClaimsSection from "@/components/IncomingClaimsSection";
+import UserProfileSection from "@/components/UserProfileSection";
 
 /**
  * Dashboard Page - Protected Route
@@ -124,6 +125,11 @@ export default function DashboardPage() {
           <p className="text-gray-600 mt-2">
             Welcome back, {session?.user?.name || 'User'}! Manage your lost & found items and track your activity.
           </p>
+        </div>
+
+        {/* Step 118: User Profile Section */}
+        <div className="mb-8">
+          <UserProfileSection userStats={userStats} />
         </div>
 
         {/* Quick Stats */}
