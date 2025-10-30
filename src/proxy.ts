@@ -59,13 +59,16 @@ export default withAuth(
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api/_next (API routes and Next.js internals)
+     * Match all request paths EXCEPT:
+     * - api/auth/* (authentication endpoints - must be public)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public files (public folder)
+     * 
+     * SECURITY IMPROVEMENT: Now protects ALL other API routes with authentication
+     * instead of leaving them completely open to attacks.
      */
-    '/((?!api/_next|_next/static|_next/image|favicon.ico|public).*)',
+    '/((?!api/auth|_next/static|_next/image|favicon.ico|public).*)',
   ],
 };
