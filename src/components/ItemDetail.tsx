@@ -3,7 +3,12 @@
  * Displays comprehensive item information in a professional layout
  */
 
+'use client';
+
+import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import CommentsSection from './CommentsSection';
+import ClaimsModal from './ClaimsModal';
 
 interface ItemUser {
   id: string;
@@ -34,6 +39,13 @@ interface ItemDetailProps {
 }
 
 export default function ItemDetail({ item }: ItemDetailProps) {
+  const { data: session } = useSession();
+  const [isClaimsModalOpen, setIsClaimsModalOpen] = useState(false);
+
+  // Step 111: Check if current user is the item owner
+  const isOwner = session?.user?.id === item.postedBy.id;
+  const isLoggedIn = !!session?.user;
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
@@ -188,20 +200,55 @@ export default function ItemDetail({ item }: ItemDetailProps) {
               </div>
             </div>
 
-            {/* Quick Actions - Placeholder for future implementation */}
+            {/* Step 111: Quick Actions */}
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold mb-4">Actions</h3>
               <div className="space-y-3">
-                {/* TODO: Add claim button for non-owners */}
-                {/* TODO: Add comment form */}
+                {/* Step 111: Claim Button - Show if logged in and not owner */}
+                {isLoggedIn && !isOwner && (
+                  <button
+                    onClick={() => setIsClaimsModalOpen(true)}
+                    disabled={item.status === 'DELETED'}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {item.status === 'DELETED' ? 'Item Deleted' : 'Claim Item'}
+                  </button>
+                )}
+                
+                {/* Show login prompt if not logged in */}
+                {!isLoggedIn && (
+                  <a
+                    href="/auth/login"
+                    className="block w-full px-4 py-2 bg-blue-600 text-white text-center rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Sign In to Claim
+                  </a>
+                )}
+                
+                {/* Show owner message */}
+                {isLoggedIn && isOwner && (
+                  <div className="text-center p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-600">
+                      This is your item
+                    </p>
+                  </div>
+                )}
+                
+                {/* TODO: Add edit/delete for owners */}
                 {/* TODO: Add share functionality */}
-                <p className="text-sm text-gray-500">
-                  Additional actions will be available in future updates.
-                </p>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Step 111: Claims Modal */}
+        <ClaimsModal
+          isOpen={isClaimsModalOpen}
+          onClose={() => setIsClaimsModalOpen(false)}
+          itemId={item.id}
+          itemTitle={item.title}
+          isOwner={isOwner}
+        />
       </div>
     </div>
   );

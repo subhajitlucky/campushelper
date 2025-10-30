@@ -656,13 +656,13 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Clear form after submit
 - Status: COMPLETE ✅
 
-**☐ Step 111**: Add claim button to ItemDetail.
+**✅ Step 111**: Add claim button to ItemDetail.
 - Show if logged in and not item owner
 - Click opens claim modal/form
 - Select claim type: FOUND_IT or OWN_IT
 - Add optional message field
 - Submit claim
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 112**: Add edit/delete buttons to ItemDetail.
 - Show if logged in as item owner or admin
