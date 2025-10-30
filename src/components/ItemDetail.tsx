@@ -3,6 +3,8 @@
  * Displays comprehensive item information in a professional layout
  */
 
+import CommentsSection from './CommentsSection';
+
 interface ItemUser {
   id: string;
   name: string | null;
@@ -100,6 +102,9 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                 </div>
               </div>
             )}
+
+            {/* Step 109: Comments Section */}
+            <CommentsSection itemId={item.id} />
           </div>
 
           {/* Right Column - User Info & Actions */}

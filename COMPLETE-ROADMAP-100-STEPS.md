@@ -642,11 +642,11 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Show posted by info (name, avatar, date)
 - Status: COMPLETE ✅
 
-**☐ Step 109**: Add comments section to ItemDetail.
+**✅ Step 109**: Add comments section to ItemDetail.
 - Fetch and display existing comments
 - Show comment author, date, message
 - Show delete button for comment author
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 110**: Add comment form to ItemDetail.
 - Show if logged in
