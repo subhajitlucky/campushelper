@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Search, Plus, Package, MessageSquare, CheckCircle } from "lucide-react";
 import UserItemsSection from "@/components/UserItemsSection";
+import UserClaimsSection from "@/components/UserClaimsSection";
 
 /**
  * Dashboard Page - Protected Route
@@ -48,7 +49,7 @@ export default function DashboardPage() {
         const itemsData = await itemsResponse.json();
         const items = itemsData.items || [];
         
-        // Calculate stats from real data
+        // Calculate item stats from real data
         const myItems = items.length;
         const resolvedItems = items.filter((item: any) => 
           item.status === 'RESOLVED' || item.status === 'CLAIMED'
@@ -61,11 +62,23 @@ export default function DashboardPage() {
           new Date(item.createdAt) > oneWeekAgo
         ).length;
         
+        // Fetch user's claims
+        let claimsMade = 0;
+        try {
+          const claimsResponse = await fetch(`/api/claims?userId=${session?.user?.id}`);
+          if (claimsResponse.ok) {
+            const claimsData = await claimsResponse.json();
+            claimsMade = claimsData.claims?.length || 0;
+          }
+        } catch (claimsError) {
+          console.error('Error fetching claims:', claimsError);
+        }
+        
         setUserStats({
           myItems,
           resolvedItems,
           thisWeek,
-          claimsMade: 0 // We'll implement claims in Step 116
+          claimsMade
         });
       }
     } catch (error) {
@@ -190,25 +203,9 @@ export default function DashboardPage() {
           <UserItemsSection userId={session?.user?.id || ''} />
         </div>
 
-        {/* Recent Claims - Placeholder for Step 116 */}
-        <div className="grid gap-6 lg:grid-cols-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Claims</CardTitle>
-              <CardDescription>
-                Claims you've made on items
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                <MessageSquare className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                <p>No claims made yet</p>
-                <Button variant="outline" asChild className="mt-4">
-                  <Link href="/search">Browse Items to Claim</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Step 116: User's Claims Section */}
+        <div className="mb-8">
+          <UserClaimsSection userId={session?.user?.id || ''} />
         </div>
       </div>
     </div>

@@ -28,24 +28,31 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    const { itemId } = queryParams;
+    const { itemId, userId } = queryParams;
 
-    // Check if item exists
-    const itemExists = await prisma.item.findUnique({
-      where: { id: itemId },
-      select: { id: true, title: true, postedById: true }
-    });
+    // If querying by itemId, check if item exists
+    if (itemId) {
+      const itemExists = await prisma.item.findUnique({
+        where: { id: itemId },
+        select: { id: true, title: true, postedById: true }
+      });
 
-    if (!itemExists) {
-      return NextResponse.json(
-        { error: 'Item not found' },
-        { status: 404 }
-      );
+      if (!itemExists) {
+        return NextResponse.json(
+          { error: 'Item not found' },
+          { status: 404 }
+        );
+      }
     }
 
-    // Fetch claims for the item with user data
+    // Build where clause based on query parameters
+    const whereClause = itemId 
+      ? { itemId } 
+      : { userId };
+
+    // Fetch claims with user data and item data
     const claims = await prisma.claim.findMany({
-      where: { itemId },
+      where: whereClause,
       include: {
         user: {
           select: {

@@ -12,7 +12,11 @@ export const createClaimSchema = baseClaimSchema;
 
 // Schema for claims query parameters
 export const claimsQuerySchema = z.object({
-  itemId: z.string().min(1, 'Item ID is required'),
+  itemId: z.string().min(1, 'Item ID is required').optional(),
+  userId: z.string().min(1, 'User ID is required').optional(),
+}).refine((data) => data.itemId || data.userId, {
+  message: 'Either itemId or userId must be provided',
+  path: ['itemId'],
 });
 
 // Schema for claim response

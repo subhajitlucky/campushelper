@@ -692,12 +692,12 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Add edit and delete buttons
 - Status: COMPLETE ✅
 
-**☐ Step 116**: Add user's claims section to dashboard.
+**✅ Step 116**: Add user's claims section to dashboard.
 - Fetch claims where userId = user.id
 - Display as cards or table
 - Show: item title, claim type, status, date
 - Add view item and cancel claim buttons
-- Status: NOT STARTED ☐
+- Status: COMPLETE ✅
 
 **☐ Step 117**: Add pending claims on user's items to dashboard.
 - Show claims made on user's posted items
