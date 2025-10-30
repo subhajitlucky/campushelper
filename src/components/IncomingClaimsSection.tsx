@@ -59,7 +59,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
       }
       
       // Extract item IDs
-      const itemIds = userItems.map((item: any) => item.id);
+      const itemIds = userItems.map((item: { id: string }) => item.id);
       
       // Fetch claims for all user's items
       const claimsPromises = itemIds.map(async (itemId: string) => {
@@ -287,7 +287,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
                         </div>
                         {claim.message && (
                           <p className="text-gray-700 text-sm mb-2 p-2 bg-white rounded border">
-                            "{claim.message}"
+                            &ldquo;{claim.message}&rdquo;
                           </p>
                         )}
                       </div>

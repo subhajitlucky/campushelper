@@ -53,14 +53,14 @@ export default function DashboardPage() {
         
         // Calculate item stats from real data
         const myItems = items.length;
-        const resolvedItems = items.filter((item: any) => 
+        const resolvedItems = items.filter((item: { status: string }) => 
           item.status === 'RESOLVED' || item.status === 'CLAIMED'
         ).length;
         
         // Calculate this week's items
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        const thisWeek = items.filter((item: any) => 
+        const thisWeek = items.filter((item: { createdAt: string }) => 
           new Date(item.createdAt) > oneWeekAgo
         ).length;
         
