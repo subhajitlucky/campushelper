@@ -13,6 +13,7 @@ import FormError from '@/components/forms/FormError';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import { useApiRequest } from '@/hooks/useApiRequest';
 import { createItemSchema } from '@/lib/schemas/item';
+import { ButtonSpinner } from '@/components/ui/loading-spinner';
 
 // Form schema for validation (without images for better UX)
 const postItemSchema = createItemSchema.omit({ images: true });
@@ -205,7 +206,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
         >
           {isLoading ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              <ButtonSpinner className="mr-2" />
               Posting Item...
             </>
           ) : (

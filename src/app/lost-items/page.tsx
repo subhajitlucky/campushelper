@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ListSkeleton } from "@/components/ui/skeleton";
 
 interface LostItem {
   id: string;

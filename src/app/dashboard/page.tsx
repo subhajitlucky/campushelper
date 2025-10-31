@@ -11,6 +11,7 @@ import UserItemsSection from "@/components/UserItemsSection";
 import UserClaimsSection from "@/components/UserClaimsSection";
 import IncomingClaimsSection from "@/components/IncomingClaimsSection";
 import UserProfileSection from "@/components/UserProfileSection";
+import { PageLoader } from "@/components/ui/loading-spinner";
 
 /**
  * Dashboard Page - Protected Route
@@ -93,17 +94,11 @@ export default function DashboardPage() {
 
   // Show loading while checking authentication or fetching data
   if (status === 'loading' || (status === 'authenticated' && loading)) {
+    const loadingText = status === 'loading' ? 'Checking authentication...' : 'Loading dashboard...';
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center py-20">
-            <div className="text-center">
-              <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600 mx-auto"></div>
-              <p className="text-gray-600">
-                {status === 'loading' ? 'Checking authentication...' : 'Loading dashboard...'}
-              </p>
-            </div>
-          </div>
+          <PageLoader text={loadingText} />
         </div>
       </div>
     );
