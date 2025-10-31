@@ -87,6 +87,248 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Add moderation state and handlers
+  const [moderatingItem, setModeratingItem] = useState<string | null>(null);
+
+  // Handle item moderation actions
+  const handleItemModeration = async (itemId: string, action: 'force_delete' | 'flag_spam' | 'unflag_spam') => {
+    let confirmMessage = '';
+    
+    switch (action) {
+      case 'force_delete':
+        confirmMessage = 'Are you sure you want to force delete this item? This will permanently remove it and all its comments.';
+        break;
+      case 'flag_spam':
+        confirmMessage = 'Are you sure you want to flag this item as spam? It will be hidden from public view.';
+        break;
+      case 'unflag_spam':
+        confirmMessage = 'Are you sure you want to unflag this item? It will be restored to public view.';
+        break;
+    }
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    setModeratingItem(itemId);
+
+    try {
+      const response = await fetch(`/api/admin/items/${itemId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Moderation action failed');
+      }
+
+      const data = await response.json();
+      
+      // Show success message
+      alert(data.message);
+      
+      // Refresh the items list
+      await fetchAdminData();
+      
+    } catch (err) {
+      console.error('Error performing moderation action:', err);
+      alert('Failed to perform moderation action. Please try again.');
+    } finally {
+      setModeratingItem(null);
+    }
+  };
+
+  // Add user moderation state and handlers
+  const [moderatingUser, setModeratingUser] = useState<string | null>(null);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+
+  // Handle user moderation actions
+  const handleUserModeration = async (userId: string, action: 'suspend' | 'activate') => {
+    const actionText = action === 'suspend' ? 'suspend' : 'activate';
+    const confirmMessage = `Are you sure you want to ${actionText} this user? They will ${action === 'suspend' ? 'lose access to their account' : 'regain access to their account'}.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    setModeratingUser(userId);
+
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'User moderation action failed');
+      }
+
+      const data = await response.json();
+      
+      // Show success message
+      alert(data.message);
+      
+      // Refresh the users list
+      await fetchAdminData();
+      
+    } catch (err) {
+      console.error('Error performing user moderation action:', err);
+      alert('Failed to perform moderation action. Please try again.');
+    } finally {
+      setModeratingUser(null);
+    }
+  };
+
+  // Handle role change
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    if (!confirm(`Are you sure you want to change this user's role to ${newRole}?`)) {
+      return;
+    }
+
+    setModeratingUser(userId);
+
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'change_role', newRole }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Role change failed');
+      }
+
+      const data = await response.json();
+      
+      // Show success message
+      alert(data.message);
+      
+      // Refresh the users list
+      await fetchAdminData();
+      
+    } catch (err) {
+      console.error('Error changing user role:', err);
+      alert('Failed to change role. Please try again.');
+    } finally {
+      setModeratingUser(null);
+      setShowRoleModal(false);
+      setSelectedUser(null);
+    }
+  };
+
+  // Get button configuration based on item status
+  const getModerationButtons = (item: AdminItem) => {
+    const isDeleted = item.status === 'DELETED';
+    const isSpam = item.status === 'RESOLVED' && item.title.includes('[SPAM]'); // Simple spam detection
+    const isModerating = moderatingItem === item.id;
+
+    return (
+      <div className="flex gap-2">
+        <Button 
+          size="sm" 
+          variant="outline"
+          onClick={() => window.open(`/item/${item.id}`, '_blank')}
+          disabled={isModerating}
+        >
+          <Eye className="w-4 h-4 mr-2" />
+          View
+        </Button>
+        
+        <Button 
+          size="sm" 
+          variant="outline"
+          onClick={() => handleItemModeration(item.id, isSpam ? 'unflag_spam' : 'flag_spam')}
+          disabled={isModerating || isDeleted}
+          className={isSpam ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' : ''}
+        >
+          <Flag className="w-4 h-4 mr-2" />
+          {isModerating ? 'Processing...' : (isSpam ? 'Unflag' : 'Flag Spam')}
+        </Button>
+        
+        {item.status !== 'DELETED' && (
+          <Button 
+            size="sm" 
+            variant="destructive"
+            onClick={() => handleItemModeration(item.id, 'force_delete')}
+            disabled={isModerating}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            {isModerating ? 'Processing...' : 'Force Delete'}
+          </Button>
+        )}
+      </div>
+    );
+  };
+
+  // Get user action buttons
+  const getUserActionButtons = (user: AdminUser) => {
+    const isModerating = moderatingUser === user.id;
+    const isOwnAccount = session?.user?.id === user.id; // Prevent self-modification
+
+    return (
+      <div className="flex gap-2">
+        <Button 
+          size="sm" 
+          variant="outline"
+          onClick={() => window.open(`/dashboard?user=${user.id}`, '_blank')}
+          disabled={isModerating}
+        >
+          <Eye className="w-4 h-4 mr-2" />
+          View Profile
+        </Button>
+        
+        <Button 
+          size="sm" 
+          variant="outline"
+          onClick={() => {/* TODO: Implement user items view */}}
+          disabled={isModerating}
+        >
+          <Package className="w-4 h-4 mr-2" />
+          View Items
+        </Button>
+        
+        {!isOwnAccount && user.role === 'USER' && (
+          <Button 
+            size="sm" 
+            variant="destructive"
+            onClick={() => handleUserModeration(user.id, user.isActive ? 'suspend' : 'activate')}
+            disabled={isModerating}
+          >
+            <XCircle className="w-4 h-4 mr-2" />
+            {isModerating ? 'Processing...' : (user.isActive ? 'Suspend' : 'Activate')}
+          </Button>
+        )}
+        
+        {!isOwnAccount && user.role !== 'USER' && (
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={() => {
+              setSelectedUser(user);
+              setShowRoleModal(true);
+            }}
+            disabled={isModerating}
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            Change Role
+          </Button>
+        )}
+      </div>
+    );
+  };
+
   // Check admin authorization
   const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'MODERATOR';
   
@@ -345,20 +587,7 @@ export default function AdminDashboard() {
                         </div>
 
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline">
-                            <Eye className="w-4 h-4 mr-2" />
-                            View
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            <Flag className="w-4 h-4 mr-2" />
-                            Flag
-                          </Button>
-                          {item.status !== 'DELETED' && (
-                            <Button size="sm" variant="destructive">
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
-                            </Button>
-                          )}
+                          {getModerationButtons(item)}
                         </div>
                       </div>
                     </CardContent>
@@ -417,26 +646,7 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="flex gap-2 mt-3">
-                        <Button size="sm" variant="outline">
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Profile
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <Package className="w-4 h-4 mr-2" />
-                          View Items
-                        </Button>
-                        {user.isActive && user.role === 'USER' && (
-                          <Button size="sm" variant="destructive">
-                            <XCircle className="w-4 h-4 mr-2" />
-                            Suspend
-                          </Button>
-                        )}
-                        {!user.isActive && (
-                          <Button size="sm" variant="default">
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Activate
-                          </Button>
-                        )}
+                        {getUserActionButtons(user)}
                       </div>
                     </CardContent>
                   </Card>
@@ -524,6 +734,77 @@ export default function AdminDashboard() {
             </div>
           )}
         </>
+      )}
+
+      {/* Role Change Modal */}
+      {showRoleModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Change User Role</h3>
+            
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                User: {selectedUser.name || selectedUser.email}
+              </p>
+              <p className="text-sm text-gray-600 mb-4">
+                Current Role: <Badge variant="outline">{selectedUser.role}</Badge>
+              </p>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <label className="block text-sm font-medium text-gray-700">
+                Select New Role
+              </label>
+              <select 
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                defaultValue=""
+                id="newRoleSelect"
+              >
+                <option value="" disabled>Choose a role...</option>
+                <option value="USER">USER</option>
+                <option value="MODERATOR">MODERATOR</option>
+                {session?.user?.role === 'ADMIN' && (
+                  <option value="ADMIN">ADMIN</option>
+                )}
+              </select>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRoleModal(false);
+                  setSelectedUser(null);
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  const select = document.getElementById('newRoleSelect') as HTMLSelectElement;
+                  const newRole = select?.value;
+                  
+                  if (!newRole) {
+                    alert('Please select a role');
+                    return;
+                  }
+                  
+                  if (newRole === selectedUser.role) {
+                    alert('User already has this role');
+                    return;
+                  }
+                  
+                  handleRoleChange(selectedUser.id, newRole);
+                }}
+                className="flex-1"
+                disabled={moderatingUser === selectedUser.id}
+              >
+                {moderatingUser === selectedUser.id ? 'Changing...' : 'Change Role'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
