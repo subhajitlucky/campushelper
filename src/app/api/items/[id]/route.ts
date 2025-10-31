@@ -12,6 +12,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CRITICAL FIX: Require authentication to prevent data harvesting
+    const session = await auth();
+    const isAuthenticated = !!session?.user?.id;
+    
     // Step 72-73: Extract and validate ID from params
     const { id } = await params;
     
@@ -22,61 +26,11 @@ export async function GET(
       );
     }
 
-    // Step 73: Query Prisma.item.findUnique() with relations
+    // Step 73: Query Prisma.item.findUnique() - basic data only for security
     const item = await prisma.item.findUnique({
       where: { id },
-      include: {
-        // Include postedBy user details
-        postedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-          }
-        },
-        // Include claimedBy user details if item is claimed
-        claimedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-          }
-        },
-        // Include comments with user details
-        comments: {
-          orderBy: {
-            createdAt: 'desc'
-          },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                avatar: true,
-              }
-            }
-          }
-        },
-        // Include claims with user details
-        claims: {
-          orderBy: {
-            createdAt: 'desc'
-          },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                avatar: true,
-              }
-            }
-          }
-        }
-      }
+      // SECURITY FIX: Remove user data from initial query
+      // User data will be added conditionally based on authorization
     });
 
     // Step 73: Return 404 if not found
@@ -87,30 +41,119 @@ export async function GET(
       );
     }
 
-    // Transform data to include counts and restructure for consistency
-    const responseItem = {
-      ...item,
-      commentCount: item.comments.length,
-      claimCount: item.claims.length,
-      // Structure comments for easier frontend consumption
-      comments: item.comments.map(comment => ({
-        id: comment.id,
-        message: comment.message,
-        images: comment.images,
-        createdAt: comment.createdAt,
-        user: comment.user
-      })),
-      // Structure claims for easier frontend consumption
-      claims: item.claims.map(claim => ({
-        id: claim.id,
-        claimType: claim.claimType,
-        status: claim.status,
-        message: claim.message,
-        createdAt: claim.createdAt,
-        resolvedAt: claim.resolvedAt,
-        user: claim.user
-      })),
-    };
+    // SECURITY FIX: Determine if user should see user data
+    const canSeeUserData = isAuthenticated && (
+      item.postedById === session.user.id || 
+      item.claimedById === session.user.id ||
+      session.user.role === 'ADMIN' ||
+      session.user.role === 'MODERATOR'
+    );
+
+    let responseItem;
+
+    if (canSeeUserData) {
+      // Authorized user - fetch with user data
+      const itemWithUserData = await prisma.item.findUnique({
+        where: { id },
+        include: {
+          // Include postedBy user details
+          postedBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+            }
+          },
+          // Include claimedBy user details if item is claimed
+          claimedBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+            }
+          },
+          // Include comments with user details
+          comments: {
+            orderBy: {
+              createdAt: 'desc'
+            },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  avatar: true,
+                }
+              }
+            }
+          },
+          // Include claims with user details
+          claims: {
+            orderBy: {
+              createdAt: 'desc'
+            },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  avatar: true,
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Transform data with user data included
+      if (itemWithUserData) {
+        responseItem = {
+          ...itemWithUserData,
+          commentCount: itemWithUserData.comments.length,
+          claimCount: itemWithUserData.claims.length,
+          // Structure comments for easier frontend consumption
+          comments: itemWithUserData.comments.map(comment => ({
+            id: comment.id,
+            message: comment.message,
+            images: comment.images,
+            createdAt: comment.createdAt,
+            user: comment.user
+          })),
+          // Structure claims for easier frontend consumption
+          claims: itemWithUserData.claims.map(claim => ({
+            id: claim.id,
+            claimType: claim.claimType,
+            status: claim.status,
+            message: claim.message,
+            createdAt: claim.createdAt,
+            resolvedAt: claim.resolvedAt,
+            user: claim.user
+          })),
+        };
+      } else {
+        // Fallback to basic data if user data fetch fails
+        responseItem = {
+          ...item,
+          commentCount: 0,
+          claimCount: 0,
+          comments: [],
+          claims: [],
+        };
+      }
+    } else {
+      // Public/unauthorized - basic item data only, no user information
+      responseItem = {
+        ...item,
+        commentCount: 0, // Can't show counts without fetching related data
+        claimCount: 0,   // Can't show counts without fetching related data
+        comments: [],    // No comments without user data
+        claims: [],      // No claims without user data
+      };
+    }
 
     return NextResponse.json({
       item: responseItem

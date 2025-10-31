@@ -9,6 +9,15 @@ import { createItemSchema, itemsQuerySchema } from '@/lib/schemas/item';
  */
 export async function GET(request: NextRequest) {
   try {
+    // CRITICAL FIX: Require authentication to prevent data harvesting
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Authentication required to access items' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     let queryParams;
     
@@ -80,25 +89,12 @@ export async function GET(request: NextRequest) {
         },
         orderBy: {
           createdAt: 'desc'
-        },
-        include: {
-          // Include postedBy user details (excluding sensitive data)
-          postedBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            }
-          },
-          // Include claimedBy user details if item is claimed
-          claimedBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            }
-          },
-        },
+        }
+        // REMOVED: User data exposure - security fix
+        // include: {
+        //   postedBy: { select: { id: true, name: true, email: true } },
+        //   claimedBy: { select: { id: true, name: true, email: true } },
+        // },
       });
 
       const total = await prisma.item.count({

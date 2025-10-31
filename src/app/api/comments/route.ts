@@ -9,6 +9,15 @@ import {
 // GET /api/comments?itemId=xxx
 export async function GET(request: NextRequest) {
   try {
+    // CRITICAL FIX: Require authentication to prevent comments data harvesting
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Authentication required to access comments' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     let queryParams;
     
@@ -30,16 +39,37 @@ export async function GET(request: NextRequest) {
 
     const { itemId } = queryParams;
 
-    // Check if item exists
-    const itemExists = await prisma.item.findUnique({
+    // SECURITY FIX: Check if user has access to this item's comments
+    const item = await prisma.item.findUnique({
       where: { id: itemId },
-      select: { id: true, title: true }
+      select: { 
+        id: true, 
+        postedById: true,
+        status: true // Check if item is deleted
+      }
     });
 
-    if (!itemExists) {
+    if (!item) {
       return NextResponse.json(
         { error: 'Item not found' },
         { status: 404 }
+      );
+    }
+
+    // Check if user can access comments on this item
+    const canAccessComments = 
+      // Item owner can see comments
+      item.postedById === session.user.id ||
+      // Admin/moderator can see all comments
+      session.user.role === 'ADMIN' || 
+      session.user.role === 'MODERATOR' ||
+      // For public items (not deleted), authenticated users can see comments
+      (item.status !== 'DELETED');
+
+    if (!canAccessComments) {
+      return NextResponse.json(
+        { error: 'You do not have permission to view comments on this item' },
+        { status: 403 }
       );
     }
 

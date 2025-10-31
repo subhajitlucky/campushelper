@@ -9,6 +9,15 @@ import {
 // GET /api/claims?itemId=xxx
 export async function GET(request: NextRequest) {
   try {
+    // CRITICAL FIX: Require authentication to prevent claims data harvesting
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Authentication required to access claims' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     let queryParams;
     
@@ -28,27 +37,52 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
+    // SECURITY FIX: Implement proper access control for claims
     const { itemId, userId } = queryParams;
-
-    // If querying by itemId, check if item exists
-    if (itemId) {
-      const itemExists = await prisma.item.findUnique({
+    
+    // Build authorization-aware where clause
+    let whereClause: any = {};
+    
+    // If querying by specific userId (user is looking for their own claims)
+    if (userId) {
+      // Users can only see their own claims
+      if (userId !== session.user.id && session.user.role !== 'ADMIN' && session.user.role !== 'MODERATOR') {
+        return NextResponse.json(
+          { error: 'You can only view your own claims' },
+          { status: 403 }
+        );
+      }
+      whereClause.userId = userId;
+    }
+    // If querying by itemId (user wants to see claims on a specific item)
+    else if (itemId) {
+      const item = await prisma.item.findUnique({
         where: { id: itemId },
-        select: { id: true, title: true, postedById: true }
+        select: { id: true, postedById: true }
       });
 
-      if (!itemExists) {
+      if (!item) {
         return NextResponse.json(
           { error: 'Item not found' },
           { status: 404 }
         );
       }
+      
+      // Only item owner or admin/moderator can see claims on this item
+      if (item.postedById !== session.user.id && 
+          session.user.role !== 'ADMIN' && 
+          session.user.role !== 'MODERATOR') {
+        return NextResponse.json(
+          { error: 'You can only view claims on your own items' },
+          { status: 403 }
+        );
+      }
+      whereClause.itemId = itemId;
+    } 
+    // No specific filter - user wants their own claims
+    else {
+      whereClause.userId = session.user.id;
     }
-
-    // Build where clause based on query parameters
-    const whereClause = itemId 
-      ? { itemId } 
-      : { userId };
 
     // Fetch claims with user data and item data
     const claims = await prisma.claim.findMany({
