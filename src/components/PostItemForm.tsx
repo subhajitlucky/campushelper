@@ -2,28 +2,22 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { setSafeErrorMessage } from '@/lib/security';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
+import ValidationInput from '@/components/forms/ValidationInput';
+import FieldError from '@/components/forms/FieldError';
+import FormError from '@/components/forms/FormError';
+import { useFormValidation } from '@/hooks/useFormValidation';
 import { createItemSchema } from '@/lib/schemas/item';
 
-// Form-specific schema without images to save database space
-const postItemFormSchema = createItemSchema.omit({ images: true });
+// Form schema for validation (without images for better UX)
+const postItemSchema = createItemSchema.omit({ images: true });
 
-type ItemFormValues = z.infer<typeof postItemFormSchema>;
+type ItemFormValues = z.infer<typeof postItemSchema>;
 
 interface PostItemFormProps {
   className?: string;
@@ -31,28 +25,40 @@ interface PostItemFormProps {
 
 export default function PostItemForm({ className }: PostItemFormProps) {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [apiError, setApiError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const form = useForm<ItemFormValues>({
-    resolver: zodResolver(postItemFormSchema),
-    defaultValues: {
+  // Initialize form validation
+  const {
+    values,
+    errors,
+    touched,
+    isValid,
+    isSubmitting,
+    getFieldProps,
+    handleSubmit,
+    resetForm
+  } = useFormValidation({
+    schema: postItemSchema,
+    initialValues: {
       title: '',
       description: '',
-      itemType: 'LOST',
+      itemType: 'LOST' as 'LOST' | 'FOUND',
       location: '',
     },
+    validateOnChange: true,
+    validateOnBlur: true
   });
 
-  const onSubmit = async (data: ItemFormValues) => {
-    setIsLoading(true);
-    setErrorMessage('');
+  const onSubmit = async (formData: ItemFormValues) => {
+    setApiError('');
+    setSuccess('');
 
     try {
       // Add empty images array to save database space
       const itemData = {
-        ...data,
-        images: [] // Empty array to save database space
+        ...formData,
+        images: []
       };
 
       const response = await fetch('/api/items', {
@@ -65,144 +71,148 @@ export default function PostItemForm({ className }: PostItemFormProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Handle field-specific validation errors from API
+        if (errorData.details?.issues) {
+          errorData.details.issues.forEach((issue: any) => {
+            // Set field-specific errors (would need to map API errors to form)
+            console.log('API validation error:', issue.field, issue.message);
+          });
+        }
+        
         throw new Error(setSafeErrorMessage(errorData.error || 'Failed to create item'));
       }
 
       const result = await response.json();
       console.log('Item created:', result);
 
-      // Reset form and redirect to dashboard
-      form.reset();
-      router.push('/dashboard');
-      router.refresh();
+      // Show success message and redirect
+      setSuccess('Item posted successfully! Redirecting...');
+      setTimeout(() => {
+        resetForm();
+        router.push('/dashboard');
+        router.refresh();
+      }, 1500);
+
     } catch (error) {
       console.error('Error creating item:', error);
-      setErrorMessage(
-        setSafeErrorMessage(
-          error instanceof Error ? error.message : 'Failed to create item. Please try again.',
-          'Failed to create item. Please try again.'
-        )
+      setApiError(
+        error instanceof Error 
+          ? error.message 
+          : 'Failed to create item. Please try again.'
       );
-    } finally {
-      setIsLoading(false);
     }
   };
 
   return (
-    <Card className={`w-full max-w-2xl mx-auto p-6 ${className}`}>
+    <Card className={`max-w-2xl mx-auto p-6 ${className}`}>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Post an Item</h1>
-        <p className="text-gray-600 mt-2">
-          Report a lost item or announce something you found on campus. Provide detailed text descriptions.
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Post a Lost or Found Item</h1>
+        <p className="text-gray-600">
+          Help reunite lost items with their owners or report items you've found.
         </p>
       </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Title Field */}
-          <FormField
-            control={form.control}
-            name="title"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Title</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="e.g., Red iPhone 15, Blue Backpack"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      {/* API Error Display */}
+      <FormError error={apiError} className="mb-6" />
+      
+      {/* Success Message */}
+      {success && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 mb-6">
+          <p>{success}</p>
+        </div>
+      )}
 
-          {/* Description Field */}
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <textarea
-                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    placeholder="Provide detailed description of the item including color, size, brand, unique features, etc. Be as specific as possible since no images are included..."
-                    rows={4}
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Item Type Field */}
-          <FormField
-            control={form.control}
-            name="itemType"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Item Type</FormLabel>
-                <FormControl>
-                  <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    {...field}
-                  >
-                    <option value="LOST">LOST</option>
-                    <option value="FOUND">FOUND</option>
-                  </select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Location Field */}
-          <FormField
-            control={form.control}
-            name="location"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Location</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="e.g., Main Library, Engineering Building, Cafeteria"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Error Message */}
-          {errorMessage && (
-            <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
-              {errorMessage}
-            </div>
-          )}
-
-          {/* Submit Button */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Item Type Selection */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Item Status
+          </label>
           <div className="flex gap-4">
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="flex-1"
-            >
-              {isLoading ? 'Creating...' : 'Create Item'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="itemType"
+                value="LOST"
+                checked={values.itemType === 'LOST'}
+                onChange={(e) => getFieldProps('itemType').onChange(e)}
+                onBlur={getFieldProps('itemType').onBlur}
+                className="mr-2"
+              />
+              <span className="text-sm font-medium text-red-700">🔍 I Lost This</span>
+            </label>
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="itemType"
+                value="FOUND"
+                checked={values.itemType === 'FOUND'}
+                onChange={(e) => getFieldProps('itemType').onChange(e)}
+                onBlur={getFieldProps('itemType').onBlur}
+                className="mr-2"
+              />
+              <span className="text-sm font-medium text-green-700">✨ I Found This</span>
+            </label>
           </div>
-        </form>
-      </Form>
+          <FieldError error={errors.itemType} />
+        </div>
+
+        {/* Title Field */}
+        <ValidationInput
+          {...getFieldProps('title')}
+          label="Item Title"
+          placeholder="e.g., Black iPhone 13, Blue Nike Shoes, Car Keys"
+          error={errors.title}
+          isValid={!!values.title && !errors.title}
+          showCheckIcon={true}
+          helperText="Give a brief, descriptive title for the item"
+        />
+
+        {/* Description Field */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Description
+          </label>
+          <Textarea
+            {...getFieldProps('description')}
+            placeholder="Describe the item in detail... Where did you lose/find it? What makes it unique?"
+            rows={4}
+            className={errors.description ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}
+          />
+          <FieldError error={errors.description} />
+          <p className="text-sm text-gray-500 mt-1">
+            {values.description.length}/2000 characters
+          </p>
+        </div>
+
+        {/* Location Field */}
+        <ValidationInput
+          {...getFieldProps('location')}
+          label="Location"
+          placeholder="e.g., Library, Cafeteria, Parking Lot A"
+          error={errors.location}
+          isValid={!!values.location && !errors.location}
+          showCheckIcon={true}
+          helperText="Where was the item lost or found?"
+        />
+
+        {/* Submit Button */}
+        <Button 
+          type="submit" 
+          disabled={!isValid || isSubmitting}
+          className="w-full"
+        >
+          {isSubmitting ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Posting Item...
+            </>
+          ) : (
+            `Post ${values.itemType === 'LOST' ? 'Lost' : 'Found'} Item`
+          )}
+        </Button>
+      </form>
     </Card>
   );
 }

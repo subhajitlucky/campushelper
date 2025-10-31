@@ -990,11 +990,16 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Safe async wrapper handles Prisma, Zod, and NextAuth errors
 - Status: COMPLETED ✅
 
-**☐ Step 152**: Add form validation error messages.
+**✅ Step 152**: Add form validation error messages. (COMPLETED)
 - Display validation errors under each field
 - Show clear, user-friendly messages
 - Real-time validation feedback
-- Status: NOT STARTED ☐
+- Created reusable form components: FieldError, FormError, ValidationInput
+- Built comprehensive useFormValidation hook with Zod integration
+- Updated PostItemForm with real-time validation
+- Visual feedback: error states, success states, loading indicators
+- Character counting and helper text for better UX
+- Status: COMPLETED ✅
 
 **☐ Step 153**: Add API request error handling in components.
 - Catch fetch errors in all API calls
@@ -1111,10 +1116,10 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 | Metric | Count |
 |--------|-------|
 | **Total Steps** | 165 |
-| **✅ Completed** | 141 |
-| **☐ Not Started** | 24 |
+| **✅ Completed** | 142 |
+| **☐ Not Started** | 23 |
 | **🟨 In Progress** | 0 |
-| **Completion %** | 85.5% |
+| **Completion %** | 86.1% |
 
 ---
 
