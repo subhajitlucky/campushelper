@@ -412,6 +412,17 @@ export async function DELETE(
 
     // Step 75: Soft delete by setting status to DELETED
     try {
+      // First, soft-delete all comments for this item (cascade delete)
+      await prisma.comment.updateMany({
+        where: { itemId: id },
+        data: {
+          message: '[Comment deleted - item removed]',
+          images: [], // Clear images too
+          updatedAt: new Date()
+        }
+      });
+
+      // Then soft-delete the item
       const deletedItem = await prisma.item.update({
         where: { id },
         data: {

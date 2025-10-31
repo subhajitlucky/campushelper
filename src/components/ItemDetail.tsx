@@ -207,7 +207,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
 
             {/* Step 109: Comments Section - Hide if item is deleted */}
             {itemStatus !== 'DELETED' && (
-              <CommentsSection itemId={item.id} />
+              <CommentsSection itemId={item.id} itemStatus={itemStatus} />
             )}
           </div>
 

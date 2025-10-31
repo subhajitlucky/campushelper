@@ -26,9 +26,10 @@ interface Comment {
 
 interface CommentsSectionProps {
   itemId: string;
+  itemStatus: 'LOST' | 'FOUND' | 'CLAIMED' | 'RESOLVED' | 'DELETED';
 }
 
-export default function CommentsSection({ itemId }: CommentsSectionProps) {
+export default function CommentsSection({ itemId, itemStatus }: CommentsSectionProps) {
   const { data: session } = useSession();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +44,12 @@ export default function CommentsSection({ itemId }: CommentsSectionProps) {
 
   // Fix: Add delete error state
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Add edit functionality state
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editMessage, setEditMessage] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // Step 110: Form validation
   const validateForm = () => {
@@ -154,6 +161,68 @@ export default function CommentsSection({ itemId }: CommentsSectionProps) {
     } catch (err) {
       console.error('Error deleting comment:', err);
       setDeleteError('Failed to delete comment. Please try again.');
+    }
+  };
+
+  // Start editing a comment
+  const startEditComment = (comment: Comment) => {
+    setEditingCommentId(comment.id);
+    setEditMessage(comment.message);
+    setEditError(null);
+  };
+
+  // Cancel editing
+  const cancelEdit = () => {
+    setEditingCommentId(null);
+    setEditMessage('');
+    setEditError(null);
+  };
+
+  // Save edited comment
+  const saveEditComment = async (commentId: string) => {
+    if (!editMessage.trim()) {
+      setEditError('Comment message is required');
+      return;
+    }
+
+    if (editMessage.trim().length > 1000) {
+      setEditError('Comment message must be 1000 characters or less');
+      return;
+    }
+
+    setEditLoading(true);
+    setEditError(null);
+
+    try {
+      const response = await fetch(`/api/comments/${commentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: editMessage.trim()
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update comment');
+      }
+
+      // Update comment in local state
+      setComments(prev => prev.map(comment => 
+        comment.id === commentId 
+          ? { ...comment, message: editMessage.trim(), updatedAt: new Date().toISOString() }
+          : comment
+      ));
+
+      // Exit edit mode
+      setEditingCommentId(null);
+      setEditMessage('');
+    } catch (err) {
+      console.error('Error updating comment:', err);
+      setEditError('Failed to update comment. Please try again.');
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -323,9 +392,44 @@ export default function CommentsSection({ itemId }: CommentsSectionProps) {
                     </span>
                   </div>
                   
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
-                    {comment.message}
-                  </p>
+                  {/* Comment Message - Edit Mode or Display Mode */}
+                  {editingCommentId === comment.id ? (
+                    // Edit Mode
+                    <div className="mt-2">
+                      <textarea
+                        value={editMessage}
+                        onChange={(e) => setEditMessage(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        rows={3}
+                        placeholder="Edit your comment..."
+                        disabled={editLoading}
+                      />
+                      {editError && (
+                        <p className="text-sm text-red-600 mt-1">{editError}</p>
+                      )}
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={() => saveEditComment(comment.id)}
+                          disabled={editLoading || !editMessage.trim()}
+                          className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        >
+                          {editLoading ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          disabled={editLoading}
+                          className="px-3 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400 disabled:cursor-not-allowed"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    // Display Mode
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+                      {comment.message}
+                    </p>
+                  )}
                   
                   {/* Comment Images */}
                   {comment.images && comment.images.length > 0 && (
@@ -344,15 +448,29 @@ export default function CommentsSection({ itemId }: CommentsSectionProps) {
                     </div>
                   )}
                   
-                  {/* Delete Button (only for comment author) */}
-                  {session?.user?.id === comment.userId && (
-                    <div className="mt-2">
+                  {/* Action Buttons (only for comment author, not on resolved items) */}
+                  {session?.user?.id === comment.userId && itemStatus !== 'RESOLVED' && itemStatus !== 'DELETED' && (
+                    <div className="mt-2 flex gap-3">
+                      <button
+                        onClick={() => startEditComment(comment)}
+                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                        disabled={editingCommentId === comment.id}
+                      >
+                        Edit
+                      </button>
                       <button
                         onClick={() => deleteComment(comment.id)}
                         className="text-xs text-red-600 hover:text-red-800 hover:underline"
                       >
                         Delete
                       </button>
+                    </div>
+                  )}
+                  
+                  {/* Show resolved message if item is resolved */}
+                  {itemStatus === 'RESOLVED' && session?.user?.id === comment.userId && (
+                    <div className="mt-2 text-xs text-gray-500">
+                      Comments are locked after resolution
                     </div>
                   )}
                 </div>
