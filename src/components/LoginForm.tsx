@@ -6,6 +6,7 @@ import { signIn } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { setSafeErrorMessage } from '@/lib/security';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,13 +51,13 @@ export default function LoginForm() {
             });
 
             if (result?.error) {
-                setErrorMessage('Invalid email or password');
+                setErrorMessage(setSafeErrorMessage('Invalid email or password'));
                 return;
             }
 
             router.push('/dashboard');
         } catch (error) {
-            setErrorMessage('Something went wrong. Please try again.');
+            setErrorMessage(setSafeErrorMessage('Something went wrong. Please try again.'));
         } finally {
             setIsLoading(false);
         }

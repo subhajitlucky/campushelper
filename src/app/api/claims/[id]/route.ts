@@ -131,6 +131,30 @@ export async function PUT(
 
         // If claim is approved, update item status based on claim type
         if (status === 'APPROVED') {
+          // Security fix: Check if item is already claimed by someone else
+          const currentItem = await tx.item.findUnique({
+            where: { id: claim.itemId },
+            select: { 
+              status: true, 
+              claimedById: true,
+              postedById: true 
+            }
+          });
+          
+          if (!currentItem) {
+            throw new Error('Item not found');
+          }
+          
+          // Prevent claiming an already claimed item (unless it's the same user)
+          if (currentItem.claimedById && currentItem.claimedById !== claim.userId) {
+            throw new Error('Item has already been claimed by another user');
+          }
+          
+          // Prevent claiming a resolved item
+          if (currentItem.status === 'RESOLVED') {
+            throw new Error('Item has already been resolved');
+          }
+          
           const newItemStatus = claim.claimType === 'OWN_IT' ? 'RESOLVED' : 'CLAIMED';
           
           await tx.item.update({

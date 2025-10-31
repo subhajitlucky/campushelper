@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { setSafeErrorMessage } from '@/lib/security';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,7 +65,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create item');
+        throw new Error(setSafeErrorMessage(errorData.error || 'Failed to create item'));
       }
 
       const result = await response.json();
@@ -77,7 +78,10 @@ export default function PostItemForm({ className }: PostItemFormProps) {
     } catch (error) {
       console.error('Error creating item:', error);
       setErrorMessage(
-        error instanceof Error ? error.message : 'Failed to create item. Please try again.'
+        setSafeErrorMessage(
+          error instanceof Error ? error.message : 'Failed to create item. Please try again.',
+          'Failed to create item. Please try again.'
+        )
       );
     } finally {
       setIsLoading(false);

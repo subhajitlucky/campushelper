@@ -18,8 +18,7 @@ export async function GET(request: NextRequest) {
       console.error('Query validation error:', error);
       return NextResponse.json(
         { 
-          error: 'Invalid query parameters',
-          details: error instanceof Error ? error.message : 'Unknown validation error'
+          error: 'Invalid query parameters'
         },
         { status: 400 }
       );
@@ -172,8 +171,7 @@ export async function GET(request: NextRequest) {
       console.error('Database query error:', dbError);
       return NextResponse.json(
         { 
-          error: 'Database error',
-          message: dbError instanceof Error ? dbError.message : 'Unknown database error'
+          error: 'Database error occurred. Please try again later.'
         },
         { status: 500 }
       );
@@ -182,8 +180,7 @@ export async function GET(request: NextRequest) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
       { 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Internal server error. Please try again later.'
       },
       { status: 500 }
     );
