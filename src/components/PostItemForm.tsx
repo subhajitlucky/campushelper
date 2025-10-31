@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { setSafeErrorMessage } from '@/lib/security';
@@ -12,6 +11,7 @@ import ValidationInput from '@/components/forms/ValidationInput';
 import FieldError from '@/components/forms/FieldError';
 import FormError from '@/components/forms/FormError';
 import { useFormValidation } from '@/hooks/useFormValidation';
+import { useApiRequest } from '@/hooks/useApiRequest';
 import { createItemSchema } from '@/lib/schemas/item';
 
 // Form schema for validation (without images for better UX)
@@ -25,8 +25,6 @@ interface PostItemFormProps {
 
 export default function PostItemForm({ className }: PostItemFormProps) {
   const router = useRouter();
-  const [apiError, setApiError] = useState('');
-  const [success, setSuccess] = useState('');
 
   // Initialize form validation
   const {
@@ -50,58 +48,60 @@ export default function PostItemForm({ className }: PostItemFormProps) {
     validateOnBlur: true
   });
 
-  const onSubmit = async (formData: ItemFormValues) => {
-    setApiError('');
-    setSuccess('');
+  // Create API request function
+  const createItem = async (formData: ItemFormValues) => {
+    const itemData = {
+      ...formData,
+      images: [] // Empty array to save database space
+    };
 
-    try {
-      // Add empty images array to save database space
-      const itemData = {
-        ...formData,
-        images: []
-      };
+    const response = await fetch('/api/items', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(itemData),
+    });
 
-      const response = await fetch('/api/items', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(itemData),
-      });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(JSON.stringify(errorData));
+    }
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        
-        // Handle field-specific validation errors from API
-        if (errorData.details?.issues) {
-          errorData.details.issues.forEach((issue: any) => {
-            // Set field-specific errors (would need to map API errors to form)
-            console.log('API validation error:', issue.field, issue.message);
-          });
-        }
-        
-        throw new Error(setSafeErrorMessage(errorData.error || 'Failed to create item'));
-      }
+    return await response.json();
+  };
 
-      const result = await response.json();
+  // Use API request hook
+  const {
+    data,
+    error,
+    isLoading,
+    isError,
+    execute
+  } = useApiRequest(createItem, {
+    showToast: true,
+    successMessage: 'Item posted successfully!',
+    errorMessage: 'Failed to post item. Please try again.',
+    onSuccess: (result) => {
       console.log('Item created:', result);
-
-      // Show success message and redirect
-      setSuccess('Item posted successfully! Redirecting...');
+      resetForm();
+      // Redirect after short delay to show success toast
       setTimeout(() => {
-        resetForm();
         router.push('/dashboard');
         router.refresh();
       }, 1500);
-
-    } catch (error) {
-      console.error('Error creating item:', error);
-      setApiError(
-        error instanceof Error 
-          ? error.message 
-          : 'Failed to create item. Please try again.'
-      );
+    },
+    onError: (apiError) => {
+      console.error('API Error:', apiError);
+      // Could update form state based on specific error codes here
+      if (apiError.code === 'AUTHENTICATION_REQUIRED') {
+        router.push('/auth/login');
+      }
     }
+  });
+
+  const onSubmit = async (formData: ItemFormValues) => {
+    await execute(formData);
   };
 
   return (
@@ -114,12 +114,12 @@ export default function PostItemForm({ className }: PostItemFormProps) {
       </div>
 
       {/* API Error Display */}
-      <FormError error={apiError} className="mb-6" />
+      <FormError error={error?.error} className="mb-6" />
       
       {/* Success Message */}
-      {success && (
+      {data && !isError && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 mb-6">
-          <p>{success}</p>
+          <p>✅ Item posted successfully! Redirecting...</p>
         </div>
       )}
 
@@ -200,10 +200,10 @@ export default function PostItemForm({ className }: PostItemFormProps) {
         {/* Submit Button */}
         <Button 
           type="submit" 
-          disabled={!isValid || isSubmitting}
+          disabled={!isValid || isSubmitting || isLoading}
           className="w-full"
         >
-          {isSubmitting ? (
+          {isLoading ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
               Posting Item...
