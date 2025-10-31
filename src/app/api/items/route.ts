@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     
-    // Simple parameter parsing without Zod for public resolved items
+    // Parse query parameters
     const status = searchParams.get('status') as 'LOST' | 'FOUND' | 'CLAIMED' | 'RESOLVED' | 'DELETED' | undefined;
     const search = searchParams.get('search') || undefined;
     const postedById = searchParams.get('postedById') || undefined;
@@ -24,20 +24,13 @@ export async function GET(request: NextRequest) {
     
     const skip = (page - 1) * limit;
 
-    // Allow public access for resolved items only
-    const isPublicResolvedOnly = status === 'RESOLVED' && !search && !postedById && !from && !to;
+    // Check if user is logged in for full user data access
+    const session = await getSession();
+    const isLoggedIn = !!session?.user?.id;
     
-    // Only require authentication for non-public requests
-    if (!isPublicResolvedOnly) {
-      const session = await getSession();
-      if (!session?.user?.id) {
-        return NextResponse.json(
-          { error: 'Authentication required to access items' },
-          { status: 401 }
-        );
-      }
-    }
-
+    // Public access: Always return items, but with different data based on auth status
+    // For public access (not logged in): Basic item data only
+    // For logged-in users: Full user data included
     try {
       const items = await prisma.item.findMany({
         skip,
@@ -93,17 +86,27 @@ export async function GET(request: NextRequest) {
           createdAt: 'desc'
         },
         // Include appropriate user data based on request type
-        include: isPublicResolvedOnly ? {
-          // For public resolved items, show minimal user info for "success stories"
+        include: isLoggedIn ? {
+          // For logged-in users, include full user data
           postedBy: { 
             select: { 
               id: true, 
-              name: true,        // Show name for human connection
-              avatar: true       // Show avatar if available
-              // Deliberately excluding email for privacy
+              name: true,        
+              email: true,       // Show email for contact
+              avatar: true       
             } 
           },
-        } : undefined,
+        } : {
+          // For public access, include minimal user data (no email for privacy)
+          postedBy: { 
+            select: { 
+              id: true, 
+              name: true,        
+              avatar: true       
+              // Deliberately excluding email for public privacy
+            } 
+          },
+        },
       });
 
       const total = await prisma.item.count({
@@ -171,6 +174,11 @@ export async function GET(request: NextRequest) {
           to,
           postedById,
         },
+        user: {
+          isLoggedIn: isLoggedIn,
+          // Only include user ID if logged in
+          ...(isLoggedIn && { userId: session?.user?.id })
+        }
       });
     } catch (dbError) {
       console.error('Database query error:', dbError);

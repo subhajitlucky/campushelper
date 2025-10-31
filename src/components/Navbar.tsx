@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { href: "/post", label: "Post Item" },
   { href: "/search", label: "Search" },
+  { href: "/lost-items", label: "Lost Items" },
   { href: "/resolved", label: "Resolved" },
 ];
 

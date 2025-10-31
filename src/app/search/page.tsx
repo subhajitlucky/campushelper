@@ -12,7 +12,8 @@ interface Item {
   createdAt: string;
   postedBy: {
     name: string | null;
-    email: string;
+    avatar: string | null;
+    // email intentionally excluded for public access
   };
 }
 
@@ -31,6 +32,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [user, setUser] = useState<{isLoggedIn: boolean; userId?: string}>({ isLoggedIn: false });
   const [filters, setFilters] = useState<SearchFilters>({
     search: '',
     itemType: '',
@@ -67,17 +69,13 @@ export default function SearchPage() {
       const response = await fetch(`/api/items?${queryParams.toString()}`);
       
       if (!response.ok) {
-        // Don't throw error - handle it gracefully
-        let errorMessage = 'Failed to fetch items. Please try again.';
+        // Handle HTTP errors gracefully without throwing
+        let errorMessage = 'Failed to search items. Please try again.';
         
-        if (response.status === 401) {
-          errorMessage = 'Please login to search for items.';
-        } else if (response.status === 403) {
-          errorMessage = 'Access denied. Please check your permissions.';
-        } else if (response.status === 404) {
-          errorMessage = 'No items found.';
-        } else if (response.status >= 500) {
+        if (response.status >= 500) {
           errorMessage = 'Server error. Please try again later.';
+        } else if (response.status >= 400) {
+          errorMessage = 'Search request failed. Please check your input.';
         }
         
         setSearchError(errorMessage);
@@ -87,15 +85,17 @@ export default function SearchPage() {
 
       const data = await response.json();
       
-      // Update state
+      // Update state with API response
       setItems(data.items || []);
       setCurrentPage(data.pagination?.page || 1);
       setTotalPages(data.pagination?.totalPages || 1);
       setTotal(data.pagination?.total || 0);
       
+      // Store user authentication status
+      setUser(data.user || { isLoggedIn: false });
+      
     } catch (error) {
-      console.error('Network error or unexpected error:', error);
-      // Handle network errors and other unexpected issues
+      console.error('Network error:', error);
       setItems([]);
       setSearchError('Network error. Please check your connection and try again.');
     } finally {
@@ -380,13 +380,49 @@ export default function SearchPage() {
 
                       {/* Card Footer */}
                       <div className="p-4 bg-gray-50 border-t">
-                        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          View Details
-                        </button>
+                        {user.isLoggedIn ? (
+                          // Logged-in user actions
+                          <div className="space-y-2">
+                            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
+                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                              View Details
+                            </button>
+                            {item.status === 'LOST' && (
+                              <button className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                </svg>
+                                I Found This!
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          // Guest user actions
+                          <div className="space-y-2">
+                            <button 
+                              onClick={() => window.location.href = '/auth/login'}
+                              className="w-full bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center"
+                            >
+                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                              Login to View Details
+                            </button>
+                            <button 
+                              onClick={() => window.location.href = '/auth/login'}
+                              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center"
+                            >
+                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                              </svg>
+                              Post Your Item
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
