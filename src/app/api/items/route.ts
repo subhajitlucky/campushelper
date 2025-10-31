@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { createItemSchema, itemsQuerySchema } from '@/lib/schemas/item';
+import { z } from 'zod';
+import { 
+  AuthenticationRequired, 
+  ValidationError, 
+  DatabaseError,
+  NotFound,
+  safeApiHandler 
+} from '@/lib/errors';
 
 /**
  * GET /api/items
  * Fetch all items with pagination and optional filtering
  */
 export async function GET(request: NextRequest) {
-  try {
+  return safeApiHandler(async () => {
     const { searchParams } = new URL(request.url);
     
     // Parse query parameters
@@ -22,6 +29,22 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     
+    // Validate pagination parameters
+    if (isNaN(page) || page < 1) {
+      throw ValidationError('Page must be a positive number');
+    }
+    if (isNaN(limit) || limit < 1 || limit > 100) {
+      throw ValidationError('Limit must be between 1 and 100');
+    }
+    
+    // Validate date parameters
+    if (from && isNaN(Date.parse(from))) {
+      throw ValidationError('From date must be valid');
+    }
+    if (to && isNaN(Date.parse(to))) {
+      throw ValidationError('To date must be valid');
+    }
+    
     const skip = (page - 1) * limit;
 
     // Check if user is logged in for full user data access
@@ -31,289 +54,262 @@ export async function GET(request: NextRequest) {
     // Public access: Always return items, but with different data based on auth status
     // For public access (not logged in): Basic item data only
     // For logged-in users: Full user data included
-    try {
-      const items = await prisma.item.findMany({
-        skip,
-        take: limit,
-        where: {
-          // Exclude deleted items by default unless specifically requested
-          ...(status ? { status } : { status: { not: 'DELETED' } }),
-          
-          ...(itemType && { itemType }),
-          ...(location && {
-            location: {
-              contains: location,
-              mode: 'insensitive'
-            }
-          }),
-          ...(from && {
-            createdAt: {
-              gte: new Date(from)
-            }
-          }),
-          ...(to && {
-            createdAt: {
-              lte: new Date(to)
-            }
-          }),
-          ...(postedById && {
-            postedById: postedById
-          }),
-          ...(search && {
-            OR: [
-              {
-                title: {
-                  contains: search,
-                  mode: 'insensitive'
-                }
-              },
-              {
-                description: {
-                  contains: search,
-                  mode: 'insensitive'
-                }
-              },
-              {
-                location: {
-                  contains: search,
-                  mode: 'insensitive'
-                }
+    const items = await prisma.item.findMany({
+      skip,
+      take: limit,
+      where: {
+        // Exclude deleted items by default unless specifically requested
+        ...(status ? { status } : { status: { not: 'DELETED' } }),
+        
+        ...(itemType && { itemType }),
+        ...(location && {
+          location: {
+            contains: location,
+            mode: 'insensitive'
+          }
+        }),
+        ...(from && {
+          createdAt: {
+            gte: new Date(from)
+          }
+        }),
+        ...(to && {
+          createdAt: {
+            lte: new Date(to)
+          }
+        }),
+        ...(postedById && {
+          postedById: postedById
+        }),
+        ...(search && {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: 'insensitive'
               }
-            ]
-          })
-        },
-        orderBy: {
-          createdAt: 'desc'
-        },
-        // Include appropriate user data based on request type
-        include: isLoggedIn ? {
-          // For logged-in users, include full user data
-          postedBy: { 
-            select: { 
-              id: true, 
-              name: true,        
-              email: true,       // Show email for contact
-              avatar: true       
-            } 
-          },
-        } : {
-          // For public access, include minimal user data (no email for privacy)
-          postedBy: { 
-            select: { 
-              id: true, 
-              name: true,        
-              avatar: true       
-              // Deliberately excluding email for public privacy
-            } 
-          },
-        },
-      });
-
-      const total = await prisma.item.count({
-        where: {
-          ...(status ? { status } : { status: { not: 'DELETED' } }),
-          ...(itemType && { itemType }),
-          ...(location && {
-            location: {
-              contains: location,
-              mode: 'insensitive'
-            }
-          }),
-          ...(from && {
-            createdAt: {
-              gte: new Date(from)
-            }
-          }),
-          ...(to && {
-            createdAt: {
-              lte: new Date(to)
-            }
-          }),
-          ...(postedById && {
-            postedById: postedById
-          }),
-          ...(search && {
-            OR: [
-              {
-                title: {
-                  contains: search,
-                  mode: 'insensitive'
-                }
-              },
-              {
-                description: {
-                  contains: search,
-                  mode: 'insensitive'
-                }
-              },
-              {
-                location: {
-                  contains: search,
-                  mode: 'insensitive'
-                }
+            },
+            {
+              description: {
+                contains: search,
+                mode: 'insensitive'
               }
-            ]
-          })
-        }
-      });
-
-      return NextResponse.json({
-        items,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-        },
-        filters: {
-          search,
-          itemType,
-          status,
-          location,
-          from,
-          to,
-          postedById,
-        },
-        user: {
-          isLoggedIn: isLoggedIn,
-          // Only include user ID if logged in
-          ...(isLoggedIn && { userId: session?.user?.id })
-        }
-      });
-    } catch (dbError) {
-      console.error('Database query error:', dbError);
-      return NextResponse.json(
-        { 
-          error: 'Database error occurred. Please try again later.'
-        },
-        { status: 500 }
-      );
-    }
-  } catch (error) {
-    console.error('Unexpected error:', error);
-    return NextResponse.json(
-      { 
-        error: 'Internal server error. Please try again later.'
+            },
+            {
+              location: {
+                contains: search,
+                mode: 'insensitive'
+              }
+            }
+          ]
+        })
       },
-      { status: 500 }
-    );
-  }
+      orderBy: {
+        createdAt: 'desc'
+      },
+      // Include appropriate user data based on request type
+      include: isLoggedIn ? {
+        // For logged-in users, include full user data
+        postedBy: { 
+          select: { 
+            id: true, 
+            name: true,        
+            email: true,       // Show email for contact
+            avatar: true       
+          } 
+        },
+      } : {
+        // For public access, include minimal user data (no email for privacy)
+        postedBy: { 
+          select: { 
+            id: true, 
+            name: true,        
+            avatar: true       
+            // Deliberately excluding email for public privacy
+          } 
+        },
+      },
+    });
+
+    // Get total count for pagination
+    const total = await prisma.item.count({
+      where: {
+        ...(status ? { status } : { status: { not: 'DELETED' } }),
+        ...(itemType && { itemType }),
+        ...(location && {
+          location: {
+            contains: location,
+            mode: 'insensitive'
+          }
+        }),
+        ...(from && {
+          createdAt: {
+            gte: new Date(from)
+          }
+        }),
+        ...(to && {
+          createdAt: {
+            lte: new Date(to)
+          }
+        }),
+        ...(postedById && {
+          postedById: postedById
+        }),
+        ...(search && {
+          OR: [
+            {
+              title: {
+                contains: search,
+                mode: 'insensitive'
+              }
+            },
+            {
+              description: {
+                contains: search,
+                mode: 'insensitive'
+              }
+            },
+            {
+              location: {
+                contains: search,
+                mode: 'insensitive'
+              }
+            }
+          ]
+        })
+      }
+    });
+
+    // Format items for consistent API response
+    const formattedItems = items.map(item => ({
+      ...item,
+      commentsCount: 0, // Will be populated if we include comments in query
+      claimsCount: 0,   // Will be populated if we include claims in query
+      // Remove the arrays from the response to avoid confusion
+      comments: undefined,
+      claims: undefined
+    }));
+
+    return NextResponse.json({
+      items: formattedItems,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      },
+      filters: {
+        status,
+        itemType,
+        location,
+        search,
+        postedById,
+        from,
+        to
+      },
+      user: {
+        isLoggedIn: isLoggedIn,
+        // Only include user ID if logged in
+        ...(isLoggedIn && { userId: session?.user?.id })
+      }
+    });
+  });
 }
 
 /**
  * POST /api/items
- * Create a new item (Steps 67-70: Authentication, Validation, Database Creation, Error Handling)
+ * Create a new item with standardized error handling
  */
 export async function POST(request: NextRequest) {
-  try {
-    // Step 67: Check authentication (session required)
+  return safeApiHandler(async () => {
+    // Check authentication
     const session = await getSession();
     
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required. Please log in to create an item.' },
-        { status: 401 }
-      );
+      throw AuthenticationRequired('Please log in to create an item.');
     }
 
-    // Step 68: Parse and validate POST request body
+    // Parse request body
     let requestBody;
     try {
       requestBody = await request.json();
     } catch {
-      return NextResponse.json(
-        { error: 'Invalid JSON in request body' },
-        { status: 400 }
-      );
+      throw ValidationError('Invalid JSON in request body');
     }
 
-    // Validate with Zod schema (Step 68: Validate with Zod schema)
+    // Validate request body with inline schema
+    const createItemSchema = z.object({
+      title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
+      description: z.string().min(10, 'Description must be at least 10 characters').max(2000, 'Description must be less than 2000 characters'),
+      itemType: z.enum(['LOST', 'FOUND']),
+      location: z.string().min(1, 'Location is required').max(100, 'Location must be less than 100 characters'),
+      images: z.array(z.string().url('Invalid image URL')).max(5, 'Maximum 5 images allowed').optional().default([])
+    });
+
     let validatedData;
     try {
       validatedData = createItemSchema.parse(requestBody);
     } catch (error) {
-      if (error instanceof Error && error.name === 'ZodError') {
-        return NextResponse.json(
-          { 
-            error: 'Validation failed',
-            details: error.message 
-          },
-          { status: 400 }
-        );
+      if (error instanceof z.ZodError) {
+        throw ValidationError('Validation failed', { 
+          issues: error.issues.map(issue => ({
+            field: issue.path.join('.'),
+            message: issue.message
+          }))
+        });
       }
-      throw error; // Re-throw unexpected errors
+      throw error;
     }
 
-    // Step 69: Create item in database
-    try {
-      // Set status based on itemType
-      const status = validatedData.itemType === 'LOST' ? 'LOST' : 'FOUND';
-      
-      // Create item in database
-      const newItem = await prisma.item.create({
-        data: {
-          title: validatedData.title,
-          description: validatedData.description,
-          itemType: validatedData.itemType,
-          status: status,
-          location: validatedData.location,
-          images: validatedData.images.filter(image => image && image.trim() !== '') as string[],
-          postedById: session.user.id,
+    // Create item in database
+    const status = validatedData.itemType === 'LOST' ? 'LOST' : 'FOUND';
+    
+    const newItem = await prisma.item.create({
+      data: {
+        title: validatedData.title,
+        description: validatedData.description,
+        itemType: validatedData.itemType,
+        status: status,
+        location: validatedData.location,
+        images: validatedData.images.filter(image => image && image.trim() !== '') as string[],
+        postedById: session.user.id,
+      },
+      include: {
+        // Include postedBy user details in response
+        postedBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          }
         },
-        include: {
-          // Include postedBy user details in response
-          postedBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              avatar: true,
-            }
-          },
-          // Include counts for comments and claims
-          comments: {
-            select: {
-              id: true,
-            }
-          },
-          claims: {
-            select: {
-              id: true,
-            }
+        // Include counts for comments and claims
+        comments: {
+          select: {
+            id: true,
+          }
+        },
+        claims: {
+          select: {
+            id: true,
           }
         }
-      });
+      }
+    });
 
-      // Transform response to include counts
-      const responseItem = {
-        ...newItem,
-        commentCount: newItem.comments.length,
-        claimCount: newItem.claims.length,
-        // Remove the arrays we only used for counting
-        comments: undefined,
-        claims: undefined,
-      };
+    // Format response
+    const formattedItem = {
+      ...newItem,
+      commentsCount: 0, // New items have no comments
+      claimsCount: 0,   // New items have no claims
+      comments: undefined,
+      claims: undefined
+    };
 
-      // Step 70: Return success response
-      return NextResponse.json({
-        item: responseItem,
-        message: 'Item created successfully'
-      }, { status: 201 });
-
-    } catch (dbError) {
-      console.error('Database error creating item:', dbError);
-      return NextResponse.json(
-        { error: 'Failed to save item to database' },
-        { status: 500 }
-      );
-    }
-
-  } catch (error) {
-    // Step 70: General error handling
-    console.error('Unexpected error creating item:', error);
-    return NextResponse.json(
-      { error: 'An unexpected error occurred while creating the item' },
-      { status: 500 }
-    );
-  }
+    return NextResponse.json({
+      message: 'Item created successfully',
+      item: formattedItem
+    }, { status: 201 });
+  });
 }

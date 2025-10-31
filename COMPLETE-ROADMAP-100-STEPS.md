@@ -889,7 +889,7 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 - Handle error: show error message
 - Update item status if needed
 - Disable claim button after claiming
-- Status: COMPLETED ✅
+- Status: COMPLETE ✅
 
 **✅ Step 142**: Add claims management to dashboard. (COMPLETED)
 - Show pending claims on user's items
@@ -980,11 +980,15 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 
 ### **8.1: Error Handling & Validation (Steps 151-155)**
 
-**☐ Step 151**: Add comprehensive API error responses.
+**✅ Step 151**: Add comprehensive API error responses. (COMPLETED)
 - Standardize error format: `{ error: string, code: string }`
 - Return appropriate HTTP status codes
 - All endpoints have try/catch
-- Status: NOT STARTED ☐
+- Created centralized error handling in /src/lib/errors.ts
+- Error codes for authentication, validation, database, business logic
+- Updated main items API and admin moderation APIs
+- Safe async wrapper handles Prisma, Zod, and NextAuth errors
+- Status: COMPLETED ✅
 
 **☐ Step 152**: Add form validation error messages.
 - Display validation errors under each field
@@ -1107,10 +1111,10 @@ A hyper-detailed roadmap from project inception to production. Each step is mark
 | Metric | Count |
 |--------|-------|
 | **Total Steps** | 165 |
-| **✅ Completed** | 140 |
-| **☐ Not Started** | 25 |
+| **✅ Completed** | 141 |
+| **☐ Not Started** | 24 |
 | **🟨 In Progress** | 0 |
-| **Completion %** | 84.8% |
+| **Completion %** | 85.5% |
 
 ---
 
