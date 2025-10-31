@@ -162,47 +162,7 @@ export default function LostItemsPage() {
         </Card>
 
         {/* Loading State */}
-        {loading && (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <Card key={index} className="hover:shadow-md transition-shadow">
-                {/* Card Header Skeleton */}
-                <div className="p-4 border-b bg-gray-50">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="h-5 bg-gray-200 rounded animate-pulse flex-1 mr-2"></div>
-                    <div className="h-6 w-16 bg-gray-200 rounded-full animate-pulse"></div>
-                  </div>
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
-                </div>
-
-                {/* Card Body Skeleton */}
-                <div className="p-4">
-                  <div className="space-y-2 mb-4">
-                    <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                    <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                    <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <div className="h-4 w-4 bg-gray-200 rounded animate-pulse mr-2"></div>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse flex-1"></div>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="h-4 w-4 bg-gray-200 rounded animate-pulse mr-2"></div>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3"></div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Footer Skeleton */}
-                <div className="p-4 bg-gray-50 border-t">
-                  <div className="h-9 bg-gray-200 rounded animate-pulse w-full"></div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
+        {loading && <ListSkeleton count={6} />}
 
         {/* Error State */}
         {error && !loading && (
