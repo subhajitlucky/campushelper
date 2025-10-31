@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { updateItemSchema } from '@/lib/schemas/item';
 
@@ -13,7 +13,7 @@ export async function GET(
 ) {
   try {
     // CRITICAL FIX: Require authentication to prevent data harvesting
-    const session = await auth();
+    const session = await getSession();
     const isAuthenticated = !!session?.user?.id;
     
     // Step 72-73: Extract and validate ID from params
@@ -178,7 +178,7 @@ export async function PUT(
 ) {
   try {
     // Step 74: Check authentication
-    const session = await auth();
+    const session = await getSession();
     
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -353,7 +353,7 @@ export async function DELETE(
 ) {
   try {
     // Step 75: Check authentication
-    const session = await auth();
+    const session = await getSession();
     
     if (!session?.user?.id) {
       return NextResponse.json(

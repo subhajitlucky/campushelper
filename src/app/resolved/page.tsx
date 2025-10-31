@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +17,10 @@ interface ResolvedItem {
   createdAt: string;
   resolvedAt: string | null;
   postedBy: {
+    id: string;
     name: string | null;
-    email: string;
+    avatar: string | null;
+    // Note: email intentionally excluded for public resolved items (privacy)
   };
 }
 
@@ -27,16 +30,18 @@ interface ResolvedFilters {
 }
 
 export default function ResolvedPage() {
+  // Fix hydration error by using consistent initial state
   const [items, setItems] = useState<ResolvedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  const [filters, setFilters] = useState<ResolvedFilters>({
-    itemType: '',
-    location: '',
-  });
+  // Ensure consistent initial state for filters (critical for hydration)
+  const [filters, setFilters] = useState<ResolvedFilters>(() => ({
+    itemType: '', // Always start with empty string
+    location: '', // Always start with empty string
+  }));
 
   const limit = 12;
 
@@ -53,7 +58,7 @@ export default function ResolvedPage() {
 
       const response = await fetch(`/api/items?${queryParams.toString()}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch resolved items');
+        throw new Error(`API returned ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -265,8 +270,23 @@ export default function ResolvedPage() {
                           Resolved on {new Date(item.resolvedAt).toLocaleDateString()}
                         </div>
                       )}
-                      <div className="text-xs text-gray-500">
-                        Posted by {item.postedBy.name || 'Anonymous'}
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        {item.postedBy.avatar ? (
+                          <Image
+                            src={item.postedBy.avatar}
+                            alt={item.postedBy.name || 'User avatar'}
+                            width={20}
+                            height={20}
+                            className="rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center">
+                            <span className="text-xs text-gray-500">
+                              {(item.postedBy.name || 'A').charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                        <span>Posted by {item.postedBy.name || 'Anonymous'}</span>
                       </div>
                       <Button asChild size="sm" className="w-full mt-auto">
                         <Link href={`/item/${item.id}`}>View Full Story</Link>

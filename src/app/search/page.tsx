@@ -29,6 +29,8 @@ export default function SearchPage() {
   // Main search state
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [filters, setFilters] = useState<SearchFilters>({
     search: '',
     itemType: '',
@@ -48,6 +50,8 @@ export default function SearchPage() {
   const fetchItems = useCallback(async (page?: number) => {
     try {
       setLoading(true);
+      setSearchError(null);
+      setHasSearched(true); // Mark that user has performed a search
       
       const queryParams = new URLSearchParams({
         page: (page || currentPage).toString(),
@@ -61,8 +65,24 @@ export default function SearchPage() {
       });
 
       const response = await fetch(`/api/items?${queryParams.toString()}`);
+      
       if (!response.ok) {
-        throw new Error(`Failed to fetch items: ${response.status}`);
+        // Don't throw error - handle it gracefully
+        let errorMessage = 'Failed to fetch items. Please try again.';
+        
+        if (response.status === 401) {
+          errorMessage = 'Please login to search for items.';
+        } else if (response.status === 403) {
+          errorMessage = 'Access denied. Please check your permissions.';
+        } else if (response.status === 404) {
+          errorMessage = 'No items found.';
+        } else if (response.status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+        
+        setSearchError(errorMessage);
+        setItems([]);
+        return; // Exit early, don't continue processing
       }
 
       const data = await response.json();
@@ -74,18 +94,20 @@ export default function SearchPage() {
       setTotal(data.pagination?.total || 0);
       
     } catch (error) {
-      console.error('Error fetching items:', error);
-      // Handle error - could set an error state here
+      console.error('Network error or unexpected error:', error);
+      // Handle network errors and other unexpected issues
       setItems([]);
+      setSearchError('Network error. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
   }, [filters, currentPage, limit]); // Include all dependencies
 
   // Fetch items on component mount and when filters change
-  useEffect(() => {
-    fetchItems(currentPage); // Pass current page
-  }, [fetchItems, currentPage]); // Re-fetch when fetchItems changes or page changes
+  // REMOVED: Auto-fetch logic to prevent 401 errors
+  // useEffect(() => {
+  //   fetchItems(currentPage); // Pass current page
+  // }, [fetchItems, currentPage]); // Re-fetch when fetchItems changes or page changes
 
   // Function to update filters and reset page
   const updateFilters = (newFilters: Partial<SearchFilters>) => {
@@ -107,14 +129,31 @@ export default function SearchPage() {
               <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
                 Search Items
               </label>
-              <input
-                type="text"
-                id="search"
-                placeholder="Search by title, description, or location..."
-                value={filters.search}
-                onChange={(e) => updateFilters({ search: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  id="search"
+                  placeholder="Search by title, description, or location..."
+                  value={filters.search}
+                  onChange={(e) => updateFilters({ search: e.target.value })}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onKeyDown={(e) => e.key === 'Enter' && fetchItems()}
+                />
+                <button
+                  onClick={() => fetchItems()}
+                  disabled={loading}
+                  className="px-6 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {loading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  )}
+                  {loading ? 'Searching...' : 'Search'}
+                </button>
+              </div>
             </div>
 
             {/* Advanced Filter Dropdowns */}
@@ -211,54 +250,76 @@ export default function SearchPage() {
         <div className="bg-white rounded-lg shadow">
           <div className="p-6 border-b">
             <h2 className="text-lg font-semibold text-gray-900">
-              Items ({total})
+              {hasSearched ? `Search Results (${total})` : 'Search Items'}
             </h2>
           </div>
           
           <div className="p-6">
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <div key={index} className="bg-white rounded-lg border shadow-sm overflow-hidden">
-                    {/* Card Header Skeleton */}
-                    <div className="p-4 border-b bg-gray-50">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="h-5 bg-gray-200 rounded animate-pulse flex-1 mr-2"></div>
-                        <div className="h-6 w-16 bg-gray-200 rounded-full animate-pulse"></div>
-                      </div>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
-                    </div>
-
-                    {/* Card Body Skeleton */}
-                    <div className="p-4">
-                      <div className="space-y-2 mb-4">
-                        <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                        <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                        <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex items-center">
-                          <div className="h-4 w-4 bg-gray-200 rounded animate-pulse mr-2"></div>
-                          <div className="h-4 bg-gray-200 rounded animate-pulse flex-1"></div>
-                        </div>
-                        <div className="flex items-center">
-                          <div className="h-4 w-4 bg-gray-200 rounded animate-pulse mr-2"></div>
-                          <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3"></div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Card Footer Skeleton */}
-                    <div className="p-4 bg-gray-50 border-t">
-                      <div className="h-9 bg-gray-200 rounded animate-pulse w-full"></div>
-                    </div>
-                  </div>
-                ))}
+            {searchError ? (
+              <div className="text-center py-8">
+                <div className="text-red-500 mb-4">
+                  <svg className="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <p className="text-red-600 font-medium mb-2">{searchError}</p>
+                <p className="text-gray-500 text-sm">
+                  {searchError.includes('login') ? (
+                    <>
+                      Please{' '}
+                      <a href="/auth/login" className="text-blue-600 hover:text-blue-500 underline">
+                        log in
+                      </a>{' '}
+                      to search for items, or try{' '}
+                      <a href="/resolved" className="text-blue-600 hover:text-blue-500 underline">
+                        browsing resolved items
+                      </a>.
+                    </>
+                  ) : (
+                    'Please try searching again or adjust your filters.'
+                  )}
+                </p>
+              </div>
+            ) : !hasSearched ? (
+              <div className="text-center py-12">
+                <div className="text-gray-400 mb-4">
+                  <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to Search?</h3>
+                <p className="text-gray-500 mb-4">
+                  Enter what you're looking for above and click search to find lost and found items on campus.
+                </p>
+                <div className="text-sm text-gray-400">
+                  <p>💡 You can search for items by:</p>
+                  <ul className="mt-2 space-y-1">
+                    <li>• Item name (e.g., "laptop", "phone", "keys")</li>
+                    <li>• Description (e.g., "black backpack", "silver watch")</li>
+                    <li>• Location (e.g., "library", "cafeteria")</li>
+                  </ul>
+                </div>
               </div>
             ) : items.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-500">No items found. Try adjusting your search or filters.</p>
+                <div className="text-gray-400 mb-4">
+                  <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0012 15c-2.34 0-4.5-.785-6.172-2.172M12 3c3.314 0 6 2.686 6 6 0 1.86-.792 3.542-2.073 4.828" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Items Found</h3>
+                <p className="text-gray-500 mb-4">
+                  {filters.search 
+                    ? `No items found for "${filters.search}". Try different keywords or check your filters.`
+                    : 'No items match your current filters. Try adjusting your search criteria.'
+                  }
+                </p>
+                <button 
+                  onClick={() => updateFilters({ search: '', itemType: '', status: '', location: '', from: '', to: '' })}
+                  className="text-blue-600 hover:text-blue-500 text-sm font-medium"
+                >
+                  Clear all filters
+                </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

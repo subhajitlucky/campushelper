@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { createItemSchema, itemsQuerySchema } from '@/lib/schemas/item';
 
@@ -9,32 +9,34 @@ import { createItemSchema, itemsQuerySchema } from '@/lib/schemas/item';
  */
 export async function GET(request: NextRequest) {
   try {
-    // CRITICAL FIX: Require authentication to prevent data harvesting
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required to access items' },
-        { status: 401 }
-      );
-    }
-
     const { searchParams } = new URL(request.url);
-    let queryParams;
     
-    try {
-      queryParams = itemsQuerySchema.parse(searchParams);
-    } catch (error) {
-      console.error('Query validation error:', error);
-      return NextResponse.json(
-        { 
-          error: 'Invalid query parameters'
-        },
-        { status: 400 }
-      );
-    }
-
-    const { page, limit, search, itemType, status, location, from, to, postedById } = queryParams;
+    // Simple parameter parsing without Zod for public resolved items
+    const status = searchParams.get('status') as 'LOST' | 'FOUND' | 'CLAIMED' | 'RESOLVED' | 'DELETED' | undefined;
+    const search = searchParams.get('search') || undefined;
+    const postedById = searchParams.get('postedById') || undefined;
+    const from = searchParams.get('from') || undefined;
+    const to = searchParams.get('to') || undefined;
+    const itemType = searchParams.get('itemType') as 'LOST' | 'FOUND' | undefined;
+    const location = searchParams.get('location') || undefined;
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    
     const skip = (page - 1) * limit;
+
+    // Allow public access for resolved items only
+    const isPublicResolvedOnly = status === 'RESOLVED' && !search && !postedById && !from && !to;
+    
+    // Only require authentication for non-public requests
+    if (!isPublicResolvedOnly) {
+      const session = await getSession();
+      if (!session?.user?.id) {
+        return NextResponse.json(
+          { error: 'Authentication required to access items' },
+          { status: 401 }
+        );
+      }
+    }
 
     try {
       const items = await prisma.item.findMany({
@@ -89,12 +91,19 @@ export async function GET(request: NextRequest) {
         },
         orderBy: {
           createdAt: 'desc'
-        }
-        // REMOVED: User data exposure - security fix
-        // include: {
-        //   postedBy: { select: { id: true, name: true, email: true } },
-        //   claimedBy: { select: { id: true, name: true, email: true } },
-        // },
+        },
+        // Include appropriate user data based on request type
+        include: isPublicResolvedOnly ? {
+          // For public resolved items, show minimal user info for "success stories"
+          postedBy: { 
+            select: { 
+              id: true, 
+              name: true,        // Show name for human connection
+              avatar: true       // Show avatar if available
+              // Deliberately excluding email for privacy
+            } 
+          },
+        } : undefined,
       });
 
       const total = await prisma.item.count({
@@ -190,7 +199,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Step 67: Check authentication (session required)
-    const session = await auth();
+    const session = await getSession();
     
     if (!session?.user?.id) {
       return NextResponse.json(

@@ -42,8 +42,16 @@ export default withAuth(
         const publicRoutes = ['/', '/auth/login', '/auth/signup', '/search', '/resolved'];
         const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
         
+        // Allow public access to resolved items API requests
+        const isResolvedItemsAPI = pathname === '/api/items' && 
+          req.nextUrl.searchParams.get('status') === 'RESOLVED' &&
+          !req.nextUrl.searchParams.get('search') &&
+          !req.nextUrl.searchParams.get('postedById') &&
+          !req.nextUrl.searchParams.get('from') &&
+          !req.nextUrl.searchParams.get('to');
+        
         // Allow public access to these routes
-        if (isPublicRoute) {
+        if (isPublicRoute || isResolvedItemsAPI) {
           return true;
         }
         

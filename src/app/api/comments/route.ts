@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { 
   createCommentSchema, 
@@ -10,7 +10,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     // CRITICAL FIX: Require authentication to prevent comments data harvesting
-    const session = await auth();
+    const session = await getSession();
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required to access comments' },
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const session = await auth();
+    const session = await getSession();
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required. Please log in to comment.' },

@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import { prisma } from './prisma';
 import bcrypt from 'bcryptjs';
+import { getServerSession } from 'next-auth/next';
 
 const handler = NextAuth({
     providers: [
@@ -121,6 +122,11 @@ const handler = NextAuth({
 });
 
 export const auth = handler;
+
+// Helper function for API routes to get session
+export async function getSession() {
+  return await getServerSession();
+}
 
 export { handler as GET, handler as POST };
 export default handler;
