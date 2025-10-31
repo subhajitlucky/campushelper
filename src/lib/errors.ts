@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { DatabaseErrorHandler } from './database-errors';
 
 /**
  * Standardized error codes for consistent API responses
@@ -172,36 +173,9 @@ export const UnsupportedAction = (action: string) =>
  * Parse Prisma errors and return appropriate standardized response
  */
 export function handlePrismaError(error: any): NextResponse {
-  // Prisma error codes
-  const prismaError = error?.code;
-  
-  switch (prismaError) {
-    case 'P2002':
-      // Unique constraint violation
-      const field = error.meta?.target?.[0] || 'field';
-      return AlreadyExists(`${field.charAt(0).toUpperCase() + field.slice(1)}`);
-    
-    case 'P2025':
-      // Record not found
-      return NotFound();
-    
-    case 'P2003':
-      // Foreign key constraint violation
-      return Conflict('Referenced resource does not exist');
-    
-    case 'P2014':
-      // Required relation not satisfied
-      return ValidationError('Required relationship is missing');
-    
-    case 'P2016':
-      // Query interpretation error
-      return ValidationError('Invalid query parameters');
-    
-    default:
-      // Generic database error
-      console.error('Unhandled Prisma error:', error);
-      return DatabaseError(error.message);
-  }
+  // Use our comprehensive database error handler
+  const dbError = DatabaseErrorHandler.handlePrismaError(error);
+  return DatabaseErrorHandler.toNextResponse(dbError);
 }
 
 /**
@@ -226,7 +200,8 @@ export async function safeApiHandler<T>(
     
     // Handle Prisma errors
     if ((error as any)?.name === 'PrismaClientKnownRequestError' || (error as any)?.code) {
-      return handlePrismaError(error);
+      const dbError = DatabaseErrorHandler.handlePrismaError(error);
+      return DatabaseErrorHandler.toNextResponse(dbError);
     }
     
     // Handle validation errors
