@@ -28,7 +28,7 @@ export default function LoadingDemo() {
   const { loading: apiLoading, progress: apiProgress, startLoading, stopLoading } = useApiLoading();
   const { loading: simpleLoading, startLoading: startSimple, stopLoading: stopSimple } = useSimpleLoading();
   const { loading: complexLoading, withLoading } = useLoading({
-    onSuccess: () => console.log('Complex loading completed!'),
+    onSuccess: () => {},
     successDelay: 500
   });
 

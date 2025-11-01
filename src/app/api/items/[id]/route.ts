@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { updateItemSchema } from '@/lib/schemas/item';
 import { sanitizeInput } from '@/lib/security';
+import { checkCSRF } from '@/lib/csrf-middleware';
 
 /**
  * GET /api/items/[id]
@@ -177,14 +178,19 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Step 74: Check authentication
+    // Step 74: Check authentication and CSRF
     const session = await getSession();
-    
+    const csrfResult = await checkCSRF(request);
+
     if (!session?.user?.id) {
       return NextResponse.json(
-        { error: 'Authentication required. Please log in to update an item.' },
+        { error: 'Authentication required' },
         { status: 401 }
       );
+    }
+
+    if (csrfResult) {
+      return csrfResult;
     }
 
     // Step 74: Extract and validate ID from params
@@ -350,14 +356,19 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Step 75: Check authentication
+    // Step 75: Check authentication and CSRF
     const session = await getSession();
-    
+    const csrfResult = await checkCSRF(request);
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required. Please log in to delete an item.' },
         { status: 401 }
       );
+    }
+
+    if (csrfResult) {
+      return csrfResult;
     }
 
     // Step 75: Extract and validate ID from params

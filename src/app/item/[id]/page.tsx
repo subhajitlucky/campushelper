@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import ItemDetail from '@/components/ItemDetail';
-import ItemDetailClient from './ItemDetailClient';
 
 /**
  * Dynamic Route: /item/[id]

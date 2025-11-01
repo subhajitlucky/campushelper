@@ -7,6 +7,7 @@ import {
 } from '@/lib/schemas/claim';
 import { sanitizeInput } from '@/lib/security';
 import { limitClaims } from '@/lib/rateLimit';
+import { checkCSRF } from '@/lib/csrf-middleware';
 
 // GET /api/claims?itemId=xxx
 export async function GET(request: NextRequest) {
@@ -148,6 +149,12 @@ export async function GET(request: NextRequest) {
 // POST /api/claims
 export async function POST(request: NextRequest) {
   try {
+    // Check CSRF protection first
+    const csrfError = await checkCSRF(request);
+    if (csrfError) {
+      return csrfError;
+    }
+
     // Check authentication
     const session = await getSession();
     if (!session?.user?.id) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { updateClaimStatusSchema } from '@/lib/schemas/claim-update';
+import { checkCSRF } from '@/lib/csrf-middleware';
 
 // PUT /api/claims/[id]
 export async function PUT(
@@ -10,11 +11,17 @@ export async function PUT(
 ) {
   try {
     const session = await getSession();
+    const csrfResult = await checkCSRF(request);
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required. Please log in to update a claim.' },
         { status: 401 }
       );
+    }
+
+    if (csrfResult) {
+      return csrfResult;
     }
 
     const { id } = await params;

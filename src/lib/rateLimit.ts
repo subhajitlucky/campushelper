@@ -51,17 +51,9 @@ async function rateLimit(
 ): Promise<void> {
   try {
     await limiter.consume(key);
-  } catch (rejRes) {
+  } catch (rejRes: any) {
     const secs = Math.round(rejRes.msBeforeNext / 1000) || 1;
     const retryAfter = Math.max(secs, 1);
-
-    // Log rate limit violation
-    console.warn(`Rate limit exceeded for ${endpointName}`, {
-      key,
-      limit: rejRes.totalHits,
-      retryAfter,
-      timestamp: new Date().toISOString(),
-    });
 
     throw new Error(
       `Too many requests to ${endpointName}. Try again in ${retryAfter} seconds.`

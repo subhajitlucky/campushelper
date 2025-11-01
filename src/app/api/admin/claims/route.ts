@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     // Check admin authentication
     const session = await getSession();
-    if (!session?.user?.id) {
+    if (!session || !session.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }

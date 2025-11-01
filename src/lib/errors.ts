@@ -98,6 +98,9 @@ export const AuthorizationDenied = (message: string = 'You do not have permissio
 export const InvalidSession = (message: string = 'Your session is invalid or has expired. Please log in again.') =>
   createErrorResponse(message, ErrorCodes.INVALID_SESSION, 401);
 
+export const ForbiddenError = (message: string = 'You do not have permission to access this resource.') =>
+  createErrorResponse(message, ErrorCodes.AUTHORIZATION_DENIED, 403);
+
 // Validation Errors
 export const ValidationError = (message: string, details?: Record<string, any>) =>
   createErrorResponse(message, ErrorCodes.VALIDATION_ERROR, 400, details);

@@ -88,7 +88,6 @@ export default function PostItemForm({ className }: PostItemFormProps) {
     successMessage: 'Item posted successfully!',
     errorMessage: 'Failed to post item. Please try again.',
     onSuccess: (result) => {
-      console.log('Item created:', result);
       resetForm();
       // Redirect after short delay to show success toast
       setTimeout(() => {

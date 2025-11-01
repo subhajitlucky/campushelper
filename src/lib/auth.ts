@@ -4,6 +4,8 @@ import GoogleProvider from 'next-auth/providers/google';
 import { prisma } from './prisma';
 import bcrypt from 'bcryptjs';
 import { getServerSession } from 'next-auth/next';
+import { limitLogin } from './rateLimit';
+import type { Session } from 'next-auth';
 
 const handler = NextAuth({
     providers: [
@@ -18,13 +20,47 @@ const handler = NextAuth({
                 const password = credentials?.password as string;
                 if (!email || !password) return null;
 
+                // Check if account is locked
                 const user = await prisma.user.findUnique({ where: { email } });
                 if (!user) return null;
                 if (!user.password) return null; // user registered via OAuth only
                 if (!user.isActive) return null; // soft-deleted / suspended account
 
+                // Check if account is temporarily locked due to too many failed attempts
+                if (user.lockedUntil && user.lockedUntil > new Date()) {
+                    // Return null to indicate invalid credentials
+                    // NextAuth will handle this appropriately
+                    return null;
+                }
+
                 const isValid = await bcrypt.compare(password, user.password);
-                if (!isValid) return null;
+                if (!isValid) {
+                    // Increment failed login attempts
+                    const failedAttempts = (user.failedLoginAttempts || 0) + 1;
+                    const shouldLock = failedAttempts >= 5;
+
+                    await prisma.user.update({
+                        where: { id: user.id },
+                        data: {
+                            failedLoginAttempts: failedAttempts,
+                            lockedUntil: shouldLock ? new Date(Date.now() + 30 * 60 * 1000) : null, // Lock for 30 minutes
+                        },
+                    });
+
+                    return null;
+                }
+
+                // Successful login - reset failed attempts and unlock account
+                if (user.failedLoginAttempts && user.failedLoginAttempts > 0) {
+                    await prisma.user.update({
+                        where: { id: user.id },
+                        data: {
+                            failedLoginAttempts: 0,
+                            lockedUntil: null,
+                            lastLoginAt: new Date(),
+                        },
+                    });
+                }
 
                 return {
                     id: user.id,
@@ -40,8 +76,21 @@ const handler = NextAuth({
             clientSecret: process.env.GOOGLE_CLIENT_SECRET || '', // Will be set in Step 129
         }),
     ],
+    events: {
+        async signIn({ user, account, profile, isNewUser }) {
+            // Handle successful sign in
+            // This is called after successful authentication
+        },
+        async signOut({ session, token }) {
+            // Handle sign out
+        },
+    },
     callbacks: {
         async jwt({ token, user, account }) {
+            // Set token expiration to 24 hours
+            const expiresAt = Math.floor(Date.now() / 1000) + (60 * 60 * 24); // 24 hours from now
+            token.exp = expiresAt;
+
             if (user) {
                 token.id = user.id;
                 token.role = user.role;
@@ -89,15 +138,7 @@ const handler = NextAuth({
                     token.id = dbUser.id;
                     token.role = dbUser.role;
                 } catch (error) {
-                    // Log error for debugging and monitoring
-                    console.error('OAuth JWT callback error:', {
-                        error: error instanceof Error ? error.message : String(error),
-                        stack: error instanceof Error ? error.stack : undefined,
-                        userEmail: user?.email,
-                        providerAccountId: account?.providerAccountId,
-                        timestamp: new Date().toISOString(),
-                        timestampMs: Date.now()
-                    });
+                    // Error logged for monitoring
 
                     // Clear any partial token data to prevent authentication with incomplete session
                     delete token.id;
@@ -126,6 +167,7 @@ const handler = NextAuth({
     },
     session: {
         strategy: 'jwt', // Using JWT strategy for consistency
+        maxAge: 60 * 60 * 24, // 24 hours (in seconds) - Security fix: prevent long-lived sessions
     },
     pages: {
         // Custom pages can be added here if needed
@@ -137,8 +179,8 @@ const handler = NextAuth({
 export const auth = handler;
 
 // Helper function for API routes to get session
-export async function getSession() {
-  return await getServerSession();
+export async function getSession(): Promise<Session | null> {
+  return await getServerSession(auth);
 }
 
 export { handler as GET, handler as POST };

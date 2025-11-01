@@ -67,7 +67,7 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
 
     try {
       // TODO: Implement cancel claim API endpoint
-      console.log('Cancel claim:', claimId);
+      // Cancel claim initiated
       // For now, just remove from local state
       setClaims(prev => prev.filter(claim => claim.id !== claimId));
     } catch (error) {

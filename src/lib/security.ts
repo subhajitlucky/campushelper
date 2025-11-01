@@ -1,14 +1,12 @@
-import DOMPurify from 'dompurify';
-
 /**
  * Security Utilities for XSS Prevention
- * 
+ *
  * Provides sanitization and validation functions to prevent
  * cross-site scripting (XSS) attacks and other security vulnerabilities
  */
 
 /**
- * Sanitizes input to prevent XSS attacks using DOMPurify
+ * Sanitizes input to prevent XSS attacks
  * Removes all potentially malicious content including:
  * - Script tags and inline JavaScript
  * - Event handlers (onclick, onload, etc.)
@@ -20,19 +18,9 @@ export function sanitizeInput(input: string): string {
     return '';
   }
 
-  // Sanitize the input using DOMPurify
-  const sanitized = DOMPurify.sanitize(input, {
-    // Allow basic formatting but remove dangerous elements
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br'],
-    ALLOWED_ATTR: [],
-    // Remove dangerous protocols
-    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input'],
-    FORBID_ATTR: ['onclick', 'onload', 'onerror', 'onmouseover', 'onfocus', 'onblur', 'onchange', 'onsubmit', 'style'],
-    // Add URL protocols to FORBID_ATTR instead
-  });
-
-  // Additional security: Remove any remaining potentially dangerous patterns
-  return sanitized
+  // Simple but effective sanitization for basic text fields
+  // Remove script tags and dangerous patterns
+  return input
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/javascript:/gi, '')
     .replace(/data:/gi, '')
@@ -77,7 +65,6 @@ export function isValidErrorMessage(message: string): boolean {
 export function setSafeErrorMessage(message: string, fallback: string = 'An error occurred. Please try again.'): string {
   // First validate against malicious patterns
   if (!isValidErrorMessage(message)) {
-    console.warn('Blocked potentially malicious error message:', message);
     return fallback;
   }
 

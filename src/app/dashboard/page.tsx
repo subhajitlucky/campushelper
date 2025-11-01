@@ -1,8 +1,23 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import DashboardClient from './DashboardClient';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Package, MessageSquare, CheckCircle, Search, Plus } from "lucide-react";
+import UserProfileSection from '@/components/UserProfileSection';
+import UserItemsSection from '@/components/UserItemsSection';
+import UserClaimsSection from '@/components/UserClaimsSection';
+import IncomingClaimsSection from '@/components/IncomingClaimsSection';
+// Simple PageLoader component
+const PageLoader = ({ text }: { text: string }) => (
+  <div className="text-center py-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+    <p className="text-gray-600">{text}</p>
+  </div>
+);
 
 /**
  * Dashboard Page - Protected Route

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { updateCommentSchema } from '@/lib/schemas/comment';
+import { checkCSRF } from '@/lib/csrf-middleware';
 
 // DELETE /api/comments/[id]
 export async function DELETE(
@@ -10,11 +10,17 @@ export async function DELETE(
 ) {
   try {
     const session = await getSession();
+    const csrfResult = await checkCSRF(request);
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required. Please log in to delete a comment.' },
         { status: 401 }
       );
+    }
+
+    if (csrfResult) {
+      return csrfResult;
     }
 
     const { id } = await params;
@@ -89,11 +95,17 @@ export async function PUT(
 ) {
   try {
     const session = await getSession();
+    const csrfResult = await checkCSRF(request);
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required. Please log in to edit a comment.' },
         { status: 401 }
       );
+    }
+
+    if (csrfResult) {
+      return csrfResult;
     }
 
     const { id } = await params;

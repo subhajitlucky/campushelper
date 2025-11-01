@@ -7,6 +7,7 @@ import {
 } from '@/lib/schemas/comment';
 import { sanitizeInput } from '@/lib/security';
 import { limitComments } from '@/lib/rateLimit';
+import { checkCSRF } from '@/lib/csrf-middleware';
 
 // GET /api/comments?itemId=xxx
 export async function GET(request: NextRequest) {
@@ -133,6 +134,12 @@ export async function GET(request: NextRequest) {
 // POST /api/comments
 export async function POST(request: NextRequest) {
   try {
+    // Check CSRF protection first
+    const csrfError = await checkCSRF(request);
+    if (csrfError) {
+      return csrfError;
+    }
+
     // Check authentication
     const session = await getSession();
     if (!session?.user?.id) {

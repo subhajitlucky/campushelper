@@ -8,6 +8,9 @@ interface ValidationInputProps extends React.InputHTMLAttributes<HTMLInputElemen
   isValid?: boolean;
   showCheckIcon?: boolean;
   helperText?: string;
+  touched?: boolean;
+  isTouched?: boolean;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
 }
 
 export const ValidationInput = forwardRef<HTMLInputElement, ValidationInputProps>(

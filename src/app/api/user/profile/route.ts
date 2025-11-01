@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { updateProfileSchema } from '@/lib/schemas/user';
+import { checkCSRF } from '@/lib/csrf-middleware';
 
 /**
  * PUT /api/user/profile
@@ -9,13 +10,19 @@ import { updateProfileSchema } from '@/lib/schemas/user';
  */
 export async function PUT(request: NextRequest) {
   try {
-    // Check authentication
+    // Check authentication and CSRF
     const session = await getSession();
+    const csrfResult = await checkCSRF(request);
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       );
+    }
+
+    if (csrfResult) {
+      return csrfResult;
     }
 
     // Parse and validate request body

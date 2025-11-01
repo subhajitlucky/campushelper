@@ -35,6 +35,10 @@ model User {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   lastLoginAt       DateTime?
+
+  // Security - Account lockout and failed login tracking
+  failedLoginAttempts Int     @default(0)  // Track failed login attempts
+  lockedUntil         DateTime?            // Account locked until this time
 }
 
 enum Role {

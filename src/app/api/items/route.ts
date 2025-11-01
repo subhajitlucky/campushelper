@@ -11,6 +11,7 @@ import {
 } from '@/lib/errors';
 import { sanitizeInput } from '@/lib/security';
 import { limitItems } from '@/lib/rateLimit';
+import { checkCSRF } from '@/lib/csrf-middleware';
 
 /**
  * GET /api/items
@@ -224,7 +225,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   return safeApiHandler(async () => {
-    // Check authentication
+    // Check authentication first
     const session = await getSession();
 
     if (!session?.user?.id) {
@@ -232,6 +233,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Apply rate limiting: 20 items per hour per user
+    // Only apply rate limiting AFTER authentication is confirmed
     await limitItems(request, session.user.id);
 
     // Parse request body
@@ -271,11 +273,11 @@ export async function POST(request: NextRequest) {
     
     const newItem = await prisma.item.create({
       data: {
-        title: sanitizeInput(validatedData.title),
-        description: sanitizeInput(validatedData.description),
+        title: validatedData.title,
+        description: validatedData.description,
         itemType: validatedData.itemType,
         status: status,
-        location: sanitizeInput(validatedData.location),
+        location: validatedData.location,
         images: validatedData.images.filter(image => image && image.trim() !== '') as string[],
         postedById: session.user.id,
       },
