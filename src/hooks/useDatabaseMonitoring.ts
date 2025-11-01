@@ -1,189 +1,154 @@
-import { useEffect, useState, useCallback } from 'react';
-import { logger } from '@/lib/logger';
-import { DatabaseError, DatabaseErrorType } from '@/lib/database-errors';
+import { useState, useEffect, useCallback } from 'react';
 
-interface DatabaseMetrics {
-  totalQueries: number;
-  successfulQueries: number;
-  failedQueries: number;
-  averageResponseTime: number;
-  errorRate: number;
-  lastError?: DatabaseError;
-  connectionStatus: 'connected' | 'disconnected' | 'checking';
+interface DatabaseError {
+  type: string;
+  message: string;
+  timestamp: Date;
+  context?: Record<string, any>;
 }
 
-interface DatabaseMonitoringOptions {
-  enablePerformanceTracking?: boolean;
-  enableErrorTracking?: boolean;
-  enableConnectionMonitoring?: boolean;
-  alertThreshold?: number; // Alert when error rate exceeds this percentage
+interface DatabaseStats {
+  totalQueries: number;
+  avgResponseTime: number;
+  errorRate: number;
+  connectionStatus: 'healthy' | 'degraded' | 'error';
 }
 
 interface UseDatabaseMonitoringReturn {
-  metrics: DatabaseMetrics;
-  trackQuery: (duration: number, success: boolean, error?: DatabaseError) => void;
+  stats: DatabaseStats | null;
+  errors: DatabaseError[];
   checkConnection: () => Promise<boolean>;
-  resetMetrics: () => void;
-  errorRate: number;
-  isHealthy: boolean;
+  clearErrors: () => void;
 }
 
 export function useDatabaseMonitoring(
-  options: DatabaseMonitoringOptions = {}
+  enabled: boolean = true,
+  thresholdMs: number = 1000,
+  errorRateThreshold: number = 0.1
 ): UseDatabaseMonitoringReturn {
-  const {
-    enablePerformanceTracking = true,
-    enableErrorTracking = true,
-    enableConnectionMonitoring = true,
-    alertThreshold = 5 // 5% error rate threshold
-  } = options;
+  const [stats, setStats] = useState<DatabaseStats | null>(null);
+  const [errors, setErrors] = useState<DatabaseError[]>([]);
 
-  const [metrics, setMetrics] = useState<DatabaseMetrics>({
-    totalQueries: 0,
-    successfulQueries: 0,
-    failedQueries: 0,
-    averageResponseTime: 0,
-    errorRate: 0,
-    connectionStatus: 'checking'
-  });
+  const recordQuery = useCallback((duration: number, success: boolean) => {
+    if (!enabled) return;
 
-  // Track query performance and errors
-  const trackQuery = useCallback((duration: number, success: boolean, error?: DatabaseError) => {
-    setMetrics(prev => {
-      const newTotal = prev.totalQueries + 1;
-      const newSuccessful = success ? prev.successfulQueries + 1 : prev.successfulQueries;
-      const newFailed = success ? prev.failedQueries : prev.failedQueries + 1;
-      
-      // Calculate average response time (using exponential moving average)
-      const alpha = 0.1; // Smoothing factor
-      const newAverageTime = prev.totalQueries === 0 
-        ? duration 
-        : (alpha * duration) + ((1 - alpha) * prev.averageResponseTime);
-      
-      // Calculate error rate
-      const errorRate = (newFailed / newTotal) * 100;
-      
-      const newMetrics: DatabaseMetrics = {
-        totalQueries: newTotal,
-        successfulQueries: newSuccessful,
-        failedQueries: newFailed,
-        averageResponseTime: newAverageTime,
-        errorRate,
-        lastError: error || prev.lastError,
-        connectionStatus: 'connected'
-      };
-
-      // Log metrics if performance tracking is enabled
-      if (enablePerformanceTracking) {
-        logger.performance('database_query', duration, {
-          success,
-          errorType: error?.type,
-          totalQueries: newTotal,
-          errorRate
-        });
-      }
-
-      // Log errors if error tracking is enabled
-      if (enableErrorTracking && error) {
-        logger.error(`Database Error: ${error.type}`, {
-          errorType: error.type,
-          userMessage: error.userMessage,
-          canRetry: error.canRetry,
-          shouldContactSupport: error.shouldContactSupport,
-          context: error
-        });
-
-        // Alert if error rate exceeds threshold
-        if (errorRate > alertThreshold) {
-          logger.error('High database error rate detected', {
-            errorRate,
-            threshold: alertThreshold,
-            totalQueries: newTotal,
-            failedQueries: newFailed,
-            lastError: error
-          });
-        }
-      }
-
-      return newMetrics;
-    });
-  }, [enablePerformanceTracking, enableErrorTracking, alertThreshold]);
-
-  // Check database connection
-  const checkConnection = useCallback(async (): Promise<boolean> => {
-    setMetrics(prev => ({ ...prev, connectionStatus: 'checking' }));
+    const timestamp = new Date();
     
+    setStats(prevStats => {
+      if (!prevStats) {
+        return {
+          totalQueries: 1,
+          avgResponseTime: duration,
+          errorRate: success ? 0 : 1,
+          connectionStatus: success ? 'healthy' : 'degraded'
+        };
+      }
+
+      const newTotal = prevStats.totalQueries + 1;
+      const newAvgTime = ((prevStats.avgResponseTime * prevStats.totalQueries) + duration) / newTotal;
+      const newErrorRate = success 
+        ? (prevStats.errorRate * prevStats.totalQueries) / newTotal
+        : ((prevStats.errorRate * prevStats.totalQueries) + 1) / newTotal;
+
+      // Determine connection status based on error rate and response time
+      let connectionStatus: DatabaseStats['connectionStatus'] = 'healthy';
+      if (newErrorRate >= errorRateThreshold || newAvgTime > thresholdMs) {
+        connectionStatus = 'degraded';
+      }
+      if (newErrorRate >= errorRateThreshold * 2 || newAvgTime > thresholdMs * 2) {
+        connectionStatus = 'error';
+      }
+
+      return {
+        totalQueries: newTotal,
+        avgResponseTime: newAvgTime,
+        errorRate: newErrorRate,
+        connectionStatus
+      };
+    });
+  }, [enabled, thresholdMs, errorRateThreshold]);
+
+  const recordError = useCallback((errorType: string, message: string, context?: Record<string, any>) => {
+    if (!enabled) return;
+
+    const error: DatabaseError = {
+      type: errorType,
+      message,
+      timestamp: new Date(),
+      context
+    };
+
+    setErrors(prev => [...prev.slice(-9), error]); // Keep last 10 errors
+  }, [enabled]);
+
+  const checkConnection = useCallback(async (): Promise<boolean> => {
     try {
-      const startTime = Date.now();
+      const start = Date.now();
       
-      // Simple connection test - you might want to customize this
-      const response = await fetch('/api/items?page=1&limit=1', { 
-        method: 'HEAD' // Use HEAD to avoid fetching data
+      // Perform a simple database query to check connection
+      const response = await fetch('/api/admin/stats', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
-      
-      const duration = Date.now() - startTime;
-      const isConnected = response.ok || response.status === 200 || response.status === 401; // 401 is ok (means DB is responding)
-      
-      setMetrics(prev => ({
-        ...prev,
-        connectionStatus: isConnected ? 'connected' : 'disconnected'
-      }));
 
-      if (enableConnectionMonitoring) {
-        logger.info('Database connection check', {
-          status: isConnected ? 'success' : 'failed',
-          responseTime: duration,
-          statusCode: response.status
-        });
-      }
+      const duration = Date.now() - start;
+      
+      const success = response.ok && duration < thresholdMs;
+      recordQuery(duration, success);
 
-      return isConnected;
+      return success;
     } catch (error) {
-      setMetrics(prev => ({ ...prev, connectionStatus: 'disconnected' }));
-      
-      if (enableConnectionMonitoring) {
-        logger.error('Database connection check failed', {
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
-      }
-      
+      recordError('CONNECTION_CHECK_ERROR', error instanceof Error ? error.message : 'Unknown error');
       return false;
     }
-  }, [enableConnectionMonitoring]);
+  }, [thresholdMs, recordQuery, recordError]);
 
-  // Reset metrics
-  const resetMetrics = useCallback(() => {
-    setMetrics({
-      totalQueries: 0,
-      successfulQueries: 0,
-      failedQueries: 0,
-      averageResponseTime: 0,
-      errorRate: 0,
-      connectionStatus: 'checking'
-    });
+  const clearErrors = useCallback(() => {
+    setErrors([]);
   }, []);
 
-  // Auto-check connection if monitoring is enabled
+  // Monitor connection health periodically
   useEffect(() => {
-    if (enableConnectionMonitoring) {
-      checkConnection();
-      
-      // Check connection every 30 seconds
-      const interval = setInterval(checkConnection, 30000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [enableConnectionMonitoring, checkConnection]);
+    if (!enabled) return;
 
-  // Calculate if database is healthy
-  const isHealthy = metrics.connectionStatus === 'connected' && metrics.errorRate <= alertThreshold;
+    // Check connection every 30 seconds
+    const interval = setInterval(checkConnection, 30000);
+
+    // Initial connection check
+    checkConnection();
+
+    return () => clearInterval(interval);
+  }, [enabled, checkConnection]);
 
   return {
-    metrics,
-    trackQuery,
+    stats,
+    errors,
     checkConnection,
-    resetMetrics,
-    errorRate: metrics.errorRate,
-    isHealthy
+    clearErrors
   };
 }
+
+// Simplified utility function for use in API routes (without logger)
+export function createDatabaseMonitor() {
+  return {
+    recordQuery: (duration: number, success: boolean) => {
+      // No logging - just return success status
+      return success;
+    },
+
+    recordError: (errorType: string, message: string, context?: Record<string, any>) => {
+      // No logging - just record the error info
+      return {
+        type: errorType,
+        message,
+        context,
+        timestamp: new Date().toISOString()
+      };
+    }
+  };
+}
+
+export default useDatabaseMonitoring;
+

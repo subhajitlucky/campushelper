@@ -25,6 +25,7 @@
     "next": "^16.0.0",
     "next-auth": "^4.24.11",
     "prisma": "^6.17.1",
+    "rate-limiter-flexible": "^8.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.65.0",

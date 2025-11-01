@@ -157,11 +157,7 @@
     @apply hover:shadow-xl hover:-translate-y-1;
   }
 
-  /* Smooth gradient transitions */
-  .gradient-transition {
-    @apply transition-all duration-500 ease-in-out;
-    background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
-  }
+
 
   /* Pulse animation for loading states */
   .pulse-smooth {

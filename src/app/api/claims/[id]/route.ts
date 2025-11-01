@@ -200,14 +200,12 @@ export async function PUT(
       });
 
     } catch (dbError) {
-      console.error('Database error updating claim:', dbError);
       return NextResponse.json(
         { error: 'Failed to update claim in database' },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('Unexpected error updating claim:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

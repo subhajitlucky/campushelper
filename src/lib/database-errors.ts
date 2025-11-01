@@ -1,5 +1,7 @@
+// Simplified database error handling without logger dependencies
+// Using React state management for error handling instead
+
 import { NextResponse } from 'next/server';
-import { logger } from './logger';
 
 /**
  * Database error types for more specific error handling
@@ -67,8 +69,6 @@ export class DatabaseErrorHandler {
   static handlePrismaError(error: any, context?: string): DatabaseError {
     const prismaError = error?.code;
     
-    logger.apiError('Prisma', 'Database Operation', error, { context, prismaCode: prismaError });
-
     switch (prismaError) {
       case 'P2002': {
         // Unique constraint violation
@@ -181,8 +181,6 @@ export class DatabaseErrorHandler {
   static handleConnectionError(error: any, context?: string): DatabaseError {
     const message = error?.message || 'Unknown connection error';
     
-    logger.apiError('Database', 'Connection Error', error, { context });
-
     if (message.includes('connection') || message.includes('timeout')) {
       return {
         type: DatabaseErrorTypes.DATABASE_CONNECTION_ERROR,
@@ -634,13 +632,6 @@ export class DatabaseErrorHandler {
       },
       timestamp: new Date().toISOString()
     };
-
-    logger.error(`Database Error Response: ${error.type}`, {
-      status: responseStatus,
-      userMessage: error.userMessage,
-      technicalDetails: error.technicalDetails,
-      context: error
-    });
 
     return NextResponse.json(responseData, { status: responseStatus });
   }

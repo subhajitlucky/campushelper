@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { 
-  createClaimSchema, 
-  claimsQuerySchema 
+import {
+  createClaimSchema,
+  claimsQuerySchema
 } from '@/lib/schemas/claim';
+import { sanitizeInput } from '@/lib/security';
+import { limitClaims } from '@/lib/rateLimit';
 
 // GET /api/claims?itemId=xxx
 export async function GET(request: NextRequest) {
@@ -136,7 +138,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Error fetching claims:', error);
     return NextResponse.json(
       { error: 'Failed to fetch claims' },
       { status: 500 }
@@ -155,6 +156,9 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Apply rate limiting: 10 claims per hour per user
+    await limitClaims(request, session.user.id);
 
     // Parse request body
     let requestBody;
@@ -184,7 +188,10 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    const { claimType, itemId, message } = validatedData;
+    const { claimType, itemId, message: rawMessage } = validatedData;
+    
+    // Sanitize user input
+    const message = rawMessage ? sanitizeInput(rawMessage) : null;
 
     // Check if item exists
     const item = await prisma.item.findUnique({
@@ -286,14 +293,12 @@ export async function POST(request: NextRequest) {
         { status: 201 }
       );
     } catch (dbError) {
-      console.error('Database error creating claim:', dbError);
       return NextResponse.json(
         { error: 'Failed to create claim in database' },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('Unexpected error creating claim:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

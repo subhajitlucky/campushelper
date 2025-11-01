@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { sanitizeInput } from '@/lib/security';
 
 interface ClaimsModalProps {
   isOpen: boolean;
@@ -49,7 +50,7 @@ export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwne
         body: JSON.stringify({
           claimType: formData.claimType,
           itemId: itemId,
-          message: formData.message.trim()
+          message: sanitizeInput(formData.message.trim())
         }),
       });
 
@@ -70,7 +71,6 @@ export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwne
       }, 2000);
       
     } catch (err) {
-      console.error('Error submitting claim:', err);
       setError(err instanceof Error ? err.message : 'Failed to submit claim');
     } finally {
       setLoading(false);

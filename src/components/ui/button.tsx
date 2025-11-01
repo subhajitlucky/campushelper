@@ -42,10 +42,26 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, loading = false, children, disabled, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    
+
     // Loading state overrides disabled
     const isDisabled = disabled || loading;
-    
+
+    // When asChild is true, we can't add extra children (loading, ripple)
+    // Only pass one child to Slot
+    if (asChild) {
+      return (
+        <Comp
+          className={cn(buttonVariants({ variant, size, className }))}
+          ref={ref}
+          disabled={isDisabled}
+          {...props}
+        >
+          {children}
+        </Comp>
+      );
+    }
+
+    // Normal button - can have multiple children
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
@@ -59,7 +75,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           </div>
         )}
         {children}
-        
+
         {/* Ripple effect overlay */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute inset-0 bg-white opacity-0 hover:opacity-10 transition-opacity duration-200" />

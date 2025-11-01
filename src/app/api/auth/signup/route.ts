@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { limitSignup } from '@/lib/rateLimit';
 
 const signupSchema = z.object(
     {
@@ -13,6 +14,8 @@ const signupSchema = z.object(
 
 export async function POST(request: NextRequest){
     try{
+        // Apply rate limiting: 5 signups per hour per IP
+        await limitSignup(request);
 
         // Parse and validate the request body
         const body = await request.json();
@@ -61,8 +64,14 @@ export async function POST(request: NextRequest){
         );
 
     }catch(error) {
+        // Handle rate limiting errors
+        if (error instanceof Error && error.message.includes('Too many requests')) {
+            return NextResponse.json(
+                { error: error.message },
+                { status: 429 } // HTTP 429 = Too Many Requests
+            );
+        }
 
-        console.error(error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

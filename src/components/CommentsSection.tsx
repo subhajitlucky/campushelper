@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
+import { sanitizeInput } from '@/lib/security';
 
 interface Comment {
   id: string;
@@ -83,7 +84,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: formData.message.trim(),
+          message: sanitizeInput(formData.message.trim()),
           itemId: itemId,
           images: [] // For now, no images in comments
         }),
@@ -102,7 +103,6 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
       setComments(prev => [data.comment, ...prev]);
       
     } catch (err) {
-      console.error('Error posting comment:', err);
       setFormError('Failed to post comment. Please try again.');
     } finally {
       setFormLoading(false);
@@ -134,7 +134,6 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
       setComments(data.comments || []);
       setError(null);
     } catch (err) {
-      console.error('Error fetching comments:', err);
       setError('Failed to load comments');
     } finally {
       setLoading(false);
@@ -159,7 +158,6 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
       // Remove comment from local state
       setComments(prev => prev.filter(comment => comment.id !== commentId));
     } catch (err) {
-      console.error('Error deleting comment:', err);
       setDeleteError('Failed to delete comment. Please try again.');
     }
   };
@@ -219,7 +217,6 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
       setEditingCommentId(null);
       setEditMessage('');
     } catch (err) {
-      console.error('Error updating comment:', err);
       setEditError('Failed to update comment. Please try again.');
     } finally {
       setEditLoading(false);

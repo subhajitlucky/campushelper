@@ -1,6 +1,7 @@
+// Simplified API request hook without logger dependencies
+// Using React state management for error handling instead
+
 import { useState, useCallback } from 'react';
-import { toast } from 'react-hot-toast';
-import { logger } from '@/lib/logger';
 
 // Error handling utilities
 export interface ApiError {
@@ -174,14 +175,10 @@ export function useApiRequest<T = any>(
     const startTime = Date.now();
 
     try {
-      logger.apiRequest(apiFunction.name || 'anonymous', 'API Call', { 
-        args: args.length > 0 ? args : undefined 
-      });
       
       const result = await apiFunction(...args);
       
       const duration = Date.now() - startTime;
-      logger.apiResponse(apiFunction.name || 'anonymous', 'API Call', 200, duration);
       
       setData(result);
       
@@ -190,47 +187,39 @@ export function useApiRequest<T = any>(
       }
 
       if (successMessage && showToast) {
-        toast.success(successMessage);
+        // showSuccess(successMessage); // Removed showSuccess - use state management
       }
-
-      logger.info(`API Success: ${apiFunction.name || 'anonymous'}`, {
-        duration,
-        success: true,
-        result: result
-      });
-
+  
+      // logger.info(`API Success: ${apiFunction.name || 'anonymous'}`, { // Removed logger
+      //   duration,
+      //   success: true,
+      //   result: result
+      // });
+  
       return result;
-
+  
     } catch (err: any) {
-      const { userMessage, logMessage, code } = getErrorMessage(err);
+      const { userMessage } = getErrorMessage(err);
       const duration = Date.now() - startTime;
       
-      const apiError: ApiError = {
+      const apiError = {
         error: userMessage,
-        code,
+        code: err?.code || 'API_ERROR',
         details: err?.response?.data || err,
         timestamp: new Date().toISOString()
       };
 
       setError(apiError);
-
-      // Log the error with our structured logger
-      logger.apiError(apiFunction.name || 'anonymous', 'API Call', err, {
-        duration,
-        args: args.length > 0 ? args : undefined,
-        userMessage,
-        code
-      });
-
+  
       // Call custom error handler
       if (onError) {
-        onError(apiError);
+        onError(err);
       }
-
-      // Show toast notification
-      if (showToast) {
-        toast.error(errorMessage || userMessage);
-      }
+  
+      // Use React state management for error display instead of toasts
+      // if (showToast) {
+      //   // showError(errorMessage || userMessage); // Removed showError - use state management
+      // }
 
       return null;
 

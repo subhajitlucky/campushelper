@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { updateItemSchema } from '@/lib/schemas/item';
+import { sanitizeInput } from '@/lib/security';
 
 /**
  * GET /api/items/[id]
@@ -160,7 +161,6 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Error fetching item:', error);
     return NextResponse.json(
       { error: 'Failed to fetch item' },
       { status: 500 }
@@ -252,7 +252,7 @@ export async function PUT(
 
     // Step 74: Update item in database
     try {
-      // Prepare update data with proper type handling
+      // Prepare update data with sanitized input
       const updateData: {
         title?: string;
         description?: string;
@@ -261,10 +261,10 @@ export async function PUT(
         location?: string;
         images?: string[];
       } = {
-        title: validatedData.title,
-        description: validatedData.description,
+        title: validatedData.title ? sanitizeInput(validatedData.title) : undefined,
+        description: validatedData.description ? sanitizeInput(validatedData.description) : undefined,
         itemType: validatedData.itemType,
-        location: validatedData.location,
+        location: validatedData.location ? sanitizeInput(validatedData.location) : undefined,
         images: validatedData.images?.filter(image => image && image.trim() !== '') as string[],
       };
       
@@ -326,7 +326,6 @@ export async function PUT(
       });
 
     } catch (dbError) {
-      console.error('Database error updating item:', dbError);
       return NextResponse.json(
         { error: 'Failed to update item in database' },
         { status: 500 }
@@ -335,7 +334,6 @@ export async function PUT(
 
   } catch (error) {
     // Step 74: General error handling
-    console.error('Unexpected error updating item:', error);
     return NextResponse.json(
       { error: 'An unexpected error occurred while updating the item' },
       { status: 500 }
@@ -478,7 +476,6 @@ export async function DELETE(
       });
 
     } catch (dbError) {
-      console.error('Database error deleting item:', dbError);
       return NextResponse.json(
         { error: 'Failed to delete item in database' },
         { status: 500 }
@@ -487,7 +484,6 @@ export async function DELETE(
 
   } catch (error) {
     // Step 75: General error handling
-    console.error('Unexpected error deleting item:', error);
     return NextResponse.json(
       { error: 'An unexpected error occurred while deleting the item' },
       { status: 500 }

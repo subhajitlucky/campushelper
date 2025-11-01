@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { 
-  createCommentSchema, 
+import {
+  createCommentSchema,
   commentsQuerySchema
 } from '@/lib/schemas/comment';
+import { sanitizeInput } from '@/lib/security';
+import { limitComments } from '@/lib/rateLimit';
 
 // GET /api/comments?itemId=xxx
 export async function GET(request: NextRequest) {
@@ -62,9 +64,7 @@ export async function GET(request: NextRequest) {
       item.postedById === session.user.id ||
       // Admin/moderator can see all comments
       session.user.role === 'ADMIN' || 
-      session.user.role === 'MODERATOR' ||
-      // For public items (not deleted), authenticated users can see comments
-      (item.status !== 'DELETED');
+      session.user.role === 'MODERATOR';
 
     if (!canAccessComments) {
       return NextResponse.json(
@@ -123,7 +123,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Error fetching comments:', error);
     return NextResponse.json(
       { error: 'Failed to fetch comments' },
       { status: 500 }
@@ -142,6 +141,9 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Apply rate limiting: 30 comments per hour per user
+    await limitComments(request, session.user.id);
 
     // Parse request body
     let requestBody;
@@ -171,7 +173,10 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    const { message, itemId, images = [] } = validatedData;
+    const { message: rawMessage, itemId, images = [] } = validatedData;
+    
+    // Sanitize user input
+    const message = sanitizeInput(rawMessage);
 
     // Check if item exists
     const item = await prisma.item.findUnique({
@@ -247,14 +252,12 @@ export async function POST(request: NextRequest) {
         { status: 201 }
       );
     } catch (dbError) {
-      console.error('Database error creating comment:', dbError);
       return NextResponse.json(
         { error: 'Failed to create comment in database' },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('Unexpected error creating comment:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

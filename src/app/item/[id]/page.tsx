@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import ItemDetail from '@/components/ItemDetail';
+import ItemDetailClient from './ItemDetailClient';
 
 /**
  * Dynamic Route: /item/[id]
@@ -55,7 +56,6 @@ export default async function ItemDetailPage({
     // Step 108: Render item detail using the ItemDetail component
     return <ItemDetail item={itemData} />;
   } catch (error) {
-    console.error('Error loading item detail page:', error);
     notFound();
   }
 }

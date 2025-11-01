@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
-import { setSafeErrorMessage } from '@/lib/security';
+import { setSafeErrorMessage, sanitizeInput } from '@/lib/security';
 import { showSuccess, showError } from '@/lib/toast-config';
 
 import { Button } from '@/components/ui/button';
@@ -50,10 +50,13 @@ export default function PostItemForm({ className }: PostItemFormProps) {
     validateOnBlur: true
   });
 
-  // Create API request function
+  // Create API request function with sanitized input
   const createItem = async (formData: ItemFormValues) => {
     const itemData = {
-      ...formData,
+      title: sanitizeInput(formData.title),
+      description: sanitizeInput(formData.description),
+      itemType: formData.itemType,
+      location: sanitizeInput(formData.location),
       images: [] // Empty array to save database space
     };
 
@@ -94,7 +97,6 @@ export default function PostItemForm({ className }: PostItemFormProps) {
       }, 1500);
     },
     onError: (apiError) => {
-      console.error('API Error:', apiError);
       // Could update form state based on specific error codes here
       if (apiError.code === 'AUTHENTICATION_REQUIRED') {
         router.push('/auth/login');

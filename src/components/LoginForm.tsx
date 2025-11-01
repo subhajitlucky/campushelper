@@ -78,7 +78,6 @@ export default function LoginForm() {
                 window.location.href = result.url;
             }
         } catch (error) {
-            console.error('Google sign-in error:', error);
             setErrorMessage(setSafeErrorMessage('Something went wrong with Google sign-in.'));
         } finally {
             setIsLoading(false);

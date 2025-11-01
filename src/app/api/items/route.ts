@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
-import { 
-  AuthenticationRequired, 
-  ValidationError, 
+import {
+  AuthenticationRequired,
+  ValidationError,
   DatabaseError,
   NotFound,
-  safeApiHandler 
+  safeApiHandler
 } from '@/lib/errors';
+import { sanitizeInput } from '@/lib/security';
+import { limitItems } from '@/lib/rateLimit';
 
 /**
  * GET /api/items
@@ -224,10 +226,13 @@ export async function POST(request: NextRequest) {
   return safeApiHandler(async () => {
     // Check authentication
     const session = await getSession();
-    
+
     if (!session?.user?.id) {
       throw AuthenticationRequired('Please log in to create an item.');
     }
+
+    // Apply rate limiting: 20 items per hour per user
+    await limitItems(request, session.user.id);
 
     // Parse request body
     let requestBody;
@@ -261,16 +266,16 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    // Create item in database
+    // Create item in database with sanitized input
     const status = validatedData.itemType === 'LOST' ? 'LOST' : 'FOUND';
     
     const newItem = await prisma.item.create({
       data: {
-        title: validatedData.title,
-        description: validatedData.description,
+        title: sanitizeInput(validatedData.title),
+        description: sanitizeInput(validatedData.description),
         itemType: validatedData.itemType,
         status: status,
-        location: validatedData.location,
+        location: sanitizeInput(validatedData.location),
         images: validatedData.images.filter(image => image && image.trim() !== '') as string[],
         postedById: session.user.id,
       },

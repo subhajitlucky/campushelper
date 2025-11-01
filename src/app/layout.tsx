@@ -1,6 +1,7 @@
 import "./globals.css";
 import Providers from "@/components/Providers";
 import { Toaster } from "@/components/ui/toaster";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -10,11 +11,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="bg-background text-foreground antialiased">
         <Providers>
+          <ErrorBoundary level="page">
           <div className="flex min-h-screen flex-col">
             <Navbar />
             <div className="flex-1">{children}</div>
             <Footer />
           </div>
+          </ErrorBoundary>
           <Toaster />
         </Providers>
       </body>

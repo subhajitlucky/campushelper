@@ -46,7 +46,6 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
       const data = await response.json();
       setItems(data.items || []);
     } catch (err) {
-      console.error('Error fetching user items:', err);
       setError('Failed to load your items. Please try again.');
     } finally {
       setLoading(false);
@@ -75,7 +74,6 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
       // Remove item from local state
       setItems(prev => prev.filter(item => item.id !== itemId));
     } catch (error) {
-      console.error('Error deleting item:', error);
       setError('Failed to delete item. Please try again.');
     }
   };

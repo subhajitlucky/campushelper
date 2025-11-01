@@ -96,7 +96,6 @@ export default function SearchPage() {
       setUser(data.user || { isLoggedIn: false });
       
     } catch (error) {
-      console.error('Network error:', error);
       setItems([]);
       setSearchError('Network error. Please check your connection and try again.');
     } finally {

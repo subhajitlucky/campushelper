@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { Button } from "@/components/ui/button";
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -49,7 +50,6 @@ export default function EditProfileModal({ isOpen, onClose, onProfileUpdate }: E
       onClose();
       
     } catch (err) {
-      console.error('Error updating profile:', err);
       setError('Failed to update profile. Please try again.');
     } finally {
       setLoading(false);

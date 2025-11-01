@@ -53,7 +53,6 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
       const data = await response.json();
       setClaims(data.claims || []);
     } catch (err) {
-      console.error('Error fetching user claims:', err);
       setError('Failed to load your claims. Please try again.');
     } finally {
       setLoading(false);
@@ -72,7 +71,6 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
       // For now, just remove from local state
       setClaims(prev => prev.filter(claim => claim.id !== claimId));
     } catch (error) {
-      console.error('Error cancelling claim:', error);
       setError('Failed to cancel claim. Please try again.');
     }
   };

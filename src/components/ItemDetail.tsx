@@ -7,6 +7,10 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import CommentsSection from './CommentsSection';
 import ClaimsModal from './ClaimsModal';
 
@@ -99,7 +103,6 @@ export default function ItemDetail({ item }: ItemDetailProps) {
       setSuccess('Item has been deleted successfully.');
       
     } catch (error) {
-      console.error('Error deleting item:', error);
       setError('Failed to delete item. Please try again.');
     } finally {
       setIsDeleting(false);

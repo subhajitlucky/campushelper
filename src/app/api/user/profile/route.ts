@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
-
-// Schema for profile update validation
-const updateProfileSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name must not exceed 100 characters'),
-});
+import { updateProfileSchema } from '@/lib/schemas/user';
 
 /**
  * PUT /api/user/profile
@@ -77,14 +72,12 @@ export async function PUT(request: NextRequest) {
         { status: 200 }
       );
     } catch (dbError) {
-      console.error('Database error updating user profile:', dbError);
       return NextResponse.json(
         { error: 'Failed to update profile in database' },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('Unexpected error updating profile:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

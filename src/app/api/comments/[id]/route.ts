@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { updateCommentSchema } from '@/lib/schemas/comment';
 
 // DELETE /api/comments/[id]
 export async function DELETE(
@@ -68,14 +69,12 @@ export async function DELETE(
         message: `Comment "${comment.message.substring(0, 50)}..." has been successfully deleted`
       });
     } catch (dbError) {
-      console.error('Database error deleting comment:', dbError);
       return NextResponse.json(
         { error: 'Failed to delete comment from database' },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('Unexpected error deleting comment:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -190,14 +189,12 @@ export async function PUT(
         message: 'Comment updated successfully'
       });
     } catch (dbError) {
-      console.error('Database error updating comment:', dbError);
       return NextResponse.json(
         { error: 'Failed to update comment in database' },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('Unexpected error updating comment:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

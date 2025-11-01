@@ -57,7 +57,6 @@ export default function UserProfileSection({ userStats }: UserProfileSectionProp
       window.location.reload();
       
     } catch (error) {
-      console.error('Error updating profile:', error);
       throw error; // Re-throw to be handled by modal
     }
   };

@@ -29,7 +29,6 @@ export default async function AdminDashboardPage() {
       </div>
     );
   } catch (error) {
-    console.error('Error in admin dashboard:', error);
     notFound();
   }
 }

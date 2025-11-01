@@ -215,9 +215,6 @@ export async function safeApiHandler<T>(
       return AuthenticationRequired('Authentication failed. Please log in again.');
     }
     
-    // Log unexpected errors
-    console.error('Unexpected API error:', error);
-    
     // Return internal server error
     return InternalServerError();
   }

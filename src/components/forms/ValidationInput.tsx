@@ -11,14 +11,18 @@ interface ValidationInputProps extends React.InputHTMLAttributes<HTMLInputElemen
 }
 
 export const ValidationInput = forwardRef<HTMLInputElement, ValidationInputProps>(
-  ({ 
-    label, 
-    error, 
-    isValid, 
+  ({
+    label,
+    error,
     showCheckIcon = false,
     helperText,
-    className = '', 
-    ...props 
+    className = '',
+    // Filter out props that aren't valid HTML attributes
+    touched,
+    isTouched,
+    onBlur,
+    isValid, // Don't pass to DOM
+    ...props
   }, ref) => {
     const hasError = !!error;
     const hasSuccess = !hasError && isValid && props.value;

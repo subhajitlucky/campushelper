@@ -1,17 +1,8 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { Search, Plus, Package, MessageSquare, CheckCircle } from "lucide-react";
-import UserItemsSection from "@/components/UserItemsSection";
-import UserClaimsSection from "@/components/UserClaimsSection";
-import IncomingClaimsSection from "@/components/IncomingClaimsSection";
-import UserProfileSection from "@/components/UserProfileSection";
-import { PageLoader } from "@/components/ui/loading-spinner";
+import DashboardClient from './DashboardClient';
 
 /**
  * Dashboard Page - Protected Route
@@ -67,7 +58,6 @@ export default function DashboardPage() {
             claimsMade = claimsData.claims?.length || 0;
           }
         } catch (claimsError) {
-          console.error('Error fetching claims:', claimsError);
         }
         
         setUserStats({
@@ -78,7 +68,6 @@ export default function DashboardPage() {
         });
       }
     } catch (error) {
-      console.error('Error fetching user stats:', error);
       // Keep default values on error
     } finally {
       setLoading(false);

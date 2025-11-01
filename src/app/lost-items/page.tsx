@@ -69,7 +69,6 @@ export default function LostItemsPage() {
       // Store user authentication status
       setUser(data.user || { isLoggedIn: false });
     } catch (err) {
-      console.error('Error fetching lost items:', err);
       setError('Failed to load lost items. Please try again.');
     } finally {
       setLoading(false);

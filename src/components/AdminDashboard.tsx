@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { showError, showSuccess } from '@/lib/toast-config';
 import { 
   Users, 
   Package, 
@@ -129,14 +130,13 @@ export default function AdminDashboard() {
       const data = await response.json();
       
       // Show success message
-      alert(data.message);
+      showSuccess(data.message);
       
       // Refresh the items list
       await fetchAdminData();
       
     } catch (err) {
-      console.error('Error performing moderation action:', err);
-      alert('Failed to perform moderation action. Please try again.');
+      showError('Failed to perform moderation action. Please try again.');
     } finally {
       setModeratingItem(null);
     }
@@ -175,14 +175,13 @@ export default function AdminDashboard() {
       const data = await response.json();
       
       // Show success message
-      alert(data.message);
+      showSuccess(data.message);
       
       // Refresh the users list
       await fetchAdminData();
       
     } catch (err) {
-      console.error('Error performing user moderation action:', err);
-      alert('Failed to perform moderation action. Please try again.');
+      showError('Failed to perform moderation action. Please try again.');
     } finally {
       setModeratingUser(null);
     }
@@ -213,14 +212,13 @@ export default function AdminDashboard() {
       const data = await response.json();
       
       // Show success message
-      alert(data.message);
+      showSuccess(data.message);
       
       // Refresh the users list
       await fetchAdminData();
       
     } catch (err) {
-      console.error('Error changing user role:', err);
-      alert('Failed to change role. Please try again.');
+      showError('Failed to change role. Please try again.');
     } finally {
       setModeratingUser(null);
       setShowRoleModal(false);
@@ -379,8 +377,7 @@ export default function AdminDashboard() {
         }
       }
     } catch (err) {
-      console.error('Error fetching admin data:', err);
-      setError('Failed to load admin data. Please try again.');
+      showError('Failed to load admin data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -786,12 +783,12 @@ export default function AdminDashboard() {
                   const newRole = select?.value;
                   
                   if (!newRole) {
-                    alert('Please select a role');
+                    showError('Please select a role');
                     return;
                   }
                   
                   if (newRole === selectedUser.role) {
-                    alert('User already has this role');
+                    showError('User already has this role');
                     return;
                   }
                   

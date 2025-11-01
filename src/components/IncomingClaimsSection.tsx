@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -70,7 +71,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
             return data.claims || [];
           }
         } catch (err) {
-          console.error(`Error fetching claims for item ${itemId}:`, err);
+          setError(`Error fetching claims for item ${itemId}: ${err}`);
           return [];
         }
       });
@@ -84,7 +85,6 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
       
       setClaims(allClaims);
     } catch (err) {
-      console.error('Error fetching incoming claims:', err);
       setError('Failed to load incoming claims. Please try again.');
     } finally {
       setLoading(false);
@@ -121,7 +121,6 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
           : claim
       ));
     } catch (error) {
-      console.error('Error approving claim:', error);
       setError('Failed to approve claim. Please try again.');
     } finally {
       setProcessingClaimId(null);
@@ -158,7 +157,6 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
           : claim
       ));
     } catch (error) {
-      console.error('Error rejecting claim:', error);
       setError('Failed to reject claim. Please try again.');
     } finally {
       setProcessingClaimId(null);

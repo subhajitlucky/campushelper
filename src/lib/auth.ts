@@ -73,7 +73,6 @@ const handler = NextAuth({
                                 isActive: true,
                             }
                         });
-                        console.log('New Google OAuth user created:', dbUser.email);
                     } else if (!dbUser.googleId) {
                         // Update existing user with Google ID
                         dbUser = await prisma.user.update({
@@ -85,13 +84,27 @@ const handler = NextAuth({
                                 emailVerified: new Date(),
                             }
                         });
-                        console.log('Existing user linked to Google account:', dbUser.email);
                     }
 
                     token.id = dbUser.id;
                     token.role = dbUser.role;
                 } catch (error) {
-                    console.error('Error handling Google OAuth:', error);
+                    // Log error for debugging and monitoring
+                    console.error('OAuth JWT callback error:', {
+                        error: error instanceof Error ? error.message : String(error),
+                        stack: error instanceof Error ? error.stack : undefined,
+                        userEmail: user?.email,
+                        providerAccountId: account?.providerAccountId,
+                        timestamp: new Date().toISOString(),
+                        timestampMs: Date.now()
+                    });
+
+                    // Clear any partial token data to prevent authentication with incomplete session
+                    delete token.id;
+                    delete token.role;
+
+                    // Re-throw error to block authentication and show error page
+                    throw error;
                 }
             }
 

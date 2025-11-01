@@ -69,9 +69,7 @@ export async function PUT(
         name: true,
         email: true,
         role: true,
-        isActive: true,
-        googleId: true,
-        password: true
+        isActive: true
       }
     });
 

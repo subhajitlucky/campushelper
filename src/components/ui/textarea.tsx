@@ -6,6 +6,9 @@ export interface TextareaProps
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, ...props }, ref) => {
+    // Filter out react-hook-form props that aren't valid HTML attributes
+    const { touched, isTouched, isValid, onBlur, ...restProps } = props;
+
     return (
       <textarea
         className={cn(
@@ -13,7 +16,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           className
         )}
         ref={ref}
-        {...props}
+        {...restProps}
       />
     );
   }

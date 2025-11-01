@@ -98,7 +98,6 @@ export function useFormValidation<T extends Record<string, any>>(
       
       return !error;
     } catch (error) {
-      console.error('Validation error:', error);
       return false;
     }
   }, [formState, schema]);
@@ -145,7 +144,6 @@ export function useFormValidation<T extends Record<string, any>>(
         return false;
       }
     } catch (error) {
-      console.error('Form validation error:', error);
       return false;
     }
   }, [formState, schema]);
@@ -277,8 +275,7 @@ export function useFormValidation<T extends Record<string, any>>(
         
         await submitFn(currentValues);
       } catch (error) {
-        console.error('Form submission error:', error);
-      } finally {
+        } finally {
         setIsSubmitting(false);
       }
     };
