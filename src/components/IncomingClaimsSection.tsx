@@ -46,26 +46,30 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
       setError(null);
       
       // First fetch user's items
-      const itemsResponse = await fetch(`/api/items?postedById=${userId}&limit=100`);
+      const itemsResponse = await fetch(`/api/items?postedById=${userId}&limit=100`, {
+        credentials: 'include'
+      });
       if (!itemsResponse.ok) {
         throw new Error('Failed to fetch your items');
       }
-      
+
       const itemsData = await itemsResponse.json();
       const userItems = itemsData.items || [];
-      
+
       if (userItems.length === 0) {
         setClaims([]);
         return;
       }
-      
+
       // Extract item IDs
       const itemIds = userItems.map((item: { id: string }) => item.id);
-      
+
       // Fetch claims for all user's items
       const claimsPromises = itemIds.map(async (itemId: string) => {
         try {
-          const response = await fetch(`/api/claims?itemId=${itemId}`);
+          const response = await fetch(`/api/claims?itemId=${itemId}`, {
+            credentials: 'include'
+          });
           if (response.ok) {
             const data = await response.json();
             return data.claims || [];

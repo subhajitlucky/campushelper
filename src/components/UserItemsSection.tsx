@@ -37,8 +37,10 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
       setError(null);
       
       // Fetch items posted by this user
-      const response = await fetch(`/api/items?postedById=${userId}&limit=50`);
-      
+      const response = await fetch(`/api/items?postedById=${userId}&limit=50`, {
+        credentials: 'include'
+      });
+
       if (!response.ok) {
         throw new Error('Failed to fetch your items');
       }

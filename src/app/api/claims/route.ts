@@ -8,24 +8,26 @@ import {
 import { sanitizeInput } from '@/lib/security';
 import { limitClaims } from '@/lib/rateLimit';
 import { checkCSRF } from '@/lib/csrf-middleware';
+import { safeApiHandler } from '@/lib/errors';
 
 // GET /api/claims?itemId=xxx
 export async function GET(request: NextRequest) {
-  try {
-    // CRITICAL FIX: Require authentication to prevent claims data harvesting
+  return safeApiHandler(async () => {
+    // Use getServerSession to get the full session with token data
+    const { getToken } = await import("next-auth/jwt");
+    
+    const token = await getToken({ 
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET 
+    });
+
     const session = await getSession();
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Authentication required to access claims' },
-        { status: 401 }
-      );
-    }
 
     const { searchParams } = new URL(request.url);
     let queryParams;
-    
+
+    const paramsObject = Object.fromEntries(searchParams.entries());
     try {
-      const paramsObject = Object.fromEntries(searchParams.entries());
       queryParams = claimsQuerySchema.parse(paramsObject);
     } catch (error) {
       if (error instanceof Error && error.name === 'ZodError') {
@@ -40,6 +42,10 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
+    // Check authentication status using token directly
+    const isLoggedIn = !!token?.id;
+    const userRole = token?.role;
+
     // SECURITY FIX: Implement proper access control for claims
     const { itemId, userId } = queryParams;
     
@@ -49,7 +55,15 @@ export async function GET(request: NextRequest) {
     // If querying by specific userId (user is looking for their own claims)
     if (userId) {
       // Users can only see their own claims
-      if (userId !== session.user.id && session.user.role !== 'ADMIN' && session.user.role !== 'MODERATOR') {
+      if (!isLoggedIn) {
+        return NextResponse.json(
+          { error: 'Authentication required to view claims' },
+          { status: 401 }
+        );
+      }
+      
+      // Users can only see their own claims unless admin/moderator
+      if (userId !== token.id && userRole !== 'ADMIN' && userRole !== 'MODERATOR') {
         return NextResponse.json(
           { error: 'You can only view your own claims' },
           { status: 403 }
@@ -72,9 +86,10 @@ export async function GET(request: NextRequest) {
       }
       
       // Only item owner or admin/moderator can see claims on this item
-      if (item.postedById !== session.user.id && 
-          session.user.role !== 'ADMIN' && 
-          session.user.role !== 'MODERATOR') {
+      if (!isLoggedIn || 
+          (item.postedById !== token.id && 
+           userRole !== 'ADMIN' && 
+           userRole !== 'MODERATOR')) {
         return NextResponse.json(
           { error: 'You can only view claims on your own items' },
           { status: 403 }
@@ -82,9 +97,15 @@ export async function GET(request: NextRequest) {
       }
       whereClause.itemId = itemId;
     } 
-    // No specific filter - user wants their own claims
+    // No specific filter - user wants their own claims (require auth)
     else {
-      whereClause.userId = session.user.id;
+      if (!isLoggedIn) {
+        return NextResponse.json(
+          { error: 'Authentication required to view claims' },
+          { status: 401 }
+        );
+      }
+      whereClause.userId = token.id;
     }
 
     // Fetch claims with user data and item data
@@ -138,12 +159,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(response);
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to fetch claims' },
-      { status: 500 }
-    );
-  }
+  });
 }
 
 // POST /api/claims

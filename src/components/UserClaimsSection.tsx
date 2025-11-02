@@ -37,15 +37,17 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
   const [claims, setClaims] = useState<UserClaim[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  
   const fetchUserClaims = async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Fetch claims made by this user
-      const response = await fetch(`/api/claims?userId=${userId}`);
-      
+      const response = await fetch(`/api/claims?userId=${userId}`, {
+        credentials: 'include'
+      });
+
       if (!response.ok) {
         throw new Error('Failed to fetch your claims');
       }
@@ -79,7 +81,7 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
     if (userId) {
       fetchUserClaims();
     }
-  }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [userId]); 
 
   // Loading state
   if (loading) {

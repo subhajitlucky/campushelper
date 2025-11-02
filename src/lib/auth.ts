@@ -85,6 +85,11 @@ const handler = NextAuth({
             // Handle sign out
         },
     },
+    session: {
+        strategy: 'jwt', // Using JWT strategy for consistency
+        maxAge: 60 * 60 * 24, // 24 hours (in seconds) - Security fix: prevent long-lived sessions
+    },
+    // Add explicit serialization to ensure id/role persist
     callbacks: {
         async jwt({ token, user, account }) {
             // Set token expiration to 24 hours
@@ -164,10 +169,6 @@ const handler = NextAuth({
             // This runs before jwt callback
             return true;
         },
-    },
-    session: {
-        strategy: 'jwt', // Using JWT strategy for consistency
-        maxAge: 60 * 60 * 24, // 24 hours (in seconds) - Security fix: prevent long-lived sessions
     },
     pages: {
         // Custom pages can be added here if needed
