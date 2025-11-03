@@ -55,6 +55,11 @@ export function useAuthFetch(requireAuth: boolean = false): AuthFetchReturn {
         }
       }
 
+      console.log('[AUTH FETCH DEBUG] Making request to:', url);
+      console.log('[AUTH FETCH DEBUG] Method:', fetchOptions.method);
+      console.log('[AUTH FETCH DEBUG] CSRF Token:', csrfToken ? 'present' : 'missing');
+      console.log('[AUTH FETCH DEBUG] Session status:', status);
+
       const response = await fetch(url, {
         ...fetchOptions,
         credentials: 'include', // ⭐ CRITICAL: Include NextAuth cookies
@@ -65,13 +70,19 @@ export function useAuthFetch(requireAuth: boolean = false): AuthFetchReturn {
         },
       });
 
+      console.log('[AUTH FETCH DEBUG] Response status:', response.status);
+      console.log('[AUTH FETCH DEBUG] Response headers:', Object.fromEntries(response.headers.entries()));
+
       // Handle authentication errors
       if (response.status === 401) {
+        console.log('[AUTH FETCH DEBUG] Got 401 status - trying to get error details');
         // Try to get error message from response
         try {
           const errorData = await response.json();
+          console.log('[AUTH FETCH DEBUG] Error response data:', errorData);
           throw new Error(errorData.error || 'Authentication failed. Please log in again.');
-        } catch {
+        } catch (e) {
+          console.log('[AUTH FETCH DEBUG] Failed to parse error response:', e);
           // Session expired or invalid
           throw new Error('Session expired. Please log in again.');
         }

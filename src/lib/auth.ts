@@ -98,7 +98,15 @@ const handler = NextAuth({
     // Add explicit serialization to ensure id/role persist
     callbacks: {
         async jwt({ token, user, account }) {
+            console.log('[AUTH DEBUG] JWT callback triggered');
+            console.log('[AUTH DEBUG] Token:', token);
+            console.log('[AUTH DEBUG] User:', user);
+            console.log('[AUTH DEBUG] Account:', account);
+            console.log('[AUTH DEBUG] Account provider:', account?.provider);
+
             if (user) {
+                console.log('[AUTH DEBUG] Setting token.id:', user.id);
+                console.log('[AUTH DEBUG] Setting token.role:', user.role);
                 token.id = user.id;
                 token.role = user.role;
             }
@@ -159,11 +167,16 @@ const handler = NextAuth({
             return token;
         },
         async session({ session, token }) {
+            console.log('[AUTH DEBUG] Session callback triggered');
+            console.log('[AUTH DEBUG] Session:', session);
+            console.log('[AUTH DEBUG] Token:', token);
             if (session.user && token) {
+                console.log('[AUTH DEBUG] Setting session.user.id:', token.id);
+                console.log('[AUTH DEBUG] Setting session.user.role:', token.role);
                 session.user.id = token.id as string;
                 session.user.role = token.role as string;
             }
-
+            console.log('[AUTH DEBUG] Final session:', session);
             return session;
         },
         async signIn({ user, account, profile }) {
@@ -183,9 +196,23 @@ export const auth = handler;
 
 // Helper function for API routes to get session
 export async function getSession(request?: NextRequest): Promise<Session | null> {
-  // In App Router, getServerSession reads from request context automatically
-  // when called within a Route Handler
-  return await getServerSession(auth);
+  try {
+    // In App Router, getServerSession reads from request context automatically
+    // when called within a Route Handler
+    const session = (await getServerSession(auth)) as Session | null;
+    console.log('[AUTH DEBUG] getSession called');
+    console.log('[AUTH DEBUG] Session:', session);
+    console.log('[AUTH DEBUG] Session exists:', !!session);
+    if (session && (session as any).user) {
+      console.log('[AUTH DEBUG] User ID:', (session as any).user?.id);
+      console.log('[AUTH DEBUG] User email:', (session as any).user?.email);
+      console.log('[AUTH DEBUG] User role:', (session as any).user?.role);
+    }
+    return session;
+  } catch (error) {
+    console.error('[AUTH DEBUG] getSession error:', error);
+    return null;
+  }
 }
 
 export { handler as GET, handler as POST };

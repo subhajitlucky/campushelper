@@ -214,12 +214,24 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   return safeApiHandler(async () => {
+    console.log('[API DEBUG] POST /api/items called');
+    console.log('[API DEBUG] Request method:', request.method);
+    console.log('[API DEBUG] Request headers:', Object.fromEntries(request.headers.entries()));
+
     // Check authentication first
+    console.log('[API DEBUG] Calling getSession()...');
     const session = await getSession();
+    console.log('[API DEBUG] getSession() returned:', session);
 
     if (!session?.user?.id) {
+      console.log('[API DEBUG] Authentication failed - no session or user.id');
+      console.log('[API DEBUG] Session:', session);
+      console.log('[API DEBUG] Session?.user:', session?.user);
+      console.log('[API DEBUG] Session?.user?.id:', session?.user?.id);
       throw AuthenticationRequired('Please log in to create an item.');
     }
+
+    console.log('[API DEBUG] Authentication successful - user.id:', session.user.id);
 
     // Apply rate limiting: 20 items per hour per user
     // Only apply rate limiting AFTER authentication is confirmed
