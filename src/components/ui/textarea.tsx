@@ -6,9 +6,16 @@ export interface TextareaProps
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, ...props }, ref) => {
-    // Don't destruct form props that aren't valid HTML attributes
-    // These will be filtered out by the spread operator
-    const restProps = props;
+    // Filter out form-specific props that aren't valid HTML attributes
+    // Use type assertion to handle form library props
+    const {
+      // Form validation props from libraries like React Hook Form
+      error,
+      touched,
+      isValid,
+      // Spread the rest to the textarea element
+      ...restProps
+    } = props as any;
 
     return (
       <textarea
