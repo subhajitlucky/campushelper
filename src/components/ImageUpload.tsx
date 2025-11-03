@@ -72,15 +72,30 @@ export default function ImageUpload({
       // Step 1: Compress image
       const compressedFile = await imageCompression(file, UPLOAD_CONFIG.compression);
 
-      // Step 2: Create FormData for upload
+      // Step 2: Get CSRF token
+      const csrfResponse = await fetch('/api/csrf-token', {
+        credentials: 'include',
+      });
+
+      if (!csrfResponse.ok) {
+        throw new Error('Failed to get CSRF token');
+      }
+
+      const csrfData = await csrfResponse.json();
+      const csrfToken = csrfData.csrfToken;
+
+      // Step 3: Create FormData for upload
       const formData = new FormData();
       formData.append('file', compressedFile);
 
-      // Step 3: Upload via API route (includes CSRF protection and auth)
+      // Step 4: Upload via API route (includes CSRF protection and auth)
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
         credentials: 'include',
+        headers: {
+          'X-CSRF-Token': csrfToken,
+        },
       });
 
       if (!response.ok) {

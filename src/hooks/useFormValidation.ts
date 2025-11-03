@@ -180,12 +180,12 @@ export function useFormValidation<T extends Record<string, any>>(
   
   // Check if form is valid
   const isValid = useMemo(() => {
-    // Form is valid if all fields have been touched and validated with no errors
+    // Form is valid if all fields have a value and no errors
     return Object.keys(formState).length > 0 &&
            Object.values(formState).every(field => {
-             // Field must be touched and have no error
-             // Also check that the field has a value
-             return field.touched && !field.error && field.value && field.value.trim().length > 0;
+             // Field must have a value, no error, and either be touched or have a value
+             // This allows initial state to be valid (e.g., radio buttons with default value)
+             return !field.error && field.value && field.value.toString().trim().length > 0;
            });
   }, [formState]);
   
