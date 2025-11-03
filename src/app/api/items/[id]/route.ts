@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { updateItemSchema } from '@/lib/schemas/item';
 import { sanitizeInput } from '@/lib/security';
 import { checkCSRF } from '@/lib/csrf-middleware';
+import { limitCustom } from '@/lib/rateLimit';
 
 /**
  * GET /api/items/[id]
@@ -14,13 +15,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // CRITICAL FIX: Require authentication to prevent data harvesting
+    // Get session (optional - unauthenticated users can view items)
     const session = await getSession();
-    const isAuthenticated = !!session?.user?.id;
-    
-    // Step 72-73: Extract and validate ID from params
+    const userId = session?.user?.id;
+    const userRole = session?.user?.role;
+
+    // Extract and validate ID from params
     const { id } = await params;
-    
+
     if (!id) {
       return NextResponse.json(
         { error: 'Item ID is required' },
@@ -28,14 +30,26 @@ export async function GET(
       );
     }
 
-    // Step 73: Query Prisma.item.findUnique() - basic data only for security
+    // Basic ID validation
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+      return NextResponse.json(
+        { error: 'Invalid item ID format' },
+        { status: 400 }
+      );
+    }
+
+    // Query the item
     const item = await prisma.item.findUnique({
       where: { id },
-      // SECURITY FIX: Remove user data from initial query
-      // User data will be added conditionally based on authorization
+      select: {
+        id: true,
+        postedById: true,
+        claimedById: true,
+        status: true,
+        itemType: true,
+      }
     });
 
-    // Step 73: Return 404 if not found
     if (!item) {
       return NextResponse.json(
         { error: 'Item not found' },
@@ -43,127 +57,107 @@ export async function GET(
       );
     }
 
-    // SECURITY FIX: Determine if user should see user data
-    const canSeeUserData = isAuthenticated && (
-      item.postedById === session.user.id || 
-      item.claimedById === session.user.id ||
-      session.user.role === 'ADMIN' ||
-      session.user.role === 'MODERATOR'
-    );
+    // Determine authorization level
+    const isOwner = userId === item.postedById;
+    const isClaimant = userId === item.claimedById;
+    const isAdmin = userRole === 'ADMIN' || userRole === 'MODERATOR';
+    const canSeeUserData = !!(userId && (isOwner || isAdmin || isClaimant));
 
-    let responseItem;
+    // Query with OPTIMAL SELECT based on authorization
+    const itemData = await prisma.item.findUnique({
+      where: { id },
+      select: {
+        // Always include these fields
+        id: true,
+        title: true,
+        description: true,
+        itemType: true,
+        status: true,
+        location: true,
+        images: true,
+        createdAt: true,
+        updatedAt: true,
+        resolvedAt: true,
 
-    if (canSeeUserData) {
-      // Authorized user - fetch with user data
-      const itemWithUserData = await prisma.item.findUnique({
-        where: { id },
-        include: {
-          // Include postedBy user details
+        // User data - include ONLY if authorized
+        ...(canSeeUserData && {
           postedBy: {
             select: {
               id: true,
               name: true,
-              email: true,
+              // Email ONLY for owner/admin
+              ...(isOwner || isAdmin ? { email: true } : {}),
               avatar: true,
             }
           },
-          // Include claimedBy user details if item is claimed
           claimedBy: {
             select: {
               id: true,
               name: true,
-              email: true,
+              // Email ONLY for owner/admin
+              ...(isOwner || isAdmin ? { email: true } : {}),
               avatar: true,
             }
-          },
-          // Include comments with user details
-          comments: {
-            orderBy: {
-              createdAt: 'desc'
-            },
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  avatar: true,
-                }
-              }
-            }
-          },
-          // Include claims with user details
-          claims: {
-            orderBy: {
-              createdAt: 'desc'
-            },
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  avatar: true,
-                }
-              }
-            }
           }
-        }
-      });
+        }),
 
-      // Transform data with user data included
-      if (itemWithUserData) {
-        responseItem = {
-          ...itemWithUserData,
-          commentCount: itemWithUserData.comments.length,
-          claimCount: itemWithUserData.claims.length,
-          // Structure comments for easier frontend consumption
-          comments: itemWithUserData.comments.map(comment => ({
-            id: comment.id,
-            message: comment.message,
-            images: comment.images,
-            createdAt: comment.createdAt,
-            user: comment.user
-          })),
-          // Structure claims for easier frontend consumption
-          claims: itemWithUserData.claims.map(claim => ({
-            id: claim.id,
-            claimType: claim.claimType,
-            status: claim.status,
-            message: claim.message,
-            createdAt: claim.createdAt,
-            resolvedAt: claim.resolvedAt,
-            user: claim.user
-          })),
-        };
-      } else {
-        // Fallback to basic data if user data fetch fails
-        responseItem = {
-          ...item,
-          commentCount: 0,
-          claimCount: 0,
-          comments: [],
-          claims: [],
-        };
+        // Claims/comments - ONLY for owner/admin
+        ...(userId && (isOwner || isAdmin) && {
+          claims: {
+            select: {
+              id: true,
+              claimType: true,
+              message: true,
+              status: true,
+              createdAt: true,
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  // DON'T show claimant email to owner (privacy)
+                  ...(isAdmin ? { email: true } : {}),
+                  avatar: true,
+                }
+              }
+            },
+            orderBy: { createdAt: 'desc' }
+          },
+          comments: {
+            select: {
+              id: true,
+              message: true,
+              createdAt: true,
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  avatar: true,
+                }
+              }
+            },
+            orderBy: { createdAt: 'desc' }
+          }
+        }),
       }
-    } else {
-      // Public/unauthorized - basic item data only, no user information
-      responseItem = {
-        ...item,
-        commentCount: 0, // Can't show counts without fetching related data
-        claimCount: 0,   // Can't show counts without fetching related data
-        comments: [],    // No comments without user data
-        claims: [],      // No claims without user data
-      };
-    }
-
-    return NextResponse.json({
-      item: responseItem
     });
 
+    // Process name truncation for non-owners
+    if (itemData?.postedBy && userId && !isOwner && !isAdmin) {
+      const name = itemData.postedBy.name || '';
+      const nameParts = name.split(' ');
+      if (nameParts.length >= 2) {
+        itemData.postedBy.name = `${nameParts[0]} ${nameParts[1].charAt(0)}.`;
+      }
+
+      // Remove email from non-owners
+      delete (itemData.postedBy as any).email;
+    }
+
+    return NextResponse.json(itemData);
   } catch (error) {
+    console.error('Error fetching item:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch item' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -192,6 +186,9 @@ export async function PUT(
     if (csrfResult) {
       return csrfResult;
     }
+
+    // Rate limiting: 20 item updates per hour per user
+    await limitCustom(`items:update:${session.user.id}`, 20, 3600, 'item update');
 
     // Step 74: Extract and validate ID from params
     const { id } = await params;
@@ -370,6 +367,9 @@ export async function DELETE(
     if (csrfResult) {
       return csrfResult;
     }
+
+    // Rate limiting: 10 item deletions per hour per user
+    await limitCustom(`items:delete:${session.user.id}`, 10, 3600, 'item delete');
 
     // Step 75: Extract and validate ID from params
     const { id } = await params;

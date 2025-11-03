@@ -106,6 +106,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
     try {
       const response = await fetch(`/api/claims/${claimId}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -142,6 +143,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
     try {
       const response = await fetch(`/api/claims/${claimId}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },

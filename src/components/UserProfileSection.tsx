@@ -43,6 +43,7 @@ export default function UserProfileSection({ userStats }: UserProfileSectionProp
       // Make API call to update user profile
       const response = await fetch('/api/user/profile', {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },

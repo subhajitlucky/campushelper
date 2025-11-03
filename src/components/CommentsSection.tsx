@@ -80,6 +80,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
     try {
       const response = await fetch('/api/comments', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -124,7 +125,9 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
   const fetchComments = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/comments?itemId=${itemId}`);
+      const response = await fetch(`/api/comments?itemId=${itemId}`, {
+        credentials: 'include',
+      });
       
       if (!response.ok) {
         throw new Error('Failed to fetch comments');
@@ -149,6 +152,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
     try {
       const response = await fetch(`/api/comments/${commentId}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -194,6 +198,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
     try {
       const response = await fetch(`/api/comments/${commentId}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },

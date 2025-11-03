@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     let queryParams;
-
+    
     const paramsObject = Object.fromEntries(searchParams.entries());
     try {
       queryParams = claimsQuerySchema.parse(paramsObject);
@@ -116,8 +116,8 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
-            email: true,
             avatar: true,
+            // Email intentionally excluded (security fix)
           },
         },
         item: {
@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
       user: {
         id: claim.user.id,
         name: claim.user.name,
-        email: claim.user.email,
+        // Email intentionally excluded from response
         avatar: claim.user.avatar,
       },
       item: {
@@ -275,8 +275,8 @@ export async function POST(request: NextRequest) {
             select: {
               id: true,
               name: true,
-              email: true,
               avatar: true,
+              // Email intentionally excluded (security fix)
             },
           },
           item: {
@@ -302,7 +302,7 @@ export async function POST(request: NextRequest) {
         user: {
           id: newClaim.user.id,
           name: newClaim.user.name,
-          email: newClaim.user.email,
+          // Email intentionally excluded from response
           avatar: newClaim.user.avatar,
         },
         item: {

@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { updateClaimStatusSchema } from '@/lib/schemas/claim-update';
 import { checkCSRF } from '@/lib/csrf-middleware';
+import { limitCustom } from '@/lib/rateLimit';
 
 // PUT /api/claims/[id]
 export async function PUT(
@@ -23,6 +24,9 @@ export async function PUT(
     if (csrfResult) {
       return csrfResult;
     }
+
+    // Rate limiting: 10 claim updates per hour per user
+    await limitCustom(`claims:update:${session.user.id}`, 10, 3600, 'claim update');
 
     const { id } = await params;
     if (!id) {
@@ -75,7 +79,8 @@ export async function PUT(
           select: {
             id: true,
             name: true,
-            email: true,
+            avatar: true,
+            // Email intentionally excluded (security fix)
           },
         },
       },
@@ -130,7 +135,8 @@ export async function PUT(
               select: {
                 id: true,
                 name: true,
-                email: true,
+                avatar: true,
+                // Email intentionally excluded (security fix)
               },
             },
           },
@@ -191,7 +197,8 @@ export async function PUT(
         user: {
           id: updatedClaim.user.id,
           name: updatedClaim.user.name,
-          email: updatedClaim.user.email,
+          avatar: updatedClaim.user.avatar,
+          // Email intentionally excluded from response (security fix)
         },
         item: {
           id: updatedClaim.item.id,

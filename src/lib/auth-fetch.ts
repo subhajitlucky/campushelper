@@ -1,0 +1,98 @@
+'use client';
+
+import { useSession } from 'next-auth/react';
+import { useCallback } from 'react';
+
+interface AuthFetchOptions extends RequestInit {
+  // Extend RequestInit with our custom options
+  requireAuth?: boolean;
+  showErrorToast?: boolean;
+}
+
+interface AuthFetchReturn {
+  fetchWithAuth: (url: string, options?: AuthFetchOptions) => Promise<Response>;
+  isLoading: boolean;
+}
+
+/**
+ * Custom hook for authenticated fetch requests
+ * Automatically includes NextAuth session cookies and handles authentication
+ *
+ * @param requireAuth - If true, throws error when not authenticated
+ * @returns Object with fetchWithAuth function and isLoading state
+ */
+export function useAuthFetch(requireAuth: boolean = false): AuthFetchReturn {
+  const { data: session, status } = useSession();
+
+  const fetchWithAuth = useCallback(
+    async (url: string, options: AuthFetchOptions = {}): Promise<Response> => {
+      const {
+        requireAuth: localRequireAuth = requireAuth,
+        showErrorToast = false,
+        ...fetchOptions
+      } = options;
+
+      // Check authentication if required
+      if (localRequireAuth && status !== 'authenticated') {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(url, {
+        ...fetchOptions,
+        credentials: 'include', // ⭐ CRITICAL: Include NextAuth cookies
+        headers: {
+          'Content-Type': 'application/json',
+          ...fetchOptions.headers,
+        },
+      });
+
+      // Handle authentication errors
+      if (response.status === 401) {
+        // Session expired or invalid
+        throw new Error('Session expired. Please log in again.');
+      }
+
+      return response;
+    },
+    [session, status, requireAuth]
+  );
+
+  return {
+    fetchWithAuth,
+    isLoading: status === 'loading',
+  };
+}
+
+/**
+ * Non-hook version for use in non-client components
+ * Uses fetch with credentials: 'include' for same-origin requests
+ */
+export async function authFetch(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  return fetch(url, {
+    ...options,
+    credentials: 'include', // ⭐ CRITICAL: Include NextAuth cookies
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+}
+
+/**
+ * Helper to check if user is authenticated
+ */
+export function useIsAuthenticated(): boolean {
+  const { status } = useSession();
+  return status === 'authenticated';
+}
+
+/**
+ * Helper to get current user
+ */
+export function useCurrentUser() {
+  const { data: session } = useSession();
+  return session?.user || null;
+}

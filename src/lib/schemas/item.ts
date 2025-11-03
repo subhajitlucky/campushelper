@@ -1,14 +1,22 @@
 import { z } from 'zod';
+import { isSafeUrl } from '@/lib/security';
 
 /**
  * Item Zod Schemas
- * 
+ *
  * Defines validation schemas for item creation, updates, and responses
  * Used for both API validation and form validation
  */
 
-// URL validation helper
-const urlSchema = z.string().url().optional().or(z.literal(''));
+// Safe URL validation helper
+const safeUrlSchema = z.string()
+  .url('Invalid URL format')
+  .refine(isSafeUrl, 'URL must be a safe HTTP(S) URL')
+  .optional()
+  .or(z.literal(''));
+
+// Legacy URL validation helper (for backwards compatibility)
+const urlSchema = safeUrlSchema;
 
 // Base item schema with all fields
 export const baseItemSchema = z.object({

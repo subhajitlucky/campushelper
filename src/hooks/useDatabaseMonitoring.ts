@@ -88,6 +88,7 @@ export function useDatabaseMonitoring(
       // Perform a simple database query to check connection
       const response = await fetch('/api/admin/stats', {
         method: 'GET',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         }

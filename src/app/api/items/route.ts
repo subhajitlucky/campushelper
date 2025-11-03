@@ -50,20 +50,20 @@ export async function GET(request: NextRequest) {
     
     const skip = (page - 1) * limit;
 
-    // Check if user is logged in for full user data access
+    // Check if user is logged in
     const session = await getSession();
     const isLoggedIn = !!session?.user?.id;
-    
-    // Public access: Always return items, but with different data based on auth status
-    // For public access (not logged in): Basic item data only
-    // For logged-in users: Full user data included
+    const userId = session?.user?.id;
+
+    // For items list: NEVER show emails (security fix)
+    // Users can view individual items for contact details
     const items = await prisma.item.findMany({
       skip,
       take: limit,
       where: {
         // Exclude deleted items by default unless specifically requested
         ...(status ? { status } : { status: { not: 'DELETED' } }),
-        
+
         ...(itemType && { itemType }),
         ...(location && {
           location: {
@@ -110,28 +110,17 @@ export async function GET(request: NextRequest) {
       orderBy: {
         createdAt: 'desc'
       },
-      // Include appropriate user data based on request type
-      include: isLoggedIn ? {
-        // For logged-in users, include full user data
-        postedBy: { 
-          select: { 
-            id: true, 
-            name: true,        
-            email: true,       // Show email for contact
-            avatar: true       
-          } 
-        },
-      } : {
-        // For public access, include minimal user data (no email for privacy)
-        postedBy: { 
-          select: { 
-            id: true, 
-            name: true,        
-            avatar: true       
-            // Deliberately excluding email for public privacy
-          } 
-        },
-      },
+      // Include user data but NEVER email (security fix for IDOR)
+      include: {
+        postedBy: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true
+            // Email intentionally excluded from items list
+          }
+        }
+      }
     });
 
     // Get total count for pagination

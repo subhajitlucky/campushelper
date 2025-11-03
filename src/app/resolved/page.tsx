@@ -6,6 +6,10 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import ItemImage from "@/components/ui/ItemImage";
+import StatusBadge from "@/components/ui/StatusBadge";
+import EmptyState, { EmptyStateIcons } from "@/components/ui/EmptyState";
+import UserDisplay from "@/components/ui/UserDisplay";
 
 interface ResolvedItem {
   id: string;
@@ -16,6 +20,7 @@ interface ResolvedItem {
   location: string;
   createdAt: string;
   resolvedAt: string | null;
+  images?: string[] | null;
   postedBy: {
     id: string;
     name: string | null;
@@ -241,7 +246,9 @@ export default function ResolvedPage() {
             {items.length > 0 ? (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
                 {items.map((item) => (
-                  <Card key={item.id} className="hover:shadow-md transition-shadow">
+                  <Card key={item.id} className="hover:shadow-md transition-shadow overflow-hidden">
+                    {/* Item Image */}
+                    <ItemImage images={item.images} alt={item.title} />
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <CardTitle className="text-lg font-semibold text-gray-900 line-clamp-2">
@@ -269,24 +276,15 @@ export default function ResolvedPage() {
                           Resolved on {new Date(item.resolvedAt).toLocaleDateString()}
                         </div>
                       )}
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        {item.postedBy.avatar ? (
-                          <Image
-                            src={item.postedBy.avatar}
-                            alt={item.postedBy.name || 'User avatar'}
-                            width={20}
-                            height={20}
-                            className="rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center">
-                            <span className="text-xs text-gray-500">
-                              {(item.postedBy.name || 'A').charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        )}
-                        <span>Posted by {item.postedBy.name || 'Anonymous'}</span>
-                      </div>
+                      <UserDisplay
+                        user={{
+                          name: item.postedBy.name,
+                          avatar: item.postedBy.avatar
+                        }}
+                        showLabel={true}
+                        labelPrefix="Posted by"
+                        size="sm"
+                      />
                       <Button asChild size="sm" className="w-full mt-auto">
                         <Link href={`/item/${item.id}`}>View Full Story</Link>
                       </Button>

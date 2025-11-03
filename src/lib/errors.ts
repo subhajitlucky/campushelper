@@ -151,12 +151,12 @@ export const RoleAlreadyAssigned = () =>
   createErrorResponse('User already has this role', ErrorCodes.ROLE_ALREADY_ASSIGNED, 400);
 
 // Database & Server Errors
-export const DatabaseError = (originalError?: string) =>
+export const DatabaseError = () =>
   createErrorResponse(
     'A database error occurred while processing your request',
     ErrorCodes.DATABASE_ERROR,
     500,
-    originalError && process.env.NODE_ENV === 'development' ? { details: originalError } : undefined
+    undefined // Never leak error details
   );
 
 export const InternalServerError = (message: string = 'An unexpected error occurred') =>

@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Edit, Trash2, Eye, Calendar, MapPin } from "lucide-react";
+import EmptyState, { EmptyStateIcons } from "@/components/ui/EmptyState";
+import { ListItemSkeleton } from "@/components/ui/LoadingSkeleton";
+import ActionButtons from "@/components/ui/ActionButtons";
 
 interface UserItem {
   id: string;
@@ -67,6 +70,7 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
     try {
       const response = await fetch(`/api/items/${itemId}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -112,23 +116,7 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
           <CardDescription>Manage your lost & found items</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse">
-                <div className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                    <div className="h-4 bg-gray-200 rounded w-16"></div>
-                  </div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3 mb-2"></div>
-                  <div className="flex gap-2 mt-3">
-                    <div className="h-8 bg-gray-200 rounded w-20"></div>
-                    <div className="h-8 bg-gray-200 rounded w-20"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ListItemSkeleton count={3} />
         </CardContent>
       </Card>
     );
@@ -168,17 +156,14 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
           <CardDescription>Manage your lost & found items</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">
-            <div className="text-gray-400 mb-4">
-              <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-            </div>
-            <p className="text-gray-500 mb-4">No items posted yet</p>
-            <Button asChild>
-              <Link href="/post">Post Your First Item</Link>
-            </Button>
-          </div>
+          <EmptyState
+            icon={EmptyStateIcons.items}
+            title="No items posted yet"
+            action={{
+              label: "Post Your First Item",
+              onClick: () => window.location.href = '/post'
+            }}
+          />
         </CardContent>
       </Card>
     );
@@ -241,33 +226,34 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
               </div>
               
               <div className="flex items-center gap-2 pt-3 border-t">
-                <Button size="sm" variant="outline" asChild>
-                  <Link href={`/item/${item.id}`}>
-                    <Eye className="w-3 h-3 mr-1" />
-                    View
-                  </Link>
-                </Button>
-                
-                {item.status !== 'DELETED' && (
-                  <>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => handleEditItem(item)}
-                    >
-                      <Edit className="w-3 h-3 mr-1" />
-                      Edit
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="destructive"
-                      onClick={() => handleDeleteItem(item.id)}
-                    >
-                      <Trash2 className="w-3 h-3 mr-1" />
-                      Delete
-                    </Button>
-                  </>
-                )}
+                <ActionButtons
+                  actions={[
+                    {
+                      label: 'View',
+                      href: `/item/${item.id}`,
+                      variant: 'outline' as const,
+                      size: 'sm' as const,
+                      icon: <Eye className="w-3 h-3" />
+                    },
+                    ...(item.status !== 'DELETED' ? [
+                      {
+                        label: 'Edit',
+                        onClick: () => handleEditItem(item),
+                        variant: 'outline' as const,
+                        size: 'sm' as const,
+                        icon: <Edit className="w-3 h-3" />
+                      },
+                      {
+                        label: 'Delete',
+                        onClick: () => handleDeleteItem(item.id),
+                        variant: 'destructive' as const,
+                        size: 'sm' as const,
+                        icon: <Trash2 className="w-3 h-3" />
+                      }
+                    ] : [])
+                  ]}
+                  fullWidth={true}
+                />
               </div>
             </div>
           ))}

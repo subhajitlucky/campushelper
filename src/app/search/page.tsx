@@ -1,7 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { ButtonSpinner } from "@/components/ui/loading-spinner";
+import ItemImage from "@/components/ui/ItemImage";
+import StatusBadge from "@/components/ui/StatusBadge";
+import EmptyState, { EmptyStateIcons } from "@/components/ui/EmptyState";
+import UserDisplay from "@/components/ui/UserDisplay";
+import Pagination from "@/components/ui/Pagination";
 
 interface Item {
   id: string;
@@ -11,6 +17,7 @@ interface Item {
   status: string;
   location: string;
   createdAt: string;
+  images?: string[] | null;
   postedBy: {
     name: string | null;
     avatar: string | null;
@@ -327,16 +334,6 @@ export default function SearchPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {items.map((item) => {
-                  const getStatusColor = (status: string) => {
-                    switch (status) {
-                      case 'LOST': return 'bg-red-100 text-red-800 border-red-200';
-                      case 'FOUND': return 'bg-green-100 text-green-800 border-green-200';
-                      case 'CLAIMED': return 'bg-blue-100 text-blue-800 border-blue-200';
-                      case 'RESOLVED': return 'bg-purple-100 text-purple-800 border-purple-200';
-                      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-                    }
-                  };
-
                   const formatDate = (dateString: string) => {
                     return new Date(dateString).toLocaleDateString('en-US', {
                       month: 'short',
@@ -347,13 +344,14 @@ export default function SearchPage() {
 
                   return (
                     <div key={item.id} className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+                      {/* Item Image */}
+                      <ItemImage images={item.images} alt={item.title} />
+
                       {/* Card Header */}
                       <div className="p-4 border-b bg-gray-50">
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">{item.title}</h3>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(item.status)} ml-2 flex-shrink-0`}>
-                            {item.status}
-                          </span>
+                          <StatusBadge status={item.status} />
                         </div>
                         <p className="text-sm text-gray-600">{formatDate(item.createdAt)}</p>
                       </div>
@@ -361,7 +359,7 @@ export default function SearchPage() {
                       {/* Card Body */}
                       <div className="p-4">
                         <p className="text-gray-600 mb-4 line-clamp-3 text-sm">{item.description}</p>
-                        
+
                         {/* Item Details */}
                         <div className="space-y-2">
                           <div className="flex items-center text-sm text-gray-500">
@@ -371,13 +369,15 @@ export default function SearchPage() {
                             </svg>
                             {item.location}
                           </div>
-                          
-                          <div className="flex items-center text-sm text-gray-500">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                            Posted by {item.postedBy.name || 'Anonymous'}
-                          </div>
+
+                          <UserDisplay
+                            user={{
+                              name: item.postedBy.name,
+                              avatar: item.postedBy.avatar
+                            }}
+                            showLabel={true}
+                            labelPrefix="Posted by"
+                          />
                         </div>
                       </div>
 
@@ -437,99 +437,13 @@ export default function SearchPage() {
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="bg-white rounded-lg shadow p-6 mt-8">
-            <div className="flex items-center justify-between">
-              {/* Page Info */}
-              <div className="text-sm text-gray-700">
-                Showing page <span className="font-medium">{currentPage}</span> of{' '}
-                <span className="font-medium">{totalPages}</span> ({total} total items)
-              </div>
-
-              {/* Pagination Buttons */}
-              <div className="flex items-center space-x-2">
-                {/* Previous Button */}
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className={`px-3 py-2 text-sm font-medium rounded-md border ${
-                    currentPage === 1
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Previous
-                </button>
-
-                {/* Page Numbers */}
-                <div className="flex items-center space-x-1">
-                  {/* First page */}
-                  {currentPage > 3 && (
-                    <>
-                      <button
-                        onClick={() => setCurrentPage(1)}
-                        className="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                      >
-                        1
-                      </button>
-                      {currentPage > 4 && <span className="text-gray-400">...</span>}
-                    </>
-                  )}
-
-                  {/* Current page and neighbors */}
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const pageNum = Math.max(1, Math.min(currentPage - 2 + i, totalPages - 4 + i));
-                    if (pageNum > totalPages - 3 && totalPages > 5) return null;
-                    
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => setCurrentPage(pageNum)}
-                        className={`px-3 py-2 text-sm font-medium rounded-md border ${
-                          pageNum === currentPage
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
-
-                  {/* Last page */}
-                  {currentPage < totalPages - 2 && totalPages > 5 && (
-                    <>
-                      {currentPage < totalPages - 3 && <span className="text-gray-400">...</span>}
-                      <button
-                        onClick={() => setCurrentPage(totalPages)}
-                        className="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                      >
-                        {totalPages}
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                {/* Next Button */}
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className={`px-3 py-2 text-sm font-medium rounded-md border ${
-                    currentPage === totalPages
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  Next
-                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            total={total}
+            className="mt-8"
+          />
         )}
       </div>
     </div>

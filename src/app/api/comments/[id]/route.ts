@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { checkCSRF } from '@/lib/csrf-middleware';
+import { limitCustom } from '@/lib/rateLimit';
 
 // DELETE /api/comments/[id]
 export async function DELETE(
@@ -22,6 +23,9 @@ export async function DELETE(
     if (csrfResult) {
       return csrfResult;
     }
+
+    // Rate limiting: 30 comment deletions per hour per user
+    await limitCustom(`comments:delete:${session.user.id}`, 30, 3600, 'comment delete');
 
     const { id } = await params;
     if (!id) {
@@ -107,6 +111,9 @@ export async function PUT(
     if (csrfResult) {
       return csrfResult;
     }
+
+    // Rate limiting: 30 comment updates per hour per user
+    await limitCustom(`comments:update:${session.user.id}`, 30, 3600, 'comment update');
 
     const { id } = await params;
     if (!id) {

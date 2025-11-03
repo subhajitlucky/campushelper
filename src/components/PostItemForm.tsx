@@ -1,9 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { setSafeErrorMessage, sanitizeInput } from '@/lib/security';
 import { showSuccess, showError } from '@/lib/toast-config';
+import { useAuthFetch } from '@/lib/auth-fetch';
+import ImageUpload from '@/components/ImageUpload';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -12,7 +15,6 @@ import ValidationInput from '@/components/forms/ValidationInput';
 import FieldError from '@/components/forms/FieldError';
 import FormError from '@/components/forms/FormError';
 import { useFormValidation } from '@/hooks/useFormValidation';
-import { useApiRequest } from '@/hooks/useApiRequest';
 import { createItemSchema } from '@/lib/schemas/item';
 import { ButtonSpinner } from '@/components/ui/loading-spinner';
 
@@ -27,6 +29,11 @@ interface PostItemFormProps {
 
 export default function PostItemForm({ className }: PostItemFormProps) {
   const router = useRouter();
+  const { fetchWithAuth } = useAuthFetch(true); // Require authentication
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   // Initialize form validation
   const {
@@ -50,61 +57,55 @@ export default function PostItemForm({ className }: PostItemFormProps) {
     validateOnBlur: true
   });
 
-  // Create API request function with sanitized input
-  const createItem = async (formData: ItemFormValues) => {
-    const itemData = {
-      title: sanitizeInput(formData.title),
-      description: sanitizeInput(formData.description),
-      itemType: formData.itemType,
-      location: sanitizeInput(formData.location),
-      images: [] // Empty array to save database space
-    };
+  // Handle form submission with authenticated fetch
+  const onSubmit = async (formData: ItemFormValues) => {
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
 
-    const response = await fetch('/api/items', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(itemData),
-    });
+    try {
+      const itemData = {
+        title: sanitizeInput(formData.title),
+        description: sanitizeInput(formData.description),
+        itemType: formData.itemType,
+        location: sanitizeInput(formData.location),
+        images: imageUrl ? [imageUrl] : [] // Optional image
+      };
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(JSON.stringify(errorData));
-    }
+      const response = await fetchWithAuth('/api/items', {
+        method: 'POST',
+        body: JSON.stringify(itemData),
+      });
 
-    return await response.json();
-  };
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to post item');
+      }
 
-  // Use API request hook
-  const {
-    data,
-    error,
-    isLoading,
-    isError,
-    execute
-  } = useApiRequest(createItem, {
-    showToast: true,
-    successMessage: 'Item posted successfully!',
-    errorMessage: 'Failed to post item. Please try again.',
-    onSuccess: (result) => {
+      const data = await response.json();
+      setSuccess('Item posted successfully!');
+      showSuccess('Item posted successfully!');
+
+      // Reset form and image
       resetForm();
+      setImageUrl(null);
+
       // Redirect after short delay to show success toast
       setTimeout(() => {
         router.push('/dashboard');
         router.refresh();
       }, 1500);
-    },
-    onError: (apiError) => {
-      // Could update form state based on specific error codes here
-      if (apiError.code === 'AUTHENTICATION_REQUIRED') {
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to post item. Please try again.';
+      setError(errorMessage);
+      showError(errorMessage);
+
+      if (err.message === 'Authentication required') {
         router.push('/auth/login');
       }
+    } finally {
+      setIsLoading(false);
     }
-  });
-
-  const onSubmit = async (formData: ItemFormValues) => {
-    await execute(formData);
   };
 
   return (
@@ -117,12 +118,12 @@ export default function PostItemForm({ className }: PostItemFormProps) {
       </div>
 
       {/* API Error Display */}
-      <FormError error={error?.error} className="mb-6" />
-      
+      <FormError error={error || undefined} className="mb-6" />
+
       {/* Success Message */}
-      {data && !isError && (
+      {success && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 mb-6">
-          <p>✅ Item posted successfully! Redirecting...</p>
+          <p>✅ {success}</p>
         </div>
       )}
 
@@ -199,6 +200,18 @@ export default function PostItemForm({ className }: PostItemFormProps) {
           showCheckIcon={true}
           helperText="Where was the item lost or found?"
         />
+
+        {/* Image Upload Field */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Item Image (Optional)
+          </label>
+          <ImageUpload
+            onImageUpload={setImageUrl}
+            onImageRemove={() => setImageUrl(null)}
+            currentImage={imageUrl}
+          />
+        </div>
 
         {/* Submit Button */}
         <Button 

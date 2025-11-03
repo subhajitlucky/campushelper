@@ -82,8 +82,8 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
-            email: true,
             avatar: true,
+            // Email intentionally excluded (security fix)
           },
         },
         item: {
@@ -108,8 +108,8 @@ export async function GET(request: NextRequest) {
       user: {
         id: comment.user.id,
         name: comment.user.name,
-        email: comment.user.email,
         avatar: comment.user.avatar,
+        // Email intentionally excluded from response
       },
       item: {
         id: comment.item.id,
@@ -220,8 +220,8 @@ export async function POST(request: NextRequest) {
             select: {
               id: true,
               name: true,
-              email: true,
               avatar: true,
+              // Email intentionally excluded (security fix)
             },
           },
           item: {
@@ -245,8 +245,8 @@ export async function POST(request: NextRequest) {
         user: {
           id: newComment.user.id,
           name: newComment.user.name,
-          email: newComment.user.email,
           avatar: newComment.user.avatar,
+          // Email intentionally excluded from response
         },
         item: {
           id: newComment.item.id,

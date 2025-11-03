@@ -1,5 +1,11 @@
 // Zod schemas for Comment validation
 import { z } from 'zod';
+import { isSafeUrl } from '@/lib/security';
+
+// Safe URL validation helper
+const safeUrlSchema = z.string()
+  .url('Invalid URL format')
+  .refine(isSafeUrl, 'URL must be a safe HTTP(S) URL');
 
 // Base comment schema
 export const baseCommentSchema = z.object({
@@ -11,7 +17,7 @@ export const baseCommentSchema = z.object({
     .string()
     .min(1, 'Item ID is required'),
   images: z
-    .array(z.string().url('Each image must be a valid URL'))
+    .array(safeUrlSchema)
     .optional()
     .default([]),
 });

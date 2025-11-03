@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Eye, Calendar, MessageSquare, AlertCircle } from "lucide-react";
+import EmptyState, { EmptyStateIcons } from "@/components/ui/EmptyState";
+import { ListItemSkeleton } from "@/components/ui/LoadingSkeleton";
+import ActionButtons from "@/components/ui/ActionButtons";
 
 interface UserClaim {
   id: string;
@@ -37,7 +40,7 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
   const [claims, setClaims] = useState<UserClaim[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const fetchUserClaims = async () => {
     try {
       setLoading(true);
@@ -92,23 +95,7 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
           <CardDescription>Claims you&apos;ve made on items</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse">
-                <div className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                    <div className="h-4 bg-gray-200 rounded w-16"></div>
-                  </div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3 mb-2"></div>
-                  <div className="flex gap-2 mt-3">
-                    <div className="h-8 bg-gray-200 rounded w-20"></div>
-                    <div className="h-8 bg-gray-200 rounded w-20"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ListItemSkeleton count={3} />
         </CardContent>
       </Card>
     );
@@ -143,18 +130,17 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
       <Card>
         <CardHeader>
           <CardTitle>Your Claims</CardTitle>
-          <CardDescription>Claims you&apos;ve made on items</CardDescription>
+          <CardDescription>Claims you've made on items</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">
-            <div className="text-gray-400 mb-4">
-              <MessageSquare className="w-12 h-12 mx-auto" />
-            </div>
-            <p className="text-gray-500 mb-4">No claims made yet</p>
-            <Button asChild>
-              <Link href="/search">Browse Items to Claim</Link>
-            </Button>
-          </div>
+          <EmptyState
+            icon={<MessageSquare className="w-16 h-16 mx-auto" />}
+            title="No claims made yet"
+            action={{
+              label: "Browse Items to Claim",
+              onClick: () => window.location.href = '/search'
+            }}
+          />
         </CardContent>
       </Card>
     );

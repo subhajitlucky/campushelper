@@ -92,6 +92,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
     try {
       const response = await fetch(`/api/items/${item.id}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (!response.ok) {

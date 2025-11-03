@@ -7,6 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ListSkeleton } from "@/components/ui/skeleton";
+import ItemImage from "@/components/ui/ItemImage";
+import StatusBadge from "@/components/ui/StatusBadge";
+import EmptyState, { EmptyStateIcons } from "@/components/ui/EmptyState";
+import { ItemListSkeleton } from "@/components/ui/LoadingSkeleton";
+import UserDisplay from "@/components/ui/UserDisplay";
+import ItemCard from "@/components/ui/ItemCard";
+import Pagination from "@/components/ui/Pagination";
 
 interface LostItem {
   id: string;
@@ -16,6 +23,7 @@ interface LostItem {
   status: string;
   location: string;
   createdAt: string;
+  images?: string[] | null;
   postedBy: {
     id: string;
     name: string | null;
@@ -161,7 +169,7 @@ export default function LostItemsPage() {
         </Card>
 
         {/* Loading State */}
-        {loading && <ListSkeleton count={6} />}
+        {loading && <ItemListSkeleton count={6} />}
 
         {/* Error State */}
         {error && !loading && (
@@ -205,238 +213,56 @@ export default function LostItemsPage() {
             {items.length === 0 ? (
               <Card>
                 <CardContent className="pt-6">
-                  <div className="text-center py-8">
-                    <div className="text-gray-400 mb-4">
-                      <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0012 15c-2.34 0-4.5-.785-6.172-2.172M12 3c3.314 0 6 2.686 6 6 0 1.86-.792 3.542-2.073 4.828" />
-                      </svg>
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Lost Items Found</h3>
-                    <p className="text-gray-500 mb-4">
-                      No items match your current filters. Try adjusting your search criteria.
-                    </p>
-                    <Button onClick={clearFilters}>
-                      Clear Filters
-                    </Button>
-                  </div>
+                  <EmptyState
+                    icon={EmptyStateIcons.items}
+                    title="No Lost Items Found"
+                    description="No items match your current filters. Try adjusting your search criteria."
+                    action={{
+                      label: "Clear Filters",
+                      onClick: clearFilters
+                    }}
+                  />
                 </CardContent>
               </Card>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {items.map((item) => {
-                  const getStatusColor = (status: string) => {
-                    switch (status) {
-                      case 'LOST': return 'bg-red-100 text-red-800 border-red-200';
-                      case 'FOUND': return 'bg-green-100 text-green-800 border-green-200';
-                      case 'CLAIMED': return 'bg-blue-100 text-blue-800 border-blue-200';
-                      case 'RESOLVED': return 'bg-purple-100 text-purple-800 border-purple-200';
-                      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-                    }
-                  };
-
-                  const formatDate = (dateString: string) => {
-                    return new Date(dateString).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
-                    });
-                  };
-
-                  return (
-                    <div key={item.id} className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
-                      {/* Card Header */}
-                      <div className="p-4 border-b bg-gray-50">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">{item.title}</h3>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(item.status)} ml-2 flex-shrink-0`}>
-                            {item.status}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600">{formatDate(item.createdAt)}</p>
-                      </div>
-
-                      {/* Card Body */}
-                      <div className="p-4">
-                        <p className="text-gray-600 mb-4 line-clamp-3 text-sm">{item.description}</p>
-                        
-                        {/* Item Details */}
-                        <div className="space-y-2">
-                          <div className="flex items-center text-sm text-gray-500">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0012 15c-2.34 0-4.5-.785-6.172-2.172M12 3c3.314 0 6 2.686 6 6 0 1.86-.792 3.542-2.073 4.828" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            {item.location}
-                          </div>
-                          
-                          <div className="flex items-center text-sm text-gray-500">
-                            {item.postedBy.avatar ? (
-                              <Image
-                                src={item.postedBy.avatar}
-                                alt={item.postedBy.name || 'User avatar'}
-                                width={20}
-                                height={20}
-                                className="rounded-full object-cover mr-2"
-                              />
-                            ) : (
-                              <div className="w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center mr-2">
-                                <span className="text-xs text-gray-500">
-                                  {(item.postedBy.name || 'A').charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                            )}
-                            <span>Reported by {item.postedBy.name || 'Anonymous'}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Card Footer */}
-                      <div className="p-4 bg-gray-50 border-t">
-                        {user.isLoggedIn ? (
-                          // Logged-in user actions
-                          <div className="space-y-2">
-                            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
-                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                              View Details
-                            </button>
-                            {item.status === 'LOST' && (
-                              <button className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
-                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                </svg>
-                                I Found This!
-                              </button>
-                            )}
-                          </div>
-                        ) : (
-                          // Guest user actions
-                          <div className="space-y-2">
-                            <button 
-                              onClick={() => window.location.href = '/auth/login'}
-                              className="w-full bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center"
-                            >
-                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                              Login to View Details
-                            </button>
-                            <button 
-                              onClick={() => window.location.href = '/auth/login'}
-                              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center"
-                            >
-                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                              </svg>
-                              Report Found Item
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                {items.map((item) => (
+                  <ItemCard
+                    key={item.id}
+                    item={{
+                      id: item.id,
+                      title: item.title,
+                      description: item.description,
+                      itemType: item.itemType,
+                      status: item.status,
+                      location: item.location,
+                      createdAt: item.createdAt,
+                      images: item.images,
+                      postedBy: {
+                        name: item.postedBy.name,
+                        avatar: item.postedBy.avatar
+                      }
+                    }}
+                    user={user}
+                    showActions={true}
+                    onFound={() => {
+                      // TODO: Implement found item handler
+                      console.log('Found item:', item.id);
+                    }}
+                  />
+                ))}
               </div>
             )}
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="bg-white rounded-lg shadow p-6 mt-8">
-                <div className="flex items-center justify-between">
-                  {/* Page Info */}
-                  <div className="text-sm text-gray-700">
-                    Showing page <span className="font-medium">{currentPage}</span> of{' '}
-                    <span className="font-medium">{totalPages}</span> ({total} total items)
-                  </div>
-
-                  {/* Pagination Buttons */}
-                  <div className="flex items-center space-x-2">
-                    {/* Previous Button */}
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                      className={`px-3 py-2 text-sm font-medium rounded-md border ${
-                        currentPage === 1
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                      Previous
-                    </button>
-
-                    {/* Page Numbers */}
-                    <div className="flex items-center space-x-1">
-                      {/* First page */}
-                      {currentPage > 3 && (
-                        <>
-                          <button
-                            onClick={() => setCurrentPage(1)}
-                            className="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                          >
-                            1
-                          </button>
-                          {currentPage > 4 && <span className="text-gray-400">...</span>}
-                        </>
-                      )}
-
-                      {/* Current page and neighbors */}
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        const pageNum = Math.max(1, Math.min(currentPage - 2 + i, totalPages - 4 + i));
-                        if (pageNum > totalPages - 3 && totalPages > 5) return null;
-                        
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => setCurrentPage(pageNum)}
-                            className={`px-3 py-2 text-sm font-medium rounded-md border ${
-                              pageNum === currentPage
-                                ? 'bg-blue-600 text-white border-blue-600'
-                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                            }`}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      })}
-
-                      {/* Last page */}
-                      {currentPage < totalPages - 2 && (
-                        <>
-                          {currentPage < totalPages - 3 && <span className="text-gray-400">...</span>}
-                          <button
-                            onClick={() => setCurrentPage(totalPages)}
-                            className="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                          >
-                            {totalPages}
-                          </button>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Next Button */}
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                      className={`px-3 py-2 text-sm font-medium rounded-md border ${
-                        currentPage === totalPages
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      Next
-                      <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                total={total}
+                className="mt-8"
+              />
             )}
           </>
         )}

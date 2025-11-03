@@ -116,6 +116,7 @@ export default function AdminDashboard() {
     try {
       const response = await fetch(`/api/admin/items/${itemId}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -161,6 +162,7 @@ export default function AdminDashboard() {
     try {
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -198,6 +200,7 @@ export default function AdminDashboard() {
     try {
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -343,7 +346,9 @@ export default function AdminDashboard() {
 
       // Fetch overview stats
       if (activeTab === 'overview') {
-        const statsResponse = await fetch('/api/admin/stats');
+        const statsResponse = await fetch('/api/admin/stats', {
+          credentials: 'include',
+        });
         if (statsResponse.ok) {
           const statsData = await statsResponse.json();
           setStats(statsData);
@@ -352,7 +357,9 @@ export default function AdminDashboard() {
 
       // Fetch items
       if (activeTab === 'items') {
-        const itemsResponse = await fetch('/api/admin/items');
+        const itemsResponse = await fetch('/api/admin/items', {
+          credentials: 'include',
+        });
         if (itemsResponse.ok) {
           const itemsData = await itemsResponse.json();
           setItems(itemsData.items || []);
@@ -361,7 +368,9 @@ export default function AdminDashboard() {
 
       // Fetch users
       if (activeTab === 'users') {
-        const usersResponse = await fetch('/api/admin/users');
+        const usersResponse = await fetch('/api/admin/users', {
+          credentials: 'include',
+        });
         if (usersResponse.ok) {
           const usersData = await usersResponse.json();
           setUsers(usersData.users || []);
@@ -370,7 +379,9 @@ export default function AdminDashboard() {
 
       // Fetch claims
       if (activeTab === 'claims') {
-        const claimsResponse = await fetch('/api/admin/claims');
+        const claimsResponse = await fetch('/api/admin/claims', {
+          credentials: 'include',
+        });
         if (claimsResponse.ok) {
           const claimsData = await claimsResponse.json();
           setClaims(claimsData.claims || []);

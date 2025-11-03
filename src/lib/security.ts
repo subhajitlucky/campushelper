@@ -73,6 +73,68 @@ export function setSafeErrorMessage(message: string, fallback: string = 'An erro
 }
 
 /**
+ * Validates if a URL is safe to use
+ * Prevents XSS and SSRF attacks by blocking dangerous protocols
+ */
+export function isSafeUrl(url: string): boolean {
+  if (!url || typeof url !== 'string') {
+    return false;
+  }
+
+  try {
+    const parsedUrl = new URL(url);
+
+    // Only allow http and https protocols
+    const allowedProtocols = ['http:', 'https:'];
+    if (!allowedProtocols.includes(parsedUrl.protocol)) {
+      return false;
+    }
+
+    // Block localhost and private IP ranges for security
+    const hostname = parsedUrl.hostname.toLowerCase();
+
+    // Block localhost variations
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+      return false;
+    }
+
+    // Block private IP ranges (SSRF protection)
+    // Check for private IP patterns
+    const privateIpPatterns = [
+      /^10\./,           // 10.0.0.0 - 10.255.255.255
+      /^192\.168\./,     // 192.168.0.0 - 192.168.255.255
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./,  // 172.16.0.0 - 172.31.255.255
+      /^169\.254\./,     // Link-local addresses (AWS metadata, etc.)
+      /^127\./,          // Loopback
+      /^0\./,            // 0.0.0.0/8
+      /^::1$/,           // IPv6 loopback
+      /^fc00:/,          // IPv6 unique local
+      /^fe80:/,          // IPv6 link-local
+    ];
+
+    if (privateIpPatterns.some(pattern => pattern.test(hostname))) {
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    // Invalid URL format
+    return false;
+  }
+}
+
+/**
+ * Validates an array of URLs are all safe
+ */
+export function areSafeUrls(urls: string[]): boolean {
+  if (!Array.isArray(urls)) {
+    return false;
+  }
+
+  return urls.every(url => !url || isSafeUrl(url));
+}
+
+/**
  * Configuration for DOMPurify in Next.js environment
  * Safe server-side rendering configuration
  */

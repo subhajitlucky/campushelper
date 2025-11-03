@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { sanitizeInput } from '@/lib/security';
+import { useAuthFetch } from '@/lib/auth-fetch';
 
 interface ClaimsModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface ClaimsModalProps {
 
 export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwner }: ClaimsModalProps) {
   const { data: session } = useSession();
+  const { fetchWithAuth } = useAuthFetch(true); // Require authentication
   const [formData, setFormData] = useState({
     claimType: 'FOUND_IT' as 'FOUND_IT' | 'OWN_IT',
     message: ''
@@ -31,7 +33,7 @@ export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwne
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.message.trim()) {
       setError('Message is required');
       return;
@@ -42,11 +44,8 @@ export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwne
     setSuccess(null);
 
     try {
-      const response = await fetch('/api/claims', {
+      const response = await fetchWithAuth('/api/claims', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           claimType: formData.claimType,
           itemId: itemId,
