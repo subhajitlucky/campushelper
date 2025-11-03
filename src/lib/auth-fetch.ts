@@ -33,7 +33,8 @@ export function useAuthFetch(requireAuth: boolean = false): AuthFetchReturn {
       } = options;
 
       // Check authentication if required
-      if (localRequireAuth && status !== 'authenticated') {
+      // Only reject if explicitly unauthenticated, not if loading
+      if (localRequireAuth && status === 'unauthenticated') {
         throw new Error('Authentication required');
       }
 

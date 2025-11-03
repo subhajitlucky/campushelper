@@ -89,6 +89,17 @@ const handler = NextAuth({
         strategy: 'jwt', // Using JWT strategy for consistency
         maxAge: 60 * 60 * 24, // 24 hours (in seconds) - Security fix: prevent long-lived sessions
     },
+    cookies: {
+        sessionToken: {
+            name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
+            options: {
+                httpOnly: true,
+                sameSite: 'lax',
+                path: '/',
+                secure: process.env.NODE_ENV === 'production',
+            },
+        },
+    },
     // Add explicit serialization to ensure id/role persist
     callbacks: {
         async jwt({ token, user, account }) {
