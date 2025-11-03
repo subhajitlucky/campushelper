@@ -69,40 +69,32 @@ export default function ImageUpload({
     setUploading(true);
 
     try {
-      // Check if Supabase is available
-      if (!supabase) {
-        throw new Error(
-          'Supabase is not configured. Please add environment variables.'
-        );
-      }
-
       // Step 1: Compress image
       const compressedFile = await imageCompression(file, UPLOAD_CONFIG.compression);
 
-      // Step 2: Generate unique filename
-      const timestamp = Date.now();
-      const randomString = Math.random().toString(36).substring(2, 15);
-      const fileExtension = compressedFile.name.split('.').pop() || 'jpg';
-      const fileName = `item-${timestamp}-${randomString}.${fileExtension}`;
+      // Step 2: Create FormData for upload
+      const formData = new FormData();
+      formData.append('file', compressedFile);
 
-      // Step 3: Upload to Supabase
-      const { data, error: uploadError } = await supabase.storage
-        .from(STORAGE_BUCKETS.ITEM_IMAGES)
-        .upload(fileName, compressedFile, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+      // Step 3: Upload via API route (includes CSRF protection and auth)
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
 
-      if (uploadError) {
-        throw uploadError;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
       }
 
-      // Step 4: Get public URL
-      const { data: urlData } = supabase.storage
-        .from(STORAGE_BUCKETS.ITEM_IMAGES)
-        .getPublicUrl(data.path);
+      const data = await response.json();
 
-      const imageUrl = urlData.publicUrl;
+      if (!data.imageUrl) {
+        throw new Error('No image URL returned from server');
+      }
+
+      const imageUrl = data.imageUrl;
 
       // Step 5: Set preview and notify parent
       setPreview(imageUrl);
@@ -127,27 +119,10 @@ export default function ImageUpload({
 
     setError(null);
 
-    try {
-      // Check if Supabase is available
-      if (supabase) {
-        // Extract file path from URL
-        const url = new URL(preview);
-        const path = url.pathname.split('/').pop();
-
-        if (path) {
-          // Delete from Supabase storage
-          await supabase.storage
-            .from(STORAGE_BUCKETS.ITEM_IMAGES)
-            .remove([path]);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to delete image:', err);
-      // Continue with cleanup even if storage delete fails
-    } finally {
-      setPreview(null);
-      onImageRemove();
-    }
+    // Just clear the preview and notify parent
+    // The actual file cleanup will happen via garbage collection or a cleanup endpoint if needed
+    setPreview(null);
+    onImageRemove();
   };
 
   /**

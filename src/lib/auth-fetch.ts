@@ -37,11 +37,29 @@ export function useAuthFetch(requireAuth: boolean = false): AuthFetchReturn {
         throw new Error('Authentication required');
       }
 
+      // Get CSRF token from cookie or generate one
+      let csrfToken = '';
+      if (fetchOptions.method && fetchOptions.method !== 'GET') {
+        // For state-changing requests, fetch CSRF token
+        try {
+          const csrfResponse = await fetch('/api/csrf-token', {
+            credentials: 'include',
+          });
+          if (csrfResponse.ok) {
+            const csrfData = await csrfResponse.json();
+            csrfToken = csrfData.csrfToken;
+          }
+        } catch (error) {
+          console.error('Failed to get CSRF token:', error);
+        }
+      }
+
       const response = await fetch(url, {
         ...fetchOptions,
         credentials: 'include', // ⭐ CRITICAL: Include NextAuth cookies
         headers: {
           'Content-Type': 'application/json',
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
           ...fetchOptions.headers,
         },
       });

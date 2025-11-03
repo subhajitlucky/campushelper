@@ -38,6 +38,12 @@ const profileLimiter = new RateLimiterMemory({
   duration: 3600, // 1 hour in seconds
 });
 
+// Uploads: 20 uploads per hour per user
+const uploadsLimiter = new RateLimiterMemory({
+  points: 20,
+  duration: 3600, // 1 hour in seconds
+});
+
 /**
  * Rate limiting middleware
  * @param key - Unique identifier for rate limiting (e.g., IP address, user ID)
@@ -145,4 +151,12 @@ export async function limitCustom(
     duration: durationSeconds,
   });
   await rateLimit(key, customLimiter, endpointName);
+}
+
+/**
+ * Rate limiter for file uploads
+ */
+export async function limitUploads(request: Request, userId: string): Promise<void> {
+  const key = `uploads:${userId}`;
+  await rateLimit(key, uploadsLimiter, 'uploads');
 }

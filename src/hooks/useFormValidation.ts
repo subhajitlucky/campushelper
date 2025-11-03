@@ -180,8 +180,13 @@ export function useFormValidation<T extends Record<string, any>>(
   
   // Check if form is valid
   const isValid = useMemo(() => {
-    return Object.keys(formState).length > 0 && 
-           Object.values(formState).every(field => field.isValid && !field.error);
+    // Form is valid if all fields have been touched and validated with no errors
+    return Object.keys(formState).length > 0 &&
+           Object.values(formState).every(field => {
+             // Field must be touched and have no error
+             // Also check that the field has a value
+             return field.touched && !field.error && field.value && field.value.trim().length > 0;
+           });
   }, [formState]);
   
   // Set field value
