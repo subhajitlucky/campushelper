@@ -67,8 +67,14 @@ export function useAuthFetch(requireAuth: boolean = false): AuthFetchReturn {
 
       // Handle authentication errors
       if (response.status === 401) {
-        // Session expired or invalid
-        throw new Error('Session expired. Please log in again.');
+        // Try to get error message from response
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Authentication failed. Please log in again.');
+        } catch {
+          // Session expired or invalid
+          throw new Error('Session expired. Please log in again.');
+        }
       }
 
       return response;

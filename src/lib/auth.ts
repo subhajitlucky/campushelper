@@ -1,4 +1,5 @@
 import NextAuth from 'next-auth';
+import type { NextRequest } from 'next/server';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import { prisma } from './prisma';
@@ -6,6 +7,11 @@ import bcrypt from 'bcryptjs';
 import { getServerSession } from 'next-auth/next';
 import { limitLogin } from './rateLimit';
 import type { Session } from 'next-auth';
+
+// Auto-detect NEXTAUTH_URL for production
+if (!process.env.NEXTAUTH_URL && process.env.VERCEL_URL) {
+  process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+}
 
 const handler = NextAuth({
     providers: [
@@ -89,24 +95,9 @@ const handler = NextAuth({
         strategy: 'jwt', // Using JWT strategy for consistency
         maxAge: 60 * 60 * 24, // 24 hours (in seconds) - Security fix: prevent long-lived sessions
     },
-    cookies: {
-        sessionToken: {
-            name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
-            options: {
-                httpOnly: true,
-                sameSite: 'lax',
-                path: '/',
-                secure: process.env.NODE_ENV === 'production',
-            },
-        },
-    },
     // Add explicit serialization to ensure id/role persist
     callbacks: {
         async jwt({ token, user, account }) {
-            // Set token expiration to 24 hours
-            const expiresAt = Math.floor(Date.now() / 1000) + (60 * 60 * 24); // 24 hours from now
-            token.exp = expiresAt;
-
             if (user) {
                 token.id = user.id;
                 token.role = user.role;
@@ -168,7 +159,7 @@ const handler = NextAuth({
             return token;
         },
         async session({ session, token }) {
-            if (session.user) {
+            if (session.user && token) {
                 session.user.id = token.id as string;
                 session.user.role = token.role as string;
             }
@@ -191,7 +182,9 @@ const handler = NextAuth({
 export const auth = handler;
 
 // Helper function for API routes to get session
-export async function getSession(): Promise<Session | null> {
+export async function getSession(request?: NextRequest): Promise<Session | null> {
+  // In App Router, getServerSession reads from request context automatically
+  // when called within a Route Handler
   return await getServerSession(auth);
 }
 
