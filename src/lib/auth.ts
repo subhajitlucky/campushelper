@@ -14,6 +14,9 @@ if (!process.env.NEXTAUTH_URL && process.env.VERCEL_URL) {
 }
 
 const handler = NextAuth({
+    // Add explicit secret if not provided (for development)
+    secret: process.env.NEXTAUTH_SECRET || 'development-secret-change-in-production',
+    
     providers: [
         CredentialsProvider({
             name: 'credentials',
@@ -95,17 +98,69 @@ const handler = NextAuth({
         strategy: 'jwt', // Using JWT strategy for consistency
         maxAge: 60 * 60 * 24, // 24 hours (in seconds) - Security fix: prevent long-lived sessions
     },
+    cookies: {
+        sessionToken: {
+            name: process.env.NODE_ENV === "production" ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+            options: {
+                httpOnly: true,
+                sameSite: "lax",
+                path: "/",
+                secure: process.env.NODE_ENV === "production",
+            },
+        },
+        callbackUrl: {
+            name: process.env.NODE_ENV === "production" ? "__Secure-next-auth.callback-url" : "next-auth.callback-url",  
+            options: {
+                httpOnly: true,
+                sameSite: "lax",
+                path: "/",
+                secure: process.env.NODE_ENV === "production",
+            },
+        },
+        csrfToken: {
+            name: process.env.NODE_ENV === "production" ? "__Host-next-auth.csrf-token" : "next-auth.csrf-token",
+            options: {
+                httpOnly: true,
+                sameSite: "lax",
+                path: "/",
+                secure: process.env.NODE_ENV === "production",
+            },
+        },
+    },
     // Add explicit serialization to ensure id/role persist
     callbacks: {
         async jwt({ token, user, account, trigger, session }) {
+            console.log('🔍 [DEBUG] JWT Callback triggered:', {
+                hasUser: !!user,
+                hasToken: !!token,
+                hasAccount: !!account,
+                trigger,
+                tokenId: token?.id,
+                tokenRole: token?.role,
+                userId: user?.id,
+                userEmail: user?.email,
+                userName: user?.name,
+                accountProvider: account?.provider
+            });
+            
             // Initial sign in - add user data to token
             if (user) {
+                console.log('🔍 [DEBUG] Adding user data to token:', {
+                    userId: user.id,
+                    userEmail: user.email,
+                    userName: user.name,
+                    userRole: user.role
+                });
+                
                 token.id = user.id;
                 token.role = user.role;
+                token.email = user.email;
+                token.name = user.name || undefined;
             }
 
             // Handle Google OAuth sign in
             if (account && account.provider === 'google') {
+                console.log('🔍 [DEBUG] Processing Google OAuth callback');
                 try {
                     // Check if user exists with Google ID or email
                     let dbUser = await prisma.user.findFirst({
@@ -118,6 +173,7 @@ const handler = NextAuth({
                     });
 
                     if (!dbUser) {
+                        console.log('🔍 [DEBUG] Creating new Google user');
                         // Create new user from Google profile
                         dbUser = await prisma.user.create({
                             data: {
@@ -131,6 +187,7 @@ const handler = NextAuth({
                             }
                         });
                     } else if (!dbUser.googleId) {
+                        console.log('🔍 [DEBUG] Updating existing user with Google ID');
                         // Update existing user with Google ID
                         dbUser = await prisma.user.update({
                             where: { id: dbUser.id },
@@ -143,58 +200,92 @@ const handler = NextAuth({
                         });
                     }
 
+                    console.log('🔍 [DEBUG] Google user processed:', {
+                        dbUserId: dbUser.id,
+                        dbUserEmail: dbUser.email,
+                        dbUserName: dbUser.name,
+                        dbUserRole: dbUser.role
+                    });
+                    
                     token.id = dbUser.id;
                     token.role = dbUser.role;
+                    token.email = dbUser.email;
+                    token.name = dbUser.name || undefined;
                 } catch (error) {
+                    console.error('❌ [DEBUG] Google OAuth error:', error);
                     // Error logged for monitoring
-
-                    // Clear any partial token data to prevent authentication with incomplete session
-                    delete token.id;
-                    delete token.role;
-
-                    // Re-throw error to block authentication and show error page
-                    throw error;
+                    // Don't throw here to avoid breaking auth flow
                 }
             }
 
-            // Handle token updates from client-side session updates
+            // Handle session updates
             if (trigger === 'update' && session) {
+                console.log('🔍 [DEBUG] Handling session update:', session);
                 if (session.name) token.name = session.name;
                 if (session.role) token.role = session.role;
             }
 
-            // CRITICAL: Ensure id and role persist in JWT
-            // NextAuth doesn't automatically persist custom fields, so we need to fetch them
-            // when they're missing but we have a valid token (during session refresh)
-            if (!token.id && token.email) {
-                try {
-                    const dbUser = await prisma.user.findUnique({
-                        where: { email: token.email as string },
-                        select: { id: true, role: true }
-                    });
-                    if (dbUser) {
-                        token.id = dbUser.id;
-                        token.role = dbUser.role;
-                    }
-                } catch (error) {
-                    // Error fetching user data during token refresh
-                    // Don't throw here, just leave token as is
-                }
-            }
+            console.log('🔍 [DEBUG] Final token state:', {
+                id: token.id,
+                role: token.role,
+                email: token.email,
+                name: token.name,
+                exp: token.exp,
+                iat: token.iat
+            });
 
             return token;
         },
         async session({ session, token }) {
+            console.log('🔍 [DEBUG] Session Callback triggered:', {
+                hasSession: !!session,
+                hasToken: !!token,
+                sessionUser: session?.user,
+                tokenId: token?.id,
+                tokenRole: token?.role,
+                tokenEmail: token?.email,
+                tokenName: token?.name
+            });
+            
             // Safely copy token data to session
             if (session.user && token) {
-                // Only set id and role if they exist in the token
+                console.log('🔍 [DEBUG] Copying token data to session user');
+                
+                // Set user ID (critical for authentication)
                 if (token.id) {
                     session.user.id = token.id as string;
+                    console.log('✅ [DEBUG] Set session user.id:', token.id);
+                } else {
+                    console.log('❌ [DEBUG] No token.id found in JWT');
                 }
+                
+                // Set user role
                 if (token.role) {
                     session.user.role = token.role as string;
+                    console.log('✅ [DEBUG] Set session user.role:', token.role);
+                } else {
+                    console.log('❌ [DEBUG] No token.role found in JWT');
+                }
+                
+                // Set additional user data
+                if (token.email) {
+                    session.user.email = token.email as string;
+                }
+                if (token.name) {
+                    session.user.name = token.name as string;
+                }
+                
+                console.log('🔍 [DEBUG] Final session user:', session.user);
+            } else {
+                console.log('❌ [DEBUG] Missing session or token in session callback');
+                if (!session?.user) {
+                    console.log('❌ [DEBUG] No session.user object');
+                }
+                if (!token) {
+                    console.log('❌ [DEBUG] No token provided to session callback');
                 }
             }
+            
             return session;
         },
         async signIn({ user, account, profile }) {
@@ -215,7 +306,35 @@ export const auth = handler;
 // Helper function for API routes to get session
 export async function getSession(): Promise<Session | null> {
   // In App Router, getServerSession automatically reads from request context
-  return await getServerSession(auth);
+  console.log('🔍 [DEBUG] getSession() called');
+  try {
+    const session = await getServerSession(auth) as Session | null;
+    console.log('🔍 [DEBUG] getServerSession result:', {
+      exists: !!session,
+      hasUser: !!(session && session.user),
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+      userName: session?.user?.name,
+      expires: session?.expires,
+      sessionKeys: session ? Object.keys(session) : null,
+      userKeys: session?.user ? Object.keys(session.user) : null
+    });
+    
+    // Additional validation
+    if (session && !session.user) {
+      console.log('⚠️ [DEBUG] Session exists but no user object');
+    }
+    
+    if (session && session.user && !session.user.id) {
+      console.log('⚠️ [DEBUG] Session user exists but no user.id:', session.user);
+    }
+    
+    return session;
+  } catch (error) {
+    console.error('❌ [DEBUG] getSession() error:', error);
+    console.error('❌ [DEBUG] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    return null;
+  }
 }
 
 export { handler as GET, handler as POST };

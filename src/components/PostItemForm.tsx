@@ -59,6 +59,10 @@ export default function PostItemForm({ className }: PostItemFormProps) {
 
   // Handle form submission with authenticated fetch
   const onSubmit = async (formData: ItemFormValues) => {
+    console.log('🔍 [DEBUG] Form submission started');
+    console.log('🔍 [DEBUG] Form data:', formData);
+    console.log('🔍 [DEBUG] Image URL:', imageUrl);
+    
     setIsLoading(true);
     setError(null);
     setSuccess(null);
@@ -72,9 +76,19 @@ export default function PostItemForm({ className }: PostItemFormProps) {
         images: imageUrl ? [imageUrl] : [] // Optional image
       };
 
+      console.log('🔍 [DEBUG] Prepared item data:', itemData);
+      console.log('🔍 [DEBUG] Making authenticated request to /api/items');
+
       const response = await fetchWithAuth('/api/items', {
         method: 'POST',
         body: JSON.stringify(itemData),
+      });
+
+      console.log('🔍 [DEBUG] Response received:', {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
       });
 
       if (!response.ok) {
