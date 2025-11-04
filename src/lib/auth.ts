@@ -1,18 +1,17 @@
 import NextAuth from 'next-auth';
-import type { NextRequest } from 'next/server';
+import { getServerSession } from 'next-auth';
+import type { NextAuthOptions, Session } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import { prisma } from './prisma';
 import bcrypt from 'bcryptjs';
-import { limitLogin } from './rateLimit';
-import type { Session } from 'next-auth';
 
 // Auto-detect NEXTAUTH_URL for production
 if (!process.env.NEXTAUTH_URL && process.env.VERCEL_URL) {
   process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
 }
 
-const handler = NextAuth({
+export const authOptions: NextAuthOptions = {
     // Require NEXTAUTH_SECRET for security - no fallback in production
     secret: process.env.NEXTAUTH_SECRET,
     
@@ -235,41 +234,41 @@ const handler = NextAuth({
             return true;
         },
     },
-    pages: {
-        // Custom pages can be added here if needed
-        // signIn: '/auth/signin', // Custom sign in page
-        // error: '/auth/error', // Error page
-    },
-});
+        pages: {
+                // Custom pages can be added here if needed
+                // signIn: '/auth/signin', // Custom sign in page
+                // error: '/auth/error', // Error page
+        },
+};
 
-export const auth = handler;
+const handler = NextAuth(authOptions);
+
+export { handler as GET, handler as POST };
+
+export async function auth(): Promise<Session | null> {
+    try {
+        const session = await getServerSession(authOptions) as Session | null;
+
+        if (session && !session.user) {
+            return null;
+        }
+
+        if (session?.user && !session.user.id) {
+            return null;
+        }
+
+        return session;
+    } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+            console.error('Session validation error:', error);
+        }
+        return null;
+    }
+}
 
 // Helper function for API routes to get session
 export async function getSession(): Promise<Session | null> {
-    // In Next.js App Router, auth() reads from the current request context
-    try {
-        const session = await auth() as Session | null;
-    
-    // Additional validation
-    if (session && !session.user) {
-      // Session exists but no user object - this shouldn't happen in normal flow
-      return null;
-    }
-    
-    if (session && session.user && !session.user.id) {
-      // Session user exists but no user.id - this indicates a JWT callback issue
-      return null;
-    }
-    
-    return session;
-  } catch (error) {
-    // Don't log errors in production to avoid information disclosure
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Session validation error:', error);
-    }
-    return null;
-  }
+    return auth();
 }
 
-export { handler as GET, handler as POST };
 export default handler;
