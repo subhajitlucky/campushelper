@@ -97,7 +97,8 @@ const handler = NextAuth({
     },
     // Add explicit serialization to ensure id/role persist
     callbacks: {
-        async jwt({ token, user, account }) {
+        async jwt({ token, user, account, trigger, session }) {
+            // Initial sign in - add user data to token
             if (user) {
                 token.id = user.id;
                 token.role = user.role;
@@ -156,12 +157,43 @@ const handler = NextAuth({
                 }
             }
 
+            // Handle token updates from client-side session updates
+            if (trigger === 'update' && session) {
+                if (session.name) token.name = session.name;
+                if (session.role) token.role = session.role;
+            }
+
+            // CRITICAL: Ensure id and role persist in JWT
+            // NextAuth doesn't automatically persist custom fields, so we need to fetch them
+            // when they're missing but we have a valid token (during session refresh)
+            if (!token.id && token.email) {
+                try {
+                    const dbUser = await prisma.user.findUnique({
+                        where: { email: token.email as string },
+                        select: { id: true, role: true }
+                    });
+                    if (dbUser) {
+                        token.id = dbUser.id;
+                        token.role = dbUser.role;
+                    }
+                } catch (error) {
+                    // Error fetching user data during token refresh
+                    // Don't throw here, just leave token as is
+                }
+            }
+
             return token;
         },
         async session({ session, token }) {
+            // Safely copy token data to session
             if (session.user && token) {
-                session.user.id = token.id as string;
-                session.user.role = token.role as string;
+                // Only set id and role if they exist in the token
+                if (token.id) {
+                    session.user.id = token.id as string;
+                }
+                if (token.role) {
+                    session.user.role = token.role as string;
+                }
             }
             return session;
         },
