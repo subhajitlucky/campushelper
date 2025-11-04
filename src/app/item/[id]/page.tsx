@@ -9,11 +9,11 @@ import ItemDetail from '@/components/ItemDetail';
 export default async function ItemDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   try {
     // Step 107: Get authenticated session (optional for viewing)
-    const { id } = params;
+    const { id } = await params;
 
     // Step 107: Validate ID parameter
     if (!id) {
@@ -21,15 +21,18 @@ export default async function ItemDetailPage({
     }
 
     // Step 107: Fetch item data from our API endpoint
-  const cookieHeader = cookies().toString();
-  const headersList = await headers();
+    const cookieHeader = cookies().toString();
+    const headersList = await headers();
 
-  const protocol = headersList.get('x-forwarded-proto') || 'https';
-  const host = headersList.get('host');
     const baseUrl =
       process.env.NEXT_PUBLIC_BASE_URL ||
       process.env.NEXTAUTH_URL ||
-      (host ? `${protocol}://${host}` : 'http://localhost:3000');
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined) ||
+      (headersList.get('x-forwarded-host')
+        ? `${headersList.get('x-forwarded-proto') || 'https'}://${headersList.get('x-forwarded-host')}`
+        : headersList.get('host')
+          ? `${headersList.get('x-forwarded-proto') || 'https'}://${headersList.get('host')}`
+          : 'http://localhost:3000');
 
     const response = await fetch(`${baseUrl}/api/items/${id}`, {
       method: 'GET',
