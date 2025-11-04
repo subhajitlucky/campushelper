@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { z } from 'zod';
-import { setSafeErrorMessage, sanitizeInput } from '@/lib/security';
+import { sanitizeInput } from '@/lib/security';
 import { showSuccess, showError } from '@/lib/toast-config';
 import { useAuthFetch } from '@/lib/auth-fetch';
 import ImageUpload from '@/components/ImageUpload';
@@ -30,15 +29,11 @@ interface PostItemFormProps {
 
 export default function PostItemForm({ className }: PostItemFormProps) {
   const router = useRouter();
-  const { data: session, status } = useSession();
   const { fetchWithAuth, isLoading: isAuthLoading } = useAuthFetch(true); // Require authentication
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-
-  // Check if user is authenticated
-  const isAuthenticated = status === 'authenticated' && !!session?.user?.id;
 
   // Initialize form validation
   const {
@@ -64,14 +59,6 @@ export default function PostItemForm({ className }: PostItemFormProps) {
 
   // Handle form submission with authenticated fetch
   const onSubmit = async (formData: ItemFormValues) => {
-    // Don't submit if not authenticated
-    if (!isAuthenticated) {
-      setError('Please log in to post an item');
-      showError('Please log in to post an item');
-      router.push('/auth/login');
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
     setSuccess(null);
@@ -113,7 +100,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
       setError(errorMessage);
       showError(errorMessage);
 
-      if (err.message?.includes('log in')) {
+      if (err.message?.toLowerCase().includes('auth')) {
         setTimeout(() => {
           router.push('/auth/login');
         }, 1500);
@@ -131,13 +118,6 @@ export default function PostItemForm({ className }: PostItemFormProps) {
           Help reunite lost items with their owners or report items you've found.
         </p>
       </div>
-
-      {/* Show warning if not authenticated */}
-      {status === 'unauthenticated' && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800 mb-6">
-          <p>⚠️ Please log in to post an item. <a href="/auth/login" className="underline font-medium">Log in here</a></p>
-        </div>
-      )}
 
       {/* API Error Display */}
       <FormError error={error || undefined} className="mb-6" />

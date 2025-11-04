@@ -4,7 +4,6 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import { prisma } from './prisma';
 import bcrypt from 'bcryptjs';
-import { getServerSession } from 'next-auth';
 import { limitLogin } from './rateLimit';
 import type { Session } from 'next-auth';
 
@@ -247,10 +246,9 @@ export const auth = handler;
 
 // Helper function for API routes to get session
 export async function getSession(): Promise<Session | null> {
-  // In Next.js App Router, getServerSession automatically reads from request context
-  // when called in API routes without parameters
-  try {
-    const session = await getServerSession(auth) as Session | null;
+    // In Next.js App Router, auth() reads from the current request context
+    try {
+        const session = await auth() as Session | null;
     
     // Additional validation
     if (session && !session.user) {

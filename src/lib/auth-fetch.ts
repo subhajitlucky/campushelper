@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { useSession, getSession } from 'next-auth/react';
 import { useCallback } from 'react';
 import { showError } from './toast-config';
 
@@ -35,18 +35,19 @@ export function useAuthFetch(requireAuth: boolean = false): AuthFetchReturn {
 
       // Check authentication if required
       if (localRequireAuth) {
-        // Don't proceed if session is still loading
-        if (status === 'loading') {
-          const errorMessage = 'Please wait, loading session...';
-          if (showErrorToast) {
-            showError(errorMessage);
+        let activeSession = session;
+
+        // If session is not yet populated, attempt to resolve it directly
+        if (!activeSession?.user?.id && status !== 'unauthenticated') {
+          try {
+            activeSession = await getSession();
+          } catch (error) {
+            console.error('Failed to resolve session:', error);
           }
-          throw new Error(errorMessage);
         }
-        
-        // Check if authenticated
-        if (status === 'unauthenticated' || !session?.user?.id) {
-          const errorMessage = 'Please log in to continue';
+
+        if (!activeSession?.user?.id) {
+          const errorMessage = 'Authentication required';
           if (showErrorToast) {
             showError(errorMessage);
           }
