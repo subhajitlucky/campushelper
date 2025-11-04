@@ -214,49 +214,18 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   return safeApiHandler(async () => {
-    console.log('🔍 [DEBUG] POST /api/items called');
-    console.log('🔍 [DEBUG] Request method:', request.method);
-    console.log('🔍 [DEBUG] Request headers:', Object.fromEntries(request.headers.entries()));
-    
     // Check CSRF token first (for security)
-    console.log('🔍 [DEBUG] Checking CSRF token...');
     const csrfCheck = await checkCSRF(request);
     if (csrfCheck) {
-      console.log('❌ [DEBUG] CSRF check failed');
       return csrfCheck;
     }
-    console.log('✅ [DEBUG] CSRF check passed');
     
-    // Check authentication first
-    console.log('🔍 [DEBUG] Checking authentication...');
+    // Check authentication first - getSession() now works correctly with App Router
     const session = await getSession();
     
-    console.log('🔍 [DEBUG] Session analysis:', {
-      sessionExists: !!session,
-      userExists: !!session?.user,
-      userId: session?.user?.id,
-      userEmail: session?.user?.email,
-      userName: session?.user?.name,
-      allSessionKeys: session ? Object.keys(session) : null,
-      allUserKeys: session?.user ? Object.keys(session.user) : null
-    });
-
     if (!session?.user?.id) {
-      console.log('❌ [DEBUG] Authentication failed - detailed analysis:');
-      console.log('  - session exists:', !!session);
-      console.log('  - session.user exists:', !!session?.user);
-      console.log('  - session.user.id:', session?.user?.id);
-      console.log('  - Full session object:', session);
-      
-      // Check if this is a session expiry issue
-      if (session && session.user && !session.user.id) {
-        console.log('🔍 [DEBUG] Session exists but missing user ID - possible JWT callback issue');
-      }
-      
       throw AuthenticationRequired('Please log in to create an item.');
     }
-
-    console.log('✅ [DEBUG] Authentication successful for user:', session.user.id);
 
     // Apply rate limiting: 20 items per hour per user
     // Only apply rate limiting AFTER authentication is confirmed

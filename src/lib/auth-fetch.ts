@@ -2,6 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useCallback } from 'react';
+import { showError } from './toast-config';
 
 interface AuthFetchOptions extends RequestInit {
   // Extend RequestInit with our custom options
@@ -23,27 +24,9 @@ interface AuthFetchReturn {
  */
 export function useAuthFetch(requireAuth: boolean = false): AuthFetchReturn {
   const { data: session, status } = useSession();
-
-  // Only log occasionally to prevent spam during development
-  if (typeof window !== 'undefined' && Math.random() < 0.01) { // 1% of the time
-    console.log('🔍 [DEBUG] useAuthFetch status:', {
-      requireAuth,
-      sessionExists: !!session,
-      sessionStatus: status,
-      userId: session?.user?.id,
-      userEmail: session?.user?.email
-    });
-  }
-
+  
   const fetchWithAuth = useCallback(
     async (url: string, options: AuthFetchOptions = {}): Promise<Response> => {
-      console.log('🔍 [DEBUG] fetchWithAuth called:', {
-        url,
-        method: options.method || 'GET',
-        requireAuth: options.requireAuth || requireAuth,
-        showErrorToast: options.showErrorToast
-      });
-      
       const {
         requireAuth: localRequireAuth = requireAuth,
         showErrorToast = false,
@@ -51,48 +34,43 @@ export function useAuthFetch(requireAuth: boolean = false): AuthFetchReturn {
       } = options;
 
       // Check authentication if required
-      // Only reject if explicitly unauthenticated, not if loading
-      console.log('🔍 [DEBUG] Authentication check:', {
-        localRequireAuth,
-        currentStatus: status,
-        isUnauthenticated: status === 'unauthenticated'
-      });
-      
-      if (localRequireAuth && status === 'unauthenticated') {
-        console.log('❌ [DEBUG] Authentication required but user is unauthenticated');
-        throw new Error('Authentication required');
+      if (localRequireAuth) {
+        // Don't proceed if session is still loading
+        if (status === 'loading') {
+          const errorMessage = 'Please wait, loading session...';
+          if (showErrorToast) {
+            showError(errorMessage);
+          }
+          throw new Error(errorMessage);
+        }
+        
+        // Check if authenticated
+        if (status === 'unauthenticated' || !session?.user?.id) {
+          const errorMessage = 'Please log in to continue';
+          if (showErrorToast) {
+            showError(errorMessage);
+          }
+          throw new Error(errorMessage);
+        }
       }
 
       // Get CSRF token from cookie or generate one
       let csrfToken = '';
       if (fetchOptions.method && fetchOptions.method !== 'GET') {
-        console.log('🔍 [DEBUG] Getting CSRF token for non-GET request');
         // For state-changing requests, fetch CSRF token
         try {
           const csrfResponse = await fetch('/api/csrf-token', {
             credentials: 'include',
           });
-          console.log('🔍 [DEBUG] CSRF token response:', {
-            ok: csrfResponse.ok,
-            status: csrfResponse.status
-          });
           
           if (csrfResponse.ok) {
             const csrfData = await csrfResponse.json();
             csrfToken = csrfData.csrfToken;
-            console.log('🔍 [DEBUG] CSRF token obtained:', csrfToken ? '✅ Present' : '❌ Missing');
           }
         } catch (error) {
-          console.error('❌ [DEBUG] Failed to get CSRF token:', error);
+          console.error('Failed to get CSRF token:', error);
         }
       }
-
-      console.log('🔍 [DEBUG] Making fetch request with headers:', {
-        'Content-Type': 'application/json',
-        ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-        ...fetchOptions.headers,
-        credentials: 'include'
-      });
       
       const response = await fetch(url, {
         ...fetchOptions,
@@ -106,26 +84,16 @@ export function useAuthFetch(requireAuth: boolean = false): AuthFetchReturn {
 
       // Handle authentication errors
       if (response.status === 401) {
-        console.log('❌ [DEBUG] 401 Unauthorized response received');
-        console.log('🔍 [DEBUG] Response details:', {
-          status: response.status,
-          statusText: response.statusText,
-          url: response.url
-        });
-        
         let errorMessage = 'Authentication required';
         try {
           const errorData = await response.json();
-          console.log('🔍 [DEBUG] Error response data:', errorData);
           errorMessage = errorData.error || errorMessage;
         } catch (e) {
-          console.log('🔍 [DEBUG] Could not parse error response as JSON');
+          // Use default error message
         }
         
         if (showErrorToast) {
-          // Assuming showError is defined elsewhere or will be added.
-          // For now, we'll just throw the error.
-          // showError(errorMessage); 
+          showError(errorMessage);
         }
         throw new Error(errorMessage);
       }

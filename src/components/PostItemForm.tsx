@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { z } from 'zod';
 import { setSafeErrorMessage, sanitizeInput } from '@/lib/security';
 import { showSuccess, showError } from '@/lib/toast-config';
@@ -29,11 +30,15 @@ interface PostItemFormProps {
 
 export default function PostItemForm({ className }: PostItemFormProps) {
   const router = useRouter();
-  const { fetchWithAuth } = useAuthFetch(true); // Require authentication
+  const { data: session, status } = useSession();
+  const { fetchWithAuth, isLoading: isAuthLoading } = useAuthFetch(true); // Require authentication
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  // Check if user is authenticated
+  const isAuthenticated = status === 'authenticated' && !!session?.user?.id;
 
   // Initialize form validation
   const {
@@ -59,10 +64,14 @@ export default function PostItemForm({ className }: PostItemFormProps) {
 
   // Handle form submission with authenticated fetch
   const onSubmit = async (formData: ItemFormValues) => {
-    console.log('🔍 [DEBUG] Form submission started');
-    console.log('🔍 [DEBUG] Form data:', formData);
-    console.log('🔍 [DEBUG] Image URL:', imageUrl);
-    
+    // Don't submit if not authenticated
+    if (!isAuthenticated) {
+      setError('Please log in to post an item');
+      showError('Please log in to post an item');
+      router.push('/auth/login');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setSuccess(null);
@@ -76,19 +85,9 @@ export default function PostItemForm({ className }: PostItemFormProps) {
         images: imageUrl ? [imageUrl] : [] // Optional image
       };
 
-      console.log('🔍 [DEBUG] Prepared item data:', itemData);
-      console.log('🔍 [DEBUG] Making authenticated request to /api/items');
-
       const response = await fetchWithAuth('/api/items', {
         method: 'POST',
         body: JSON.stringify(itemData),
-      });
-
-      console.log('🔍 [DEBUG] Response received:', {
-        ok: response.ok,
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
       });
 
       if (!response.ok) {
@@ -114,8 +113,10 @@ export default function PostItemForm({ className }: PostItemFormProps) {
       setError(errorMessage);
       showError(errorMessage);
 
-      if (err.message === 'Authentication required') {
-        router.push('/auth/login');
+      if (err.message?.includes('log in')) {
+        setTimeout(() => {
+          router.push('/auth/login');
+        }, 1500);
       }
     } finally {
       setIsLoading(false);
@@ -130,6 +131,13 @@ export default function PostItemForm({ className }: PostItemFormProps) {
           Help reunite lost items with their owners or report items you've found.
         </p>
       </div>
+
+      {/* Show warning if not authenticated */}
+      {status === 'unauthenticated' && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800 mb-6">
+          <p>⚠️ Please log in to post an item. <a href="/auth/login" className="underline font-medium">Log in here</a></p>
+        </div>
+      )}
 
       {/* API Error Display */}
       <FormError error={error || undefined} className="mb-6" />
@@ -196,7 +204,10 @@ export default function PostItemForm({ className }: PostItemFormProps) {
             {...getFieldProps('description')}
             placeholder="Describe the item in detail... Where did you lose/find it? What makes it unique?"
             rows={4}
-            className={errors.description ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}
+            className={errors.description 
+              ? 'border-red-300 focus-visible:border-red-500 focus-visible:ring-red-500/50' 
+              : ''
+            }
           />
           <FieldError error={errors.description} />
           <p className="text-sm text-gray-500 mt-1">
@@ -230,13 +241,18 @@ export default function PostItemForm({ className }: PostItemFormProps) {
         {/* Submit Button */}
         <Button 
           type="submit" 
-          disabled={!isValid || isSubmitting || isLoading}
+          disabled={!isValid || isSubmitting || isLoading || isAuthLoading}
           className="w-full"
         >
           {isLoading ? (
             <>
               <ButtonSpinner className="mr-2" />
               Posting Item...
+            </>
+          ) : isAuthLoading ? (
+            <>
+              <ButtonSpinner className="mr-2" />
+              Loading...
             </>
           ) : (
             `Post ${values.itemType === 'LOST' ? 'Lost' : 'Found'} Item`
