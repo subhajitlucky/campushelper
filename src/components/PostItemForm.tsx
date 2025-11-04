@@ -89,12 +89,6 @@ export default function PostItemForm({ className }: PostItemFormProps) {
       // Reset form and image
       resetForm();
       setImageUrl(null);
-
-      // Redirect after short delay to show success toast
-      setTimeout(() => {
-        router.push('/dashboard');
-        router.refresh();
-      }, 1500);
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to post item. Please try again.';
       setError(errorMessage);
@@ -185,7 +179,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
             placeholder="Describe the item in detail... Where did you lose/find it? What makes it unique?"
             rows={4}
             className={errors.description 
-              ? 'border-red-300 focus-visible:border-red-500 focus-visible:ring-red-500/50' 
+              ? 'border-red-300 focus:border-red-500' 
               : ''
             }
           />

@@ -33,12 +33,12 @@ export const ValidationInput = forwardRef<HTMLInputElement, ValidationInputProps
     const inputClasses = `
       w-full px-3 py-2 border rounded-md transition-colors bg-background shadow-xs
       ${hasError 
-        ? 'border-red-300 focus-visible:border-red-500 focus-visible:ring-red-500/50' 
+        ? 'border-red-300 focus:border-red-500'
         : hasSuccess 
-          ? 'border-green-300 focus-visible:border-green-500 focus-visible:ring-green-500/50'
-          : 'border-input focus-visible:border-ring focus-visible:ring-ring/50'
+          ? 'border-green-300 focus:border-green-500'
+          : 'border-input focus:border-ring'
       }
-      focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-offset-2
+      focus:outline-none focus:ring-0 focus-visible:ring-0
       disabled:cursor-not-allowed disabled:opacity-50
       ${className}
     `;

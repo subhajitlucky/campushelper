@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { auth } from '@/lib/auth';
+import { cookies } from 'next/headers';
 import ItemDetail from '@/components/ItemDetail';
 
 /**
@@ -9,12 +9,11 @@ import ItemDetail from '@/components/ItemDetail';
 export default async function ItemDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
   try {
     // Step 107: Get authenticated session (optional for viewing)
-    const session = await auth();
-    const { id } = await params;
+  const { id } = params;
 
     // Step 107: Validate ID parameter
     if (!id) {
@@ -22,17 +21,15 @@ export default async function ItemDetailPage({
     }
 
     // Step 107: Fetch item data from our API endpoint
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/items/${id}`, {
+    const cookieHeader = cookies().toString();
+
+  const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/items/${id}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...(cookieHeader ? { Cookie: cookieHeader } : {}),
       },
-      // Add authentication if user is logged in
-      ...(session?.user && {
-        headers: {
-          ...(session?.user && { 'Cookie': `authjs.session-token=${session.user.id}` }),
-        },
-      }),
+      cache: 'no-store',
     });
 
     // Step 107: Handle API errors

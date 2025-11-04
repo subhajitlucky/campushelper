@@ -21,7 +21,7 @@ export async function GET(
     const userRole = session?.user?.role;
 
     // Extract and validate ID from params
-    const { id } = await params;
+  const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -153,7 +153,7 @@ export async function GET(
       delete (itemData.postedBy as any).email;
     }
 
-    return NextResponse.json(itemData);
+  return NextResponse.json({ item: itemData });
   } catch (error) {
     console.error('Error fetching item:', error);
     return NextResponse.json(
@@ -191,7 +191,7 @@ export async function PUT(
     await limitCustom(`items:update:${session.user.id}`, 20, 3600, 'item update');
 
     // Step 74: Extract and validate ID from params
-    const { id } = await params;
+  const { id } = await params;
     
     if (!id) {
       return NextResponse.json(
@@ -372,7 +372,7 @@ export async function DELETE(
     await limitCustom(`items:delete:${session.user.id}`, 10, 3600, 'item delete');
 
     // Step 75: Extract and validate ID from params
-    const { id } = await params;
+  const { id } = await params;
     
     if (!id) {
       return NextResponse.json(

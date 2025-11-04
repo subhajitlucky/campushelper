@@ -29,6 +29,7 @@ interface ItemCardProps {
   showActions?: boolean;
   onFound?: (item: Item) => void;
   className?: string;
+  variant?: 'default' | 'compact';
 }
 
 /**
@@ -42,8 +43,11 @@ export default function ItemCard({
   user,
   showActions = true,
   onFound,
-  className = ''
+  className = '',
+  variant = 'default'
 }: ItemCardProps) {
+  const isCompact = variant === 'compact';
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
@@ -53,14 +57,24 @@ export default function ItemCard({
   };
 
   return (
-    <Card className={`hover:shadow-md transition-shadow overflow-hidden ${className}`}>
+    <Card
+      className={`flex h-full flex-col overflow-hidden border border-gray-200 bg-white transition-shadow ${
+        isCompact ? 'hover:shadow-sm' : 'hover:shadow-md'
+      } ${className}`}
+    >
       {/* Item Image */}
-      <ItemImage images={item.images} alt={item.title} />
+      <ItemImage
+        images={item.images}
+        alt={item.title}
+        aspectRatio={isCompact ? 'square' : 'video'}
+        className={isCompact ? 'max-h-48' : ''}
+      />
 
       {/* Card Header */}
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+      <CardHeader className={`${isCompact ? 'px-4 pt-4 pb-2' : 'px-6 pt-6 pb-3'}`}>
+        <div className={`flex items-start justify-between gap-2 ${isCompact ? 'mb-1' : 'mb-2'}`}>
+          <h3 className={`${isCompact ? 'text-base' : 'text-lg'} font-semibold text-gray-900 line-clamp-2`}
+          >
             {item.title}
           </h3>
           <StatusBadge status={item.status} />
@@ -71,14 +85,14 @@ export default function ItemCard({
       </CardHeader>
 
       {/* Card Content */}
-      <CardContent className="flex flex-col gap-3">
-        <p className="text-sm text-gray-700 line-clamp-3">
+      <CardContent className={`${isCompact ? 'px-4 pb-4 pt-0' : 'px-6 pb-6 pt-0'} flex flex-col gap-3`}> 
+        <p className={`${isCompact ? 'text-sm' : 'text-sm'} text-gray-700 ${isCompact ? 'line-clamp-2' : 'line-clamp-3'}`}>
           {item.description}
         </p>
 
         {/* Item Details */}
         <div className="space-y-2">
-          <div className="flex items-center text-sm text-gray-500">
+          <div className={`${isCompact ? 'text-xs' : 'text-sm'} flex items-center text-gray-500`}> 
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -86,15 +100,22 @@ export default function ItemCard({
             {item.location}
           </div>
 
-          <UserDisplay user={item.postedBy} size="sm" />
+          {isCompact ? (
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <UserDisplay user={item.postedBy} size="sm" showLabel={false} />
+              <span>{item.postedBy.name || 'Anonymous'}</span>
+            </div>
+          ) : (
+            <UserDisplay user={item.postedBy} size="sm" />
+          )}
         </div>
 
         {/* Actions */}
         {showActions && user && (
-          <div className="mt-auto pt-3">
+          <div className={`mt-auto ${isCompact ? 'pt-2' : 'pt-3'}`}>
             {user.isLoggedIn ? (
               <div className="space-y-2">
-                <Button asChild size="sm" className="w-full">
+                <Button asChild size="sm" variant={isCompact ? 'outline' : 'default'} className="w-full">
                   <Link href={`/item/${item.id}`}>
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

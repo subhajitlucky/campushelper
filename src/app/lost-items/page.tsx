@@ -245,6 +245,7 @@ export default function LostItemsPage() {
                     }}
                     user={user}
                     showActions={true}
+                    variant="compact"
                     onFound={() => {
                       // TODO: Implement found item handler
                       console.log('Found item:', item.id);
