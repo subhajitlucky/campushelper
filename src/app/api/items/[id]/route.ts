@@ -79,27 +79,23 @@ export async function GET(
         updatedAt: true,
         resolvedAt: true,
 
-        // User data - include ONLY if authorized
-        ...(canSeeUserData && {
-          postedBy: {
-            select: {
-              id: true,
-              name: true,
-              // Email ONLY for owner/admin
-              ...(isOwner || isAdmin ? { email: true } : {}),
-              avatar: true,
-            }
-          },
-          claimedBy: {
-            select: {
-              id: true,
-              name: true,
-              // Email ONLY for owner/admin
-              ...(isOwner || isAdmin ? { email: true } : {}),
-              avatar: true,
-            }
+        // User data - always fetch, redact later if needed
+        postedBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
           }
-        }),
+        },
+        claimedBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          }
+        },
 
         // Claims/comments - ONLY for owner/admin
         ...(userId && (isOwner || isAdmin) && {
@@ -142,15 +138,22 @@ export async function GET(
     });
 
     // Process name truncation for non-owners
-    if (itemData?.postedBy && userId && !isOwner && !isAdmin) {
-      const name = itemData.postedBy.name || '';
-      const nameParts = name.split(' ');
-      if (nameParts.length >= 2) {
-        itemData.postedBy.name = `${nameParts[0]} ${nameParts[1].charAt(0)}.`;
+    if (itemData?.postedBy) {
+      if (!isOwner && !isAdmin) {
+        const name = itemData.postedBy.name || '';
+        const nameParts = name.split(' ');
+        if (nameParts.length >= 2) {
+          itemData.postedBy.name = `${nameParts[0]} ${nameParts[1].charAt(0)}.`;
+        }
       }
 
-      // Remove email from non-owners
-      delete (itemData.postedBy as any).email;
+      if (!canSeeUserData) {
+        delete (itemData.postedBy as { email?: string }).email;
+      }
+    }
+
+    if (itemData?.claimedBy && !canSeeUserData) {
+      delete (itemData.claimedBy as { email?: string }).email;
     }
 
   return NextResponse.json({ item: itemData });
