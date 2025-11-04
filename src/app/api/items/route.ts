@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
-            avatar: true
+            avatar: true,
             // Email intentionally excluded from items list
           }
         }

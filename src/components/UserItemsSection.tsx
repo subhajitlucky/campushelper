@@ -10,6 +10,7 @@ import { Edit, Trash2, Eye, Calendar, MapPin } from "lucide-react";
 import EmptyState, { EmptyStateIcons } from "@/components/ui/EmptyState";
 import { ListItemSkeleton } from "@/components/ui/LoadingSkeleton";
 import ActionButtons from "@/components/ui/ActionButtons";
+import { useAuthFetch } from '@/lib/auth-fetch';
 
 interface UserItem {
   id: string;
@@ -30,6 +31,8 @@ interface UserItemsSectionProps {
 }
 
 export default function UserItemsSection({ userId }: UserItemsSectionProps) {
+  const { data: session } = useSession();
+  const { fetchWithAuth } = useAuthFetch(true);
   const [items, setItems] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,9 +71,8 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
     }
 
     try {
-      const response = await fetch(`/api/items/${itemId}`, {
+      const response = await fetchWithAuth(`/api/items/${itemId}`, {
         method: 'DELETE',
-        credentials: 'include',
       });
 
       if (!response.ok) {

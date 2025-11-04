@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, User, Mail, Calendar, Package, MessageSquare, CheckCircle } from "lucide-react";
 import EditProfileModal from "./EditProfileModal";
+import { useAuthFetch } from '@/lib/auth-fetch';
 
 interface UserProfileSectionProps {
   userStats: {
@@ -19,6 +20,7 @@ interface UserProfileSectionProps {
 
 export default function UserProfileSection({ userStats }: UserProfileSectionProps) {
   const { data: session } = useSession();
+  const { fetchWithAuth } = useAuthFetch(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
   if (!session?.user) {
@@ -41,12 +43,8 @@ export default function UserProfileSection({ userStats }: UserProfileSectionProp
   const handleProfileUpdate = async (updatedData: { name: string }) => {
     try {
       // Make API call to update user profile
-      const response = await fetch('/api/user/profile', {
+      const response = await fetchWithAuth('/api/user/profile', {
         method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(updatedData),
       });
 
@@ -56,7 +54,7 @@ export default function UserProfileSection({ userStats }: UserProfileSectionProp
 
       // On success, refresh the page to get updated session data
       window.location.reload();
-      
+
     } catch (error) {
       throw error; // Re-throw to be handled by modal
     }

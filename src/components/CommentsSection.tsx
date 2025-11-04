@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { sanitizeInput } from '@/lib/security';
+import { useAuthFetch } from '@/lib/auth-fetch';
 
 interface Comment {
   id: string;
@@ -32,6 +33,7 @@ interface CommentsSectionProps {
 
 export default function CommentsSection({ itemId, itemStatus }: CommentsSectionProps) {
   const { data: session } = useSession();
+  const { fetchWithAuth } = useAuthFetch(true);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +71,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
   // Step 110: Submit comment
   const submitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -78,12 +80,8 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
     setFormError(null);
 
     try {
-      const response = await fetch('/api/comments', {
+      const response = await fetchWithAuth('/api/comments', {
         method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           message: sanitizeInput(formData.message.trim()),
           itemId: itemId,
@@ -96,13 +94,13 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
       }
 
       const data = await response.json();
-      
+
       // Step 110: Clear form and add comment to list
       setFormData({ message: '' });
-      
+
       // Add new comment to the top of the list
       setComments(prev => [data.comment, ...prev]);
-      
+
     } catch (err) {
       setFormError('Failed to post comment. Please try again.');
     } finally {
@@ -128,11 +126,11 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
       const response = await fetch(`/api/comments?itemId=${itemId}`, {
         credentials: 'include',
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch comments');
       }
-      
+
       const data = await response.json();
       setComments(data.comments || []);
       setError(null);
@@ -150,9 +148,8 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
     }
 
     try {
-      const response = await fetch(`/api/comments/${commentId}`, {
+      const response = await fetchWithAuth(`/api/comments/${commentId}`, {
         method: 'DELETE',
-        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -196,12 +193,8 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
     setEditError(null);
 
     try {
-      const response = await fetch(`/api/comments/${commentId}`, {
+      const response = await fetchWithAuth(`/api/comments/${commentId}`, {
         method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           message: editMessage.trim()
         }),
@@ -212,8 +205,8 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
       }
 
       // Update comment in local state
-      setComments(prev => prev.map(comment => 
-        comment.id === commentId 
+      setComments(prev => prev.map(comment =>
+        comment.id === commentId
           ? { ...comment, message: editMessage.trim(), updatedAt: new Date().toISOString() }
           : comment
       ));

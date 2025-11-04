@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import CommentsSection from './CommentsSection';
 import ClaimsModal from './ClaimsModal';
+import { useAuthFetch } from '@/lib/auth-fetch';
 
 interface ItemUser {
   id: string;
@@ -44,6 +45,7 @@ interface ItemDetailProps {
 
 export default function ItemDetail({ item }: ItemDetailProps) {
   const { data: session } = useSession();
+  const { fetchWithAuth } = useAuthFetch(true);
   const [isClaimsModalOpen, setIsClaimsModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [itemStatus, setItemStatus] = useState(item.status);
@@ -90,9 +92,8 @@ export default function ItemDetail({ item }: ItemDetailProps) {
     setSuccess(null);
 
     try {
-      const response = await fetch(`/api/items/${item.id}`, {
+      const response = await fetchWithAuth(`/api/items/${item.id}`, {
         method: 'DELETE',
-        credentials: 'include',
       });
 
       if (!response.ok) {

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { CheckCircle, XCircle, User, Calendar, MessageSquare, Eye, AlertCircle } from "lucide-react";
+import { useAuthFetch } from '@/lib/auth-fetch';
 
 interface IncomingClaim {
   id: string;
@@ -35,6 +36,8 @@ interface IncomingClaimsSectionProps {
 }
 
 export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionProps) {
+  const { data: session } = useSession();
+  const { fetchWithAuth } = useAuthFetch(true);
   const [claims, setClaims] = useState<IncomingClaim[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,12 +107,8 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
     setProcessingClaimId(claimId);
 
     try {
-      const response = await fetch(`/api/claims/${claimId}`, {
+      const response = await fetchWithAuth(`/api/claims/${claimId}`, {
         method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           status: 'APPROVED'
         }),
@@ -141,12 +140,8 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
     setProcessingClaimId(claimId);
 
     try {
-      const response = await fetch(`/api/claims/${claimId}`, {
+      const response = await fetchWithAuth(`/api/claims/${claimId}`, {
         method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           status: 'REJECTED'
         }),
@@ -157,8 +152,8 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
       }
 
       // Update local state
-      setClaims(prev => prev.map(claim => 
-        claim.id === claimId 
+      setClaims(prev => prev.map(claim =>
+        claim.id === claimId
           ? { ...claim, status: 'REJECTED', resolvedAt: new Date().toISOString() }
           : claim
       ));
