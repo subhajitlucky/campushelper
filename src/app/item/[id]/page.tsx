@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import ItemDetail from '@/components/ItemDetail';
 
 /**
@@ -13,7 +13,7 @@ export default async function ItemDetailPage({
 }) {
   try {
     // Step 107: Get authenticated session (optional for viewing)
-  const { id } = params;
+    const { id } = params;
 
     // Step 107: Validate ID parameter
     if (!id) {
@@ -21,9 +21,17 @@ export default async function ItemDetailPage({
     }
 
     // Step 107: Fetch item data from our API endpoint
-    const cookieHeader = cookies().toString();
+  const cookieHeader = cookies().toString();
+  const headersList = await headers();
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/items/${id}`, {
+  const protocol = headersList.get('x-forwarded-proto') || 'https';
+  const host = headersList.get('host');
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      process.env.NEXTAUTH_URL ||
+      (host ? `${protocol}://${host}` : 'http://localhost:3000');
+
+    const response = await fetch(`${baseUrl}/api/items/${id}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
