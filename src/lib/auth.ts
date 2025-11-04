@@ -8,7 +8,16 @@ import bcrypt from 'bcryptjs';
 
 // Auto-detect NEXTAUTH_URL for production
 if (!process.env.NEXTAUTH_URL && process.env.VERCEL_URL) {
-  process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+    process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+}
+
+// Validate required environment variables
+if (!process.env.NEXTAUTH_SECRET) {
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error('NEXTAUTH_SECRET environment variable is required in production');
+    } else {
+        console.warn('NEXTAUTH_SECRET not found, using development fallback');
+    }
 }
 
 export const authOptions: NextAuthOptions = {
@@ -101,7 +110,7 @@ export const authOptions: NextAuthOptions = {
             name: process.env.NODE_ENV === "production" ? "__Secure-next-auth.session-token" : "next-auth.session-token",
             options: {
                 httpOnly: true,
-                sameSite: "strict", // Changed from "lax" for better CSRF protection
+                sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict", // FIX: Use "lax" in production for better compatibility
                 path: "/",
                 secure: process.env.NODE_ENV === "production",
             },
@@ -110,7 +119,7 @@ export const authOptions: NextAuthOptions = {
             name: process.env.NODE_ENV === "production" ? "__Secure-next-auth.callback-url" : "next-auth.callback-url",  
             options: {
                 httpOnly: true,
-                sameSite: "strict", // Changed from "lax" for better CSRF protection
+                sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict", // FIX: Use "lax" in production for better compatibility
                 path: "/",
                 secure: process.env.NODE_ENV === "production",
             },
@@ -119,7 +128,7 @@ export const authOptions: NextAuthOptions = {
             name: process.env.NODE_ENV === "production" ? "__Host-next-auth.csrf-token" : "next-auth.csrf-token",
             options: {
                 httpOnly: true,
-                sameSite: "strict", // Changed from "lax" for better CSRF protection
+                sameSite: process.env.NODE_ENV === "production" ? "lax" : "strict", // FIX: Use "lax" in production for better compatibility
                 path: "/",
                 secure: process.env.NODE_ENV === "production",
             },
@@ -259,8 +268,16 @@ export async function auth(): Promise<Session | null> {
 
         return session;
     } catch (error) {
+        // Enhanced error logging for production debugging
         if (process.env.NODE_ENV === 'development') {
             console.error('Session validation error:', error);
+        } else {
+            // In production, log to error monitoring service
+            console.error('Production session validation error:', {
+                message: error instanceof Error ? error.message : 'Unknown error',
+                stack: error instanceof Error ? error.stack : undefined,
+                timestamp: new Date().toISOString()
+            });
         }
         return null;
     }

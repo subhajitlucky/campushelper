@@ -59,20 +59,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if user can access comments on this item
-    const canAccessComments = 
-      // Item owner can see comments
-      item.postedById === session.user.id ||
-      // Admin/moderator can see all comments
-      session.user.role === 'ADMIN' || 
-      session.user.role === 'MODERATOR';
-
-    if (!canAccessComments) {
-      return NextResponse.json(
-        { error: 'You do not have permission to view comments on this item' },
-        { status: 403 }
-      );
-    }
+    // All authenticated users can view comments on public items
+    // (Comments are already hidden if item is deleted above)
 
     // Fetch comments for the item with user data
     const comments = await prisma.comment.findMany({
