@@ -96,7 +96,6 @@ export async function POST(request: NextRequest) {
         console.error('Upload error:', uploadError);
         console.error('Upload error details:', {
           message: uploadError.message,
-          statusCode: uploadError.statusCode,
           name: uploadError.name,
           cause: uploadError.cause,
         });
