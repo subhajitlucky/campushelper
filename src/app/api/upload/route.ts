@@ -60,8 +60,16 @@ export async function POST(request: NextRequest) {
 
     // Check if Supabase is configured
     if (!supabase) {
+      console.error('Upload failed: Supabase client is null');
+      console.error('Environment check:', {
+        hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      });
       throw new Error('Storage service is not configured.');
     }
+
+    console.log('Starting upload with Supabase client initialized');
 
     try {
       // Convert file to buffer
@@ -75,6 +83,7 @@ export async function POST(request: NextRequest) {
       const fileName = `item-${timestamp}-${randomString}.${fileExtension}`;
 
       // Upload to Supabase storage
+      console.log('Uploading to Supabase:', { fileName, fileType: file.type, fileSize: buffer.length });
       const { data, error: uploadError } = await supabase.storage
         .from('item-images')
         .upload(fileName, buffer, {
@@ -85,8 +94,16 @@ export async function POST(request: NextRequest) {
 
       if (uploadError) {
         console.error('Upload error:', uploadError);
+        console.error('Upload error details:', {
+          message: uploadError.message,
+          statusCode: uploadError.statusCode,
+          name: uploadError.name,
+          cause: uploadError.cause,
+        });
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
+
+      console.log('Upload successful:', data);
 
       // Get public URL
       const { data: urlData } = supabase.storage
