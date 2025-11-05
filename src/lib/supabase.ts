@@ -64,10 +64,11 @@ export const UPLOAD_CONFIG = {
   // Allowed image types
   allowedImageTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
   // Compression settings
+  // Note: useWebWorker: false to avoid CSP issues in production
   compression: {
     maxSizeMB: 1,
     maxWidthOrHeight: 1920,
-    useWebWorker: true,
+    useWebWorker: false,
   },
 } as const;
 

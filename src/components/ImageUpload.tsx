@@ -71,19 +71,8 @@ export default function ImageUpload({
     setUploading(true);
 
     try {
-      // Step 1: Compress image
-      // Try with web worker first, fallback without if it fails
-      let compressedFile;
-      try {
-        compressedFile = await imageCompression(file, UPLOAD_CONFIG.compression);
-      } catch (compressionError) {
-        console.warn('Compression with web worker failed, trying without:', compressionError);
-        // Fallback: compress without web worker
-        compressedFile = await imageCompression(file, {
-          ...UPLOAD_CONFIG.compression,
-          useWebWorker: false,
-        });
-      }
+      // Step 1: Compress image (without web worker to avoid CSP issues)
+      const compressedFile = await imageCompression(file, UPLOAD_CONFIG.compression);
 
       // Step 2: Create FormData for upload
       const formData = new FormData();
