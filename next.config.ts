@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js needs 'unsafe-inline' for dynamic features
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:", // Next.js needs 'unsafe-inline'; blob: for web workers
               "style-src 'self' 'unsafe-inline'", // Tailwind CSS needs 'unsafe-inline'
               "img-src 'self' data: https: http:", // Allow images from self, data URLs, and external sources
               "font-src 'self' data:", // Allow fonts from self and data URLs

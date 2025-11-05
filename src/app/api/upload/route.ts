@@ -101,8 +101,13 @@ export async function POST(request: NextRequest) {
         message: 'Image uploaded successfully',
       });
     } catch (error: any) {
-      console.error('Upload failed:', error);
-      throw new Error(`Failed to upload image: ${error.message}`);
+      console.error('Upload failed:', {
+        message: error?.message,
+        stack: error?.stack,
+        cause: error?.cause,
+        code: error?.code,
+      });
+      throw new Error(`Failed to upload image: ${error?.message || 'Unknown error'}`);
     }
   });
 }
