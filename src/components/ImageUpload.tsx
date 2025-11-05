@@ -19,6 +19,7 @@ import imageCompression from 'browser-image-compression';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { supabase, STORAGE_BUCKETS, UPLOAD_CONFIG } from '@/lib/supabase';
+import { useAuthFetch } from '@/lib/auth-fetch';
 
 interface ImageUploadProps {
   // Callback when image is successfully uploaded
@@ -44,6 +45,7 @@ export default function ImageUpload({
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(currentImage || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { fetchWithAuth } = useAuthFetch(true);
 
   /**
    * Handle file selection
@@ -72,30 +74,14 @@ export default function ImageUpload({
       // Step 1: Compress image
       const compressedFile = await imageCompression(file, UPLOAD_CONFIG.compression);
 
-      // Step 2: Get CSRF token
-      const csrfResponse = await fetch('/api/csrf-token', {
-        credentials: 'include',
-      });
-
-      if (!csrfResponse.ok) {
-        throw new Error('Failed to get CSRF token');
-      }
-
-      const csrfData = await csrfResponse.json();
-      const csrfToken = csrfData.csrfToken;
-
-      // Step 3: Create FormData for upload
+      // Step 2: Create FormData for upload
       const formData = new FormData();
       formData.append('file', compressedFile);
 
-      // Step 4: Upload via API route (includes CSRF protection and auth)
-      const response = await fetch('/api/upload', {
+      // Step 3: Upload via API route (fetchWithAuth handles CSRF token and auth automatically)
+      const response = await fetchWithAuth('/api/upload', {
         method: 'POST',
         body: formData,
-        credentials: 'include',
-        headers: {
-          'X-CSRF-Token': csrfToken,
-        },
       });
 
       if (!response.ok) {

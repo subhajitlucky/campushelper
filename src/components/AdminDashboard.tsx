@@ -6,12 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { showError, showSuccess } from '@/lib/toast-config';
-import { 
-  Users, 
-  Package, 
-  MessageSquare, 
-  AlertTriangle, 
-  CheckCircle, 
+import { useAuthFetch } from '@/lib/auth-fetch';
+import {
+  Users,
+  Package,
+  MessageSquare,
+  AlertTriangle,
+  CheckCircle,
   XCircle,
   RefreshCw,
   Shield,
@@ -80,6 +81,7 @@ interface AdminClaim {
 
 export default function AdminDashboard() {
   const { data: session } = useSession();
+  const { fetchWithAuth } = useAuthFetch(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'items' | 'users' | 'claims'>('overview');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [items, setItems] = useState<AdminItem[]>([]);
@@ -114,12 +116,8 @@ export default function AdminDashboard() {
     setModeratingItem(itemId);
 
     try {
-      const response = await fetch(`/api/admin/items/${itemId}`, {
+      const response = await fetchWithAuth(`/api/admin/items/${itemId}`, {
         method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ action }),
       });
 
@@ -160,12 +158,8 @@ export default function AdminDashboard() {
     setModeratingUser(userId);
 
     try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
+      const response = await fetchWithAuth(`/api/admin/users/${userId}`, {
         method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ action }),
       });
 
@@ -198,12 +192,8 @@ export default function AdminDashboard() {
     setModeratingUser(userId);
 
     try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
+      const response = await fetchWithAuth(`/api/admin/users/${userId}`, {
         method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ action: 'change_role', newRole }),
       });
 
