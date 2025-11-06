@@ -11,9 +11,10 @@ interface ClaimsModalProps {
   itemId: string;
   itemTitle: string;
   isOwner: boolean;
+  onSuccess?: () => void;
 }
 
-export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwner }: ClaimsModalProps) {
+export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwner, onSuccess }: ClaimsModalProps) {
   const { data: session } = useSession();
   const { fetchWithAuth } = useAuthFetch(true); // Require authentication
   const [formData, setFormData] = useState({
@@ -62,6 +63,11 @@ export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwne
       
       setSuccess('Claim submitted successfully!');
       
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+      
       // Close modal after 2 seconds
       setTimeout(() => {
         onClose();
@@ -95,7 +101,7 @@ export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwne
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b">

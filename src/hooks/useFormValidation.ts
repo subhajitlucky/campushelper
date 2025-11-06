@@ -112,7 +112,7 @@ export function useFormValidation<T extends Record<string, any>>(
       });
 
       const result = schema.safeParse(currentValues);
-      
+
       if (result.success) {
         // Clear all errors
         const clearedState: Record<keyof T, FormField> = {} as any;
@@ -128,7 +128,7 @@ export function useFormValidation<T extends Record<string, any>>(
       } else {
         // Set errors for each field
         const newState: Record<keyof T, FormField> = { ...formState };
-        
+
         result.error.issues.forEach((issue) => {
           const field = issue.path[0] as keyof T;
           if (newState[field]) {
@@ -139,7 +139,7 @@ export function useFormValidation<T extends Record<string, any>>(
             };
           }
         });
-        
+
         setFormState(newState);
         return false;
       }
@@ -162,7 +162,8 @@ export function useFormValidation<T extends Record<string, any>>(
     const currentErrors: Partial<Record<keyof T, string>> = {};
     Object.keys(formState).forEach((key) => {
       const fieldState = formState[key as keyof T];
-      if (fieldState.error) {
+      // Only show errors for fields that have been touched
+      if (fieldState.error && fieldState.touched) {
         currentErrors[key as keyof T] = fieldState.error;
       }
     });
@@ -184,7 +185,8 @@ export function useFormValidation<T extends Record<string, any>>(
     return Object.keys(formState).length > 0 &&
            Object.values(formState).every(field => {
              // Field must have a value, no error, and either be touched or have a value
-             // This allows initial state to be valid (e.g., radio buttons with default value)
+             // Only validate if field has been touched
+             if (!field.touched) return true;
              return !field.error && field.value && field.value.toString().trim().length > 0;
            });
   }, [formState]);
@@ -198,7 +200,7 @@ export function useFormValidation<T extends Record<string, any>>(
         value
       }
     }));
-    
+
     // Validate on change if enabled
     if (validateOnChange) {
       setTimeout(() => validateField(field), 0);
@@ -214,7 +216,7 @@ export function useFormValidation<T extends Record<string, any>>(
         touched
       }
     }));
-    
+
     // Validate on blur if enabled
     if (validateOnBlur && touched) {
       setTimeout(() => validateField(field), 0);

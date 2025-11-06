@@ -9,7 +9,6 @@ import Link from "next/link";
 import { Edit, Trash2, Eye, Calendar, MapPin } from "lucide-react";
 import EmptyState, { EmptyStateIcons } from "@/components/ui/EmptyState";
 import { ListItemSkeleton } from "@/components/ui/LoadingSkeleton";
-import ActionButtons from "@/components/ui/ActionButtons";
 import { useAuthFetch } from '@/lib/auth-fetch';
 
 interface UserItem {
@@ -86,21 +85,10 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
     }
   };
 
-  // Handle edit item
-  const handleEditItem = (item: UserItem) => {
-    // Store item data in localStorage for the post form to pre-fill
-    const editData = {
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      itemType: item.itemType,
-      location: item.location,
-      images: item.images,
-      isEdit: true
-    };
-    
-    localStorage.setItem('editItem', JSON.stringify(editData));
-    window.location.href = '/post';
+  // Handle edit item - navigate to item detail page with edit mode
+  const handleEditItem = (itemId: string) => {
+    // Navigate to item detail page where inline editing is available
+    window.location.href = `/item/${itemId}?edit=true`;
   };
 
   useEffect(() => {
@@ -228,34 +216,48 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
               </div>
               
               <div className="flex items-center gap-2 pt-3 border-t">
-                <ActionButtons
-                  actions={[
-                    {
-                      label: 'View',
-                      href: `/item/${item.id}`,
-                      variant: 'outline' as const,
-                      size: 'sm' as const,
-                      icon: <Eye className="w-3 h-3" />
-                    },
-                    ...(item.status !== 'DELETED' ? [
-                      {
-                        label: 'Edit',
-                        onClick: () => handleEditItem(item),
-                        variant: 'outline' as const,
-                        size: 'sm' as const,
-                        icon: <Edit className="w-3 h-3" />
-                      },
-                      {
-                        label: 'Delete',
-                        onClick: () => handleDeleteItem(item.id),
-                        variant: 'destructive' as const,
-                        size: 'sm' as const,
-                        icon: <Trash2 className="w-3 h-3" />
-                      }
-                    ] : [])
-                  ]}
-                  fullWidth={true}
-                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  className="flex-1"
+                >
+                  <Link href={`/item/${item.id}`}>
+                    <Eye className="w-3 h-3 mr-1" />
+                    View
+                  </Link>
+                </Button>
+                
+                {item.status !== 'DELETED' && item.status !== 'RESOLVED' && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditItem(item.id)}
+                      className="flex-1"
+                    >
+                      <Edit className="w-3 h-3 mr-1" />
+                      Edit
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteItem(item.id)}
+                      className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
+                    >
+                      <Trash2 className="w-3 h-3 mr-1" />
+                      Delete
+                    </Button>
+                  </>
+                )}
+                
+                {/* Show resolved message for resolved items */}
+                {item.status === 'RESOLVED' && (
+                  <div className="flex-1 text-center py-2 bg-green-50 border border-green-200 rounded text-xs text-green-700 font-medium">
+                    ✅ Resolved
+                  </div>
+                )}
               </div>
             </div>
           ))}

@@ -12,13 +12,12 @@
  * - Error handling
  */
 
-import { useState, useRef } from 'react';
-import Image from 'next/image';
+import { useState, useRef, useEffect } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { supabase, STORAGE_BUCKETS, UPLOAD_CONFIG } from '@/lib/supabase';
+import { UPLOAD_CONFIG } from '@/lib/supabase';
 import { useAuthFetch } from '@/lib/auth-fetch';
 
 interface ImageUploadProps {
@@ -44,8 +43,36 @@ export default function ImageUpload({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(currentImage || null);
+  const [imageLoading, setImageLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const localPreviewRef = useRef<string | null>(null);
   const { fetchWithAuth } = useAuthFetch(true);
+
+  // Sync preview with currentImage updates from parent (e.g. form reset)
+  useEffect(() => {
+    if (currentImage) {
+      setPreview(currentImage);
+      if (localPreviewRef.current) {
+        URL.revokeObjectURL(localPreviewRef.current);
+        localPreviewRef.current = null;
+      }
+      return;
+    }
+
+    if (!uploading) {
+      setPreview(null);
+    }
+  }, [currentImage, uploading]);
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (localPreviewRef.current) {
+        URL.revokeObjectURL(localPreviewRef.current);
+        localPreviewRef.current = null;
+      }
+    };
+  }, []);
 
   /**
    * Handle file selection
@@ -71,21 +98,52 @@ export default function ImageUpload({
     setUploading(true);
 
     try {
+      // Provide immediate local preview while upload runs
+      const localPreviewUrl = URL.createObjectURL(file);
+      if (localPreviewRef.current) {
+        URL.revokeObjectURL(localPreviewRef.current);
+      }
+      localPreviewRef.current = localPreviewUrl;
+      setPreview(localPreviewUrl);
+      setImageLoading(true);
+
       // Step 1: Compress image (without web worker to avoid CSP issues)
       const compressedFile = await imageCompression(file, UPLOAD_CONFIG.compression);
 
+      // Fix: Preserve original filename extension
+      // browser-image-compression sometimes loses the extension, so we fix it
+      const originalName = file.name;
+  const extension = originalName.includes('.') ? originalName.split('.').pop()! : 'jpg';
+      const baseName = originalName.replace(/\.[^/.]+$/, '');
+      // Create new File with proper name and extension
+      const finalFile = new File([compressedFile], `${baseName}.${extension}`, {
+        type: compressedFile.type,
+        lastModified: Date.now(),
+      });
+
       // Step 2: Create FormData for upload
       const formData = new FormData();
-      formData.append('file', compressedFile);
+      formData.append('file', finalFile);
 
-      // Step 3: Upload via API route (fetchWithAuth handles CSRF token and auth automatically)
+      // Check if we can upload (API will handle Supabase availability)
       const response = await fetchWithAuth('/api/upload', {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (jsonErr) {
+          errorData = {};
+        }
+        
+        // Provide helpful error message if Supabase is not configured
+        if (errorData.error?.includes('Supabase') || errorData.error?.includes('not configured')) {
+          throw new Error('Image upload service is not available. Please contact support.');
+        }
+        
         throw new Error(errorData.error || `Upload failed with status ${response.status}`);
       }
 
@@ -99,10 +157,20 @@ export default function ImageUpload({
 
       // Step 5: Set preview and notify parent
       setPreview(imageUrl);
+      setImageLoading(false);
+      if (localPreviewRef.current) {
+        URL.revokeObjectURL(localPreviewRef.current);
+        localPreviewRef.current = null;
+      }
       onImageUpload(imageUrl);
     } catch (err: any) {
-      console.error('Upload failed:', err);
       setError(err.message || 'Failed to upload image. Please try again.');
+      setImageLoading(false);
+      if (localPreviewRef.current) {
+        URL.revokeObjectURL(localPreviewRef.current);
+        localPreviewRef.current = null;
+      }
+      setPreview(currentImage || null);
     } finally {
       setUploading(false);
       // Reset file input
@@ -119,37 +187,48 @@ export default function ImageUpload({
     if (!preview) return;
 
     setError(null);
+    setImageLoading(false);
+
+    if (localPreviewRef.current) {
+      URL.revokeObjectURL(localPreviewRef.current);
+      localPreviewRef.current = null;
+    }
 
     // Just clear the preview and notify parent
     // The actual file cleanup will happen via garbage collection or a cleanup endpoint if needed
     setPreview(null);
     onImageRemove();
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   /**
    * Trigger file input
    */
   const handleClick = () => {
-    if (uploading) return;
+    if (uploading || imageLoading) return;
     fileInputRef.current?.click();
   };
 
   return (
     <div className={`space-y-4 ${className}`}>
+      {/* Hidden file input - always rendered so ref stays valid */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        disabled={uploading}
+        className="hidden"
+        id="image-upload-input"
+      />
+
       {/* Upload Area */}
       {!preview && (
         <Card className="border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors">
           <div className="p-8 text-center">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              disabled={uploading}
-              className="hidden"
-              id="image-upload-input"
-            />
-
             {uploading ? (
               <div className="flex flex-col items-center">
                 <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
@@ -176,42 +255,59 @@ export default function ImageUpload({
 
       {/* Preview Area */}
       {preview && (
-        <div className="relative group">
-          <div className="relative aspect-square w-full max-w-md mx-auto rounded-lg overflow-hidden border">
-            <Image
-              src={preview}
-              alt="Uploaded image"
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 400px"
-            />
-
-            {/* Overlay with actions */}
-            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity flex items-center justify-center">
-              <Button
-                onClick={handleRemove}
-                variant="destructive"
-                size="sm"
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Remove
-              </Button>
+        <div className="space-y-4">
+          {/* Loading spinner */}
+          {imageLoading && (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+            </div>
+          )}
+          
+          {/* Image container with hover actions */}
+          <div className="relative group">
+            <div className="relative w-full max-w-md mx-auto rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50 shadow-sm">
+              <img
+                src={preview}
+                alt="Preview"
+                className="w-full h-auto display-block"
+                style={{ maxHeight: '400px', objectFit: 'contain' }}
+                onLoad={() => {
+                  setImageLoading(false);
+                }}
+                onError={() => {
+                  setImageLoading(false);
+                }}
+              />
+              
+              {/* Remove overlay - shows on hover over image only */}
+              {!imageLoading && (
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
+                  <Button
+                    onClick={handleRemove}
+                    variant="destructive"
+                    size="sm"
+                    type="button"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Remove
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Replace button */}
-          <div className="mt-4 text-center">
-            <Button
-              onClick={handleClick}
-              variant="outline"
-              disabled={uploading}
-              className="w-full"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Replace Image
-            </Button>
-          </div>
+          {/* Replace button below image */}
+          <Button
+            onClick={handleClick}
+            variant="outline"
+            disabled={uploading || imageLoading}
+            type="button"
+            className="w-full"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Replace Image
+          </Button>
         </div>
       )}
 

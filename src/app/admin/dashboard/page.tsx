@@ -2,6 +2,9 @@ import { notFound } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import AdminDashboard from '@/components/AdminDashboard';
 
+// Force dynamic rendering to avoid build-time headers() error
+export const dynamic = 'force-dynamic';
+
 /**
  * Admin Dashboard Page - Protected Admin Route
  * Only accessible to users with ADMIN or MODERATOR role

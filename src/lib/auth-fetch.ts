@@ -42,7 +42,7 @@ export function useAuthFetch(requireAuth: boolean = false): AuthFetchReturn {
           try {
             activeSession = await getSession();
           } catch (error) {
-            console.error('Failed to resolve session:', error);
+            // Session resolution failed
           }
         }
 
@@ -63,24 +63,30 @@ export function useAuthFetch(requireAuth: boolean = false): AuthFetchReturn {
           const csrfResponse = await fetch('/api/csrf-token', {
             credentials: 'include',
           });
-          
+
           if (csrfResponse.ok) {
             const csrfData = await csrfResponse.json();
             csrfToken = csrfData.csrfToken;
           }
         } catch (error) {
-          console.error('Failed to get CSRF token:', error);
+          // CSRF token fetch failed
         }
       }
       
+      // Prepare headers
+      const headers: Record<string, string> = {};
+      if (!(fetchOptions.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+      }
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
+      const finalHeaders = { ...headers, ...fetchOptions.headers };
+
       const response = await fetch(url, {
         ...fetchOptions,
         credentials: 'include', // ⭐ CRITICAL: Include NextAuth cookies
-        headers: {
-          'Content-Type': 'application/json',
-          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
-          ...fetchOptions.headers,
-        },
+        headers: finalHeaders,
       });
 
       // Handle authentication errors
@@ -122,7 +128,11 @@ export async function authFetch(
     ...options,
     credentials: 'include', // ⭐ CRITICAL: Include NextAuth cookies
     headers: {
-      'Content-Type': 'application/json',
+      // Don't set Content-Type for FormData - browser will set it with boundary
+      // Only set Content-Type for JSON or other content types
+      ...(options.body instanceof FormData
+        ? {}
+        : { 'Content-Type': 'application/json' }),
       ...options.headers,
     },
   });

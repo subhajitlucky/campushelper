@@ -158,7 +158,6 @@ export async function GET(
 
   return NextResponse.json({ item: itemData });
   } catch (error) {
-    console.error('Error fetching item:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -266,6 +265,8 @@ export async function PUT(
         status?: 'LOST' | 'FOUND' | 'CLAIMED' | 'RESOLVED';
         location?: string;
         images?: string[];
+        claimedById?: string;
+        resolvedAt?: Date;
       } = {
         title: validatedData.title ? sanitizeInput(validatedData.title) : undefined,
         description: validatedData.description ? sanitizeInput(validatedData.description) : undefined,
@@ -274,9 +275,23 @@ export async function PUT(
         images: validatedData.images?.filter(image => image && image.trim() !== '') as string[],
       };
       
-      // Set status based on itemType if provided
-      if (validatedData.itemType) {
+      // Handle status update
+      if (validatedData.status) {
+        // If status is explicitly provided, use it
+        updateData.status = validatedData.status;
+        
+        // If status is RESOLVED, set resolvedAt timestamp
+        if (validatedData.status === 'RESOLVED') {
+          updateData.resolvedAt = new Date();
+        }
+      } else if (validatedData.itemType) {
+        // Otherwise, set status based on itemType if provided
         updateData.status = validatedData.itemType === 'LOST' ? 'LOST' : 'FOUND';
+      }
+      
+      // Handle claimedById
+      if (validatedData.claimedById) {
+        updateData.claimedById = validatedData.claimedById;
       }
 
       // Update the item

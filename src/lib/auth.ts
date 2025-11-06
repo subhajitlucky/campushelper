@@ -15,8 +15,6 @@ if (!process.env.NEXTAUTH_URL && process.env.VERCEL_URL) {
 if (!process.env.NEXTAUTH_SECRET) {
     if (process.env.NODE_ENV === 'production') {
         throw new Error('NEXTAUTH_SECRET environment variable is required in production');
-    } else {
-        console.warn('NEXTAUTH_SECRET not found, using development fallback');
     }
 }
 
@@ -268,17 +266,7 @@ export async function auth(): Promise<Session | null> {
 
         return session;
     } catch (error) {
-        // Enhanced error logging for production debugging
-        if (process.env.NODE_ENV === 'development') {
-            console.error('Session validation error:', error);
-        } else {
-            // In production, log to error monitoring service
-            console.error('Production session validation error:', {
-                message: error instanceof Error ? error.message : 'Unknown error',
-                stack: error instanceof Error ? error.stack : undefined,
-                timestamp: new Date().toISOString()
-            });
-        }
+        // Session validation failed
         return null;
     }
 }

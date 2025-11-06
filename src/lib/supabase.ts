@@ -49,6 +49,27 @@ export function getSupabaseClient() {
 const supabase = getSupabaseClient();
 export { supabase };
 
+/**
+ * Get Supabase client with service role key for server-side operations
+ * This bypasses RLS and can perform admin operations
+ */
+export const getSupabaseServiceRoleClient = () => {
+  // Get service role configuration
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceRoleKey) {
+    return null;
+  }
+
+  return createClient(url, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+};
+
 // Storage bucket configuration
 export const STORAGE_BUCKETS = {
   ITEM_IMAGES: 'item-images',

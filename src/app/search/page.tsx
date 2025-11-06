@@ -110,11 +110,13 @@ export default function SearchPage() {
     }
   }, [filters, currentPage, limit]); // Include all dependencies
 
-  // Fetch items on component mount and when filters change
-  // REMOVED: Auto-fetch logic to prevent 401 errors
-  // useEffect(() => {
-  //   fetchItems(currentPage); // Pass current page
-  // }, [fetchItems, currentPage]); // Re-fetch when fetchItems changes or page changes
+  // Don't auto-load items on mount - wait for user to search
+  // Re-fetch when filters change
+  useEffect(() => {
+    if (hasSearched) {
+      fetchItems(currentPage);
+    }
+  }, [fetchItems, currentPage, hasSearched]); // Re-fetch when fetchItems changes or page changes
 
   // Function to update filters and reset page
   const updateFilters = (newFilters: Partial<SearchFilters>) => {
@@ -125,9 +127,6 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Search Items</h1>
-        <p className="text-gray-600 mb-8">Search and browse lost and found items on campus.</p>
-        
         {/* Search and filters */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="space-y-4">
@@ -291,24 +290,39 @@ export default function SearchPage() {
                 </p>
               </div>
             ) : !hasSearched ? (
-              <div className="text-center py-12">
+              <div className="text-center py-16">
                 <div className="text-gray-400 mb-4">
-                  <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-20 h-20 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to Search?</h3>
-                <p className="text-gray-500 mb-4">
-                  Enter what you're looking for above and click search to find lost and found items on campus.
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">Start Your Search</h3>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  Use the search box and filters above to find lost and found items across campus.
                 </p>
-                <div className="text-sm text-gray-400">
-                  <p>💡 You can search for items by:</p>
-                  <ul className="mt-2 space-y-1">
-                    <li>• Item name (e.g., "laptop", "phone", "keys")</li>
-                    <li>• Description (e.g., "black backpack", "silver watch")</li>
-                    <li>• Location (e.g., "library", "cafeteria")</li>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-lg mx-auto text-left">
+                  <p className="text-sm font-medium text-blue-900 mb-3">💡 Search Tips:</p>
+                  <ul className="space-y-2 text-sm text-blue-800">
+                    <li className="flex items-start">
+                      <span className="mr-2">•</span>
+                      <span>Type item names: "laptop", "phone", "keys", "wallet"</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="mr-2">•</span>
+                      <span>Use filters to narrow by type, status, or location</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="mr-2">•</span>
+                      <span>Try quick filters below for common searches</span>
+                    </li>
                   </ul>
                 </div>
+                <p className="text-sm text-gray-500 mt-6">
+                  Looking for only lost items?{' '}
+                  <a href="/lost-items" className="text-blue-600 hover:text-blue-500 font-medium underline">
+                    Browse Lost Items
+                  </a>
+                </p>
               </div>
             ) : items.length === 0 ? (
               <div className="text-center py-8">
@@ -332,7 +346,7 @@ export default function SearchPage() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {items.map((item) => {
                   const formatDate = (dateString: string) => {
                     return new Date(dateString).toLocaleDateString('en-US', {
@@ -386,7 +400,9 @@ export default function SearchPage() {
                         {user.isLoggedIn ? (
                           // Logged-in user actions
                           <div className="space-y-2">
-                            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
+                            <button 
+                              onClick={() => window.location.href = `/item/${item.id}`}
+                              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
                               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -394,7 +410,9 @@ export default function SearchPage() {
                               View Details
                             </button>
                             {item.status === 'LOST' && (
-                              <button className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
+                              <button 
+                                onClick={() => window.location.href = `/item/${item.id}`}
+                                className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
                                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                                 </svg>
@@ -440,7 +458,10 @@ export default function SearchPage() {
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
-            onPageChange={setCurrentPage}
+            onPageChange={(page) => {
+              setCurrentPage(page);
+              fetchItems(page);
+            }}
             total={total}
             className="mt-8"
           />

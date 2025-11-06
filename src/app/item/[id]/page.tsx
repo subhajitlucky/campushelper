@@ -21,7 +21,8 @@ export default async function ItemDetailPage({
     }
 
     // Step 107: Fetch item data from our API endpoint
-    const cookieHeader = cookies().toString();
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore.toString();
     const headersList = await headers();
 
     const baseUrl =

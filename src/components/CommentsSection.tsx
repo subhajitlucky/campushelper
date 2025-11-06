@@ -128,6 +128,11 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
       });
 
       if (!response.ok) {
+        // Handle authentication errors for non-resolved items
+        if (response.status === 401) {
+          const data = await response.json();
+          throw new Error(data.error || 'Authentication required');
+        }
         throw new Error('Failed to fetch comments');
       }
 
@@ -135,7 +140,11 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
       setComments(data.comments || []);
       setError(null);
     } catch (err) {
-      setError('Failed to load comments');
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to load comments');
+      }
     } finally {
       setLoading(false);
     }
@@ -249,17 +258,28 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
   }
 
   if (error) {
+    const isAuthError = error.includes('Authentication required') || error.includes('Authentication');
+    
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold mb-4">Comments</h3>
         <div className="text-center py-8">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={fetchComments}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Try Again
-          </button>
+          <p className="text-gray-600 mb-4">{error}</p>
+          {isAuthError ? (
+            <a
+              href="/auth/login"
+              className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Sign In to View Comments
+            </a>
+          ) : (
+            <button
+              onClick={fetchComments}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Try Again
+            </button>
+          )}
         </div>
       </div>
     );
@@ -271,8 +291,27 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
         Comments ({comments.length})
       </h3>
       
-      {/* Step 110: Comment Form - Only show if logged in */}
-      {session?.user && (
+      {/* Show info message for resolved items */}
+      {itemStatus === 'RESOLVED' && (
+        <div className="mb-4 p-4 bg-green-50 border-l-4 border-green-500 rounded-lg">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-green-800 font-semibold text-sm mb-1">
+                Item Resolved
+              </p>
+              <p className="text-green-700 text-xs">
+                This item has been resolved. You can view existing comments but cannot add new ones.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Step 110: Comment Form - Only show if logged in and item is not resolved */}
+      {session?.user && itemStatus !== 'RESOLVED' && (
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
           <h4 className="text-sm font-medium text-gray-900 mb-3">Add a Comment</h4>
           <form onSubmit={submitComment}>
@@ -313,8 +352,8 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
         </div>
       )}
       
-      {/* Show login prompt if not logged in */}
-      {!session?.user && (
+      {/* Show login prompt if not logged in and item is not resolved */}
+      {!session?.user && itemStatus !== 'RESOLVED' && (
         <div className="mb-6 p-4 bg-gray-50 rounded-lg text-center">
           <p className="text-gray-600 mb-3">Sign in to add a comment</p>
           <a

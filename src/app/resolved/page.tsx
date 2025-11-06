@@ -122,16 +122,6 @@ export default function ResolvedPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-2">
-            Success Stories
-          </h1>
-          <p className="text-gray-600 text-lg">
-            See how Campus Helper has reunited people with their lost belongings
-          </p>
-        </div>
-
         {/* Filters */}
         <Card className="mb-6">
           <CardHeader>
@@ -185,8 +175,8 @@ export default function ResolvedPage() {
 
         {/* Loading State */}
         {loading && (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
               <Card key={i} className="animate-pulse">
                 <CardHeader>
                   <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
@@ -244,7 +234,7 @@ export default function ResolvedPage() {
 
             {/* Items Grid */}
             {items.length > 0 ? (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
                 {items.map((item) => (
                   <Card key={item.id} className="hover:shadow-md transition-shadow overflow-hidden">
                     {/* Item Image */}

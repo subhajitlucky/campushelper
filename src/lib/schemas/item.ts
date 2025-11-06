@@ -49,8 +49,11 @@ export const baseItemSchema = z.object({
 // Schema for creating a new item (all required fields)
 export const createItemSchema = baseItemSchema;
 
-// Schema for updating an item (all fields optional)
-export const updateItemSchema = baseItemSchema.partial();
+// Schema for updating an item (all fields optional, includes status)
+export const updateItemSchema = baseItemSchema.partial().extend({
+  status: z.enum(['LOST', 'FOUND', 'CLAIMED', 'RESOLVED']).optional(),
+  claimedById: z.string().optional(), // Allow setting who claimed/resolved the item
+});
 
 // Schema for API request validation
 export const createItemRequestSchema = z.object({

@@ -1,7 +1,62 @@
 import type { NextConfig } from "next";
 
+type RemotePatternConfig = {
+  protocol: 'http' | 'https';
+  hostname: string;
+  port?: string;
+  pathname: string;
+};
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  || process.env.NEXT_PUBLIC_SUPABASE_STORAGE_HOST
+  || 'http://localhost:3000';
+
+const supabaseRemotePattern: RemotePatternConfig | null = (() => {
+  try {
+    const parsed = new URL(supabaseUrl);
+    const protocol = parsed.protocol.replace(':', '') as 'http' | 'https';
+    const pattern: RemotePatternConfig = {
+      protocol,
+      hostname: parsed.hostname,
+      pathname: '/storage/v1/object/public/**',
+    };
+
+    if (parsed.port) {
+      pattern.port = parsed.port;
+    }
+
+    return pattern;
+  } catch {
+    return null;
+  }
+})();
+
 const nextConfig: NextConfig = {
   /* config options here */
+
+  // Image Optimization Configuration
+  images: {
+    remotePatterns: [
+      // Supabase Storage - for uploaded item images
+      ...(supabaseRemotePattern ? [supabaseRemotePattern] : []),
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+      // Google avatars - for OAuth users
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.googleusercontent.com',
+        pathname: '/**',
+      },
+    ],
+  },
 
   // Security Headers for XSS Protection
   async headers() {

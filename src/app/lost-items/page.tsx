@@ -14,6 +14,9 @@ import { ItemListSkeleton } from "@/components/ui/LoadingSkeleton";
 import UserDisplay from "@/components/ui/UserDisplay";
 import ItemCard from "@/components/ui/ItemCard";
 import Pagination from "@/components/ui/Pagination";
+import ClaimsModal from "@/components/ClaimsModal";
+import { useAuthFetch } from "@/lib/auth-fetch";
+import { toast } from "react-hot-toast";
 
 interface LostItem {
   id: string;
@@ -38,6 +41,7 @@ interface LostFilters {
 }
 
 export default function LostItemsPage() {
+  const { fetchWithAuth } = useAuthFetch(false);
   const [items, setItems] = useState<LostItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +49,10 @@ export default function LostItemsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [user, setUser] = useState<{isLoggedIn: boolean; userId?: string}>({ isLoggedIn: false });
+
+  // Claims Modal State
+  const [claimsModalOpen, setClaimsModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<LostItem | null>(null);
 
   const [filters, setFilters] = useState<LostFilters>({
     itemType: '',
@@ -104,6 +112,61 @@ export default function LostItemsPage() {
     setCurrentPage(1);
   };
 
+  // Handle "I Found This" button click
+  const handleFoundClick = async (item: LostItem) => {
+    if (!user.isLoggedIn) {
+      toast.error('Please login to claim items');
+      window.location.href = '/auth/login';
+      return;
+    }
+
+    const isOwner = user.userId === item.postedBy.id;
+
+    if (isOwner) {
+      // Owner found their own item - show confirmation dialog
+      const confirmed = window.confirm(
+        `Did you find your "${item.title}"?\n\nThis will mark the item as RESOLVED.`
+      );
+
+      if (confirmed) {
+        try {
+          const response = await fetchWithAuth(`/api/items/${item.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              status: 'RESOLVED',
+              claimedById: user.userId, // Set owner as the person who resolved it
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update item status');
+          }
+
+          toast.success('Item marked as resolved!');
+          // Refresh the items list
+          fetchLostItems(currentPage);
+        } catch (err) {
+          toast.error('Failed to update item status. Please try again.');
+        }
+      }
+    } else {
+      // Non-owner wants to claim - open claims modal
+      setSelectedItem(item);
+      setClaimsModalOpen(true);
+    }
+  };
+
+  const handleClaimSuccess = () => {
+    setClaimsModalOpen(false);
+    setSelectedItem(null);
+    toast.success('Claim submitted successfully! The owner will review it.');
+    // Optionally refresh items
+    fetchLostItems(currentPage);
+  };
+
   // Fetch items when page or filters change
   useEffect(() => {
     fetchLostItems(currentPage);
@@ -112,11 +175,6 @@ export default function LostItemsPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-2">Lost Items</h1>
-          <p className="text-gray-600 text-lg">Find items that have been reported as lost on campus</p>
-        </div>
-        
         {/* Filter Stories */}
         <Card className="mb-6">
           <CardHeader>
@@ -225,7 +283,7 @@ export default function LostItemsPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {items.map((item) => (
                   <ItemCard
                     key={item.id}
@@ -246,10 +304,7 @@ export default function LostItemsPage() {
                     user={user}
                     showActions={true}
                     variant="compact"
-                    onFound={() => {
-                      // TODO: Implement found item handler
-                      console.log('Found item:', item.id);
-                    }}
+                    onFound={() => handleFoundClick(item)}
                   />
                 ))}
               </div>
@@ -268,6 +323,21 @@ export default function LostItemsPage() {
           </>
         )}
       </div>
+
+      {/* Claims Modal */}
+      {selectedItem && (
+        <ClaimsModal
+          isOpen={claimsModalOpen}
+          onClose={() => {
+            setClaimsModalOpen(false);
+            setSelectedItem(null);
+          }}
+          itemId={selectedItem.id}
+          itemTitle={selectedItem.title}
+          isOwner={user.userId === selectedItem.postedBy.id}
+          onSuccess={handleClaimSuccess}
+        />
+      )}
     </div>
   );
 }

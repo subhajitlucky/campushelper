@@ -114,87 +114,77 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            Dashboard
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Welcome back, {session?.user?.name || 'User'}! Manage your lost & found items and track your activity.
-          </p>
-        </div>
-
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-6">
+      <div className="container mx-auto px-4 max-w-7xl">
         {/* Step 118: User Profile Section */}
-        <div className="mb-8">
+        <div className="mb-6">
           <UserProfileSection userStats={userStats} />
         </div>
 
         {/* Quick Stats */}
-        <div className="grid gap-6 mb-8 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
+        <div className="grid gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="hover:shadow-lg transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">My Items</CardTitle>
-              <Package className="h-4 w-4 text-gray-600" />
+              <CardTitle className="text-sm font-medium text-gray-700">My Items</CardTitle>
+              <Package className="h-5 w-5 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{userStats.myItems}</div>
-              <p className="text-xs text-gray-600">Items posted</p>
+              <div className="text-3xl font-bold text-gray-900">{userStats.myItems}</div>
+              <p className="text-xs text-gray-500 mt-1">Items posted</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover:shadow-lg transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Claims Made</CardTitle>
-              <MessageSquare className="h-4 w-4 text-gray-600" />
+              <CardTitle className="text-sm font-medium text-gray-700">Claims Made</CardTitle>
+              <MessageSquare className="h-5 w-5 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{userStats.claimsMade}</div>
-              <p className="text-xs text-gray-600">Claims submitted</p>
+              <div className="text-3xl font-bold text-gray-900">{userStats.claimsMade}</div>
+              <p className="text-xs text-gray-500 mt-1">Claims submitted</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover:shadow-lg transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Resolved</CardTitle>
-              <CheckCircle className="h-4 w-4 text-gray-600" />
+              <CardTitle className="text-sm font-medium text-gray-700">Resolved</CardTitle>
+              <CheckCircle className="h-5 w-5 text-emerald-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{userStats.resolvedItems}</div>
-              <p className="text-xs text-gray-600">Items resolved</p>
+              <div className="text-3xl font-bold text-gray-900">{userStats.resolvedItems}</div>
+              <p className="text-xs text-gray-500 mt-1">Items resolved</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover:shadow-lg transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">This Week</CardTitle>
-              <Search className="h-4 w-4 text-gray-600" />
+              <CardTitle className="text-sm font-medium text-gray-700">This Week</CardTitle>
+              <Search className="h-5 w-5 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{userStats.thisWeek}</div>
-              <p className="text-xs text-gray-600">New items posted</p>
+              <div className="text-3xl font-bold text-gray-900">{userStats.thisWeek}</div>
+              <p className="text-xs text-gray-500 mt-1">New items posted</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Quick Actions */}
-        <Card className="mb-8">
+        <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle className="text-lg">Quick Actions</CardTitle>
             <CardDescription>
               Get started with common tasks
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <Button asChild className="flex-1">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button asChild className="flex-1 bg-blue-600 hover:bg-blue-700">
                 <Link href="/post">
                   <Plus className="mr-2 h-4 w-4" />
                   Post New Item
                 </Link>
               </Button>
-              <Button variant="outline" asChild className="flex-1">
+              <Button variant="outline" asChild className="flex-1 border-blue-300 hover:bg-blue-50">
                 <Link href="/search">
                   <Search className="mr-2 h-4 w-4" />
                   Search Items
@@ -205,17 +195,17 @@ export default function DashboardPage() {
         </Card>
 
         {/* Step 115: User's Posted Items Section */}
-        <div className="mb-8">
+        <div className="mb-6">
           <UserItemsSection userId={session?.user?.id || ''} />
         </div>
 
         {/* Step 116: User's Claims Section */}
-        <div className="mb-8">
+        <div className="mb-6">
           <UserClaimsSection userId={session?.user?.id || ''} />
         </div>
 
         {/* Step 117: Incoming Claims Section */}
-        <div className="mb-8">
+        <div className="mb-6">
           <IncomingClaimsSection userId={session?.user?.id || ''} />
         </div>
       </div>
