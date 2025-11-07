@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     const serviceRoleClient = getSupabaseServiceRoleClient();
     if (!serviceRoleClient) {
-      throw new Error('Storage service is not configured.');
+      throw new Error('Storage service is not configured. Please ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in your environment variables.');
     }
 
     try {

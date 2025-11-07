@@ -98,13 +98,8 @@ export default function ImageUpload({
     setUploading(true);
 
     try {
-      // Provide immediate local preview while upload runs
-      const localPreviewUrl = URL.createObjectURL(file);
-      if (localPreviewRef.current) {
-        URL.revokeObjectURL(localPreviewRef.current);
-      }
-      localPreviewRef.current = localPreviewUrl;
-      setPreview(localPreviewUrl);
+      // Don't show preview yet - keep uploading state visible
+      // This ensures the spinner stays until everything is done
       setImageLoading(true);
 
       // Step 1: Compress image (without web worker to avoid CSP issues)
@@ -139,12 +134,22 @@ export default function ImageUpload({
           errorData = {};
         }
         
-        // Provide helpful error message if Supabase is not configured
-        if (errorData.error?.includes('Supabase') || errorData.error?.includes('not configured')) {
-          throw new Error('Image upload service is not available. Please contact support.');
+        // Provide helpful error messages
+        if (response.status === 500) {
+          throw new Error(
+            errorData.error || 
+            'Server error occurred. This might be due to missing Supabase configuration. Please check the setup guide.'
+          );
+        } else if (response.status === 401) {
+          throw new Error('You must be logged in to upload images.');
+        } else if (response.status === 413) {
+          throw new Error('File is too large. Please choose a smaller image.');
+        } else {
+          throw new Error(
+            errorData.error || 
+            `Upload failed with status ${response.status}. Please try again or contact support.`
+          );
         }
-        
-        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
       }
 
       const data = await response.json();
@@ -155,24 +160,21 @@ export default function ImageUpload({
 
       const imageUrl = data.imageUrl;
 
-      // Step 5: Set preview and notify parent
+      // Step 5: Now show preview and notify parent (upload complete)
       setPreview(imageUrl);
       setImageLoading(false);
-      if (localPreviewRef.current) {
-        URL.revokeObjectURL(localPreviewRef.current);
-        localPreviewRef.current = null;
-      }
+      setUploading(false);
       onImageUpload(imageUrl);
     } catch (err: any) {
       setError(err.message || 'Failed to upload image. Please try again.');
       setImageLoading(false);
+      setUploading(false);
       if (localPreviewRef.current) {
         URL.revokeObjectURL(localPreviewRef.current);
         localPreviewRef.current = null;
       }
       setPreview(currentImage || null);
     } finally {
-      setUploading(false);
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -232,8 +234,9 @@ export default function ImageUpload({
             {uploading ? (
               <div className="flex flex-col items-center">
                 <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-                <p className="text-gray-600">Compressing and uploading image...</p>
-                <p className="text-sm text-gray-500 mt-2">This may take a moment</p>
+                <p className="text-gray-600 font-medium">Processing your image...</p>
+                <p className="text-sm text-gray-500 mt-2">Compressing and uploading</p>
+                <p className="text-xs text-gray-400 mt-1">Please wait, this may take a moment</p>
               </div>
             ) : (
               <div className="flex flex-col items-center cursor-pointer" onClick={handleClick}>
@@ -256,13 +259,6 @@ export default function ImageUpload({
       {/* Preview Area */}
       {preview && (
         <div className="space-y-4">
-          {/* Loading spinner */}
-          {imageLoading && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-            </div>
-          )}
-          
           {/* Image container with hover actions */}
           <div className="relative group">
             <div className="relative w-full max-w-md mx-auto rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50 shadow-sm">
@@ -271,29 +267,21 @@ export default function ImageUpload({
                 alt="Preview"
                 className="w-full h-auto display-block"
                 style={{ maxHeight: '400px', objectFit: 'contain' }}
-                onLoad={() => {
-                  setImageLoading(false);
-                }}
-                onError={() => {
-                  setImageLoading(false);
-                }}
               />
               
               {/* Remove overlay - shows on hover over image only */}
-              {!imageLoading && (
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
-                  <Button
-                    onClick={handleRemove}
-                    variant="destructive"
-                    size="sm"
-                    type="button"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Remove
-                  </Button>
-                </div>
-              )}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
+                <Button
+                  onClick={handleRemove}
+                  variant="destructive"
+                  size="sm"
+                  type="button"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Remove
+                </Button>
+              </div>
             </div>
           </div>
 

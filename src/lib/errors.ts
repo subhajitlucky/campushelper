@@ -218,6 +218,11 @@ export async function safeApiHandler<T>(
       return AuthenticationRequired('Authentication failed. Please log in again.');
     }
     
+    // Handle generic Error objects
+    if (error instanceof Error) {
+      return InternalServerError(error.message);
+    }
+    
     // Return internal server error
     return InternalServerError();
   }
