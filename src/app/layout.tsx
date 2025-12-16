@@ -2,6 +2,7 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import { Toaster } from "@/components/ui/toaster";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { Analytics } from "@vercel/analytics/next";
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </ErrorBoundary>
           <Toaster />
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
