@@ -1,6 +1,10 @@
-# Campus Helper 🔍
+# Campus Helper
 
-A comprehensive, production-ready platform for university communities to report, search, and reclaim lost or found items. Built with modern web technologies and enterprise-grade security practices.
+CampusHelper is a full-stack campus lost-and-found platform for authenticated reports, image uploads, searchable records, claims, and moderation workflows.
+
+- Status: Live platform
+- Portfolio case study: https://subhajitpradhan.vercel.app/projects/campushelper
+- Inspect the implementation: `src/app`, `src/lib`, `prisma`, and the API routes
 
 [![Next.js](https://img.shields.io/badge/Next.js-15.0-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
@@ -71,7 +75,7 @@ A comprehensive, production-ready platform for university communities to report,
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/campushelper.git
+   git clone https://github.com/subhajitlucky/campushelper.git
    cd campushelper
    ```
 
