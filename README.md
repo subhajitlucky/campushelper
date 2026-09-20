@@ -58,7 +58,7 @@ CampusHelper is a full-stack campus lost-and-found platform for authenticated re
 - **[Zod](https://zod.dev/)** - Runtime type validation
 - **[React Hook Form](https://react-hook-form.com/)** - Form management
 - **[Lucide React](https://lucide.dev/)** - Icon library
-- **[Rate Limiter Flexible](https://github.com/vvo/rrul)** - API rate limiting
+- **[Rate Limiter Flexible](https://github.com/animir/node-rate-limiter-flexible)** - API rate limiting
 
 ---
 
@@ -132,7 +132,7 @@ CampusHelper is a full-stack campus lost-and-found platform for authenticated re
 
    e. Add authorized redirect URIs:
    - `http://localhost:3000/api/auth/callback/google` (development)
-   - `https://your-domain.vercel.app/api/auth/callback/google` (production)
+   - `https://campushelper.vercel.app/api/auth/callback/google` (production)
 
 6. **Generate Prisma Client**
    ```bash
