@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -134,7 +134,7 @@ export default function AdminDashboard() {
       // Refresh the items list
       await fetchAdminData();
       
-    } catch (err) {
+    } catch {
       showError('Failed to perform moderation action. Please try again.');
     } finally {
       setModeratingItem(null);
@@ -176,7 +176,7 @@ export default function AdminDashboard() {
       // Refresh the users list
       await fetchAdminData();
       
-    } catch (err) {
+    } catch {
       showError('Failed to perform moderation action. Please try again.');
     } finally {
       setModeratingUser(null);
@@ -210,7 +210,7 @@ export default function AdminDashboard() {
       // Refresh the users list
       await fetchAdminData();
       
-    } catch (err) {
+    } catch {
       showError('Failed to change role. Please try again.');
     } finally {
       setModeratingUser(null);
@@ -323,13 +323,7 @@ export default function AdminDashboard() {
   // Check admin authorization
   const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'MODERATOR';
   
-  useEffect(() => {
-    if (isAdmin) {
-      fetchAdminData();
-    }
-  }, [isAdmin, activeTab]);
-
-  const fetchAdminData = async () => {
+  const fetchAdminData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -377,12 +371,18 @@ export default function AdminDashboard() {
           setClaims(claimsData.claims || []);
         }
       }
-    } catch (err) {
+    } catch {
       showError('Failed to load admin data. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchAdminData();
+    }
+  }, [isAdmin, fetchAdminData]);
 
   if (!isAdmin) {
     return (
@@ -390,7 +390,7 @@ export default function AdminDashboard() {
         <div className="text-center">
           <Shield className="w-16 h-16 mx-auto text-red-500 mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <p className="text-gray-600">You don't have permission to access the admin dashboard.</p>
+          <p className="text-gray-600">You don&apos;t have permission to access the admin dashboard.</p>
         </div>
       </div>
     );

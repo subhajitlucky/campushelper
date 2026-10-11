@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Eye, Calendar, MessageSquare, AlertCircle } from "lucide-react";
-import EmptyState, { EmptyStateIcons } from "@/components/ui/EmptyState";
+import EmptyState from "@/components/ui/EmptyState";
 import { ListItemSkeleton } from "@/components/ui/LoadingSkeleton";
-import ActionButtons from "@/components/ui/ActionButtons";
 
 interface UserClaim {
   id: string;
@@ -41,7 +40,7 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchUserClaims = async () => {
+  const fetchUserClaims = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -57,12 +56,12 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
       
       const data = await response.json();
       setClaims(data.claims || []);
-    } catch (err) {
+    } catch {
       setError('Failed to load your claims. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   // Handle cancel claim (placeholder for future implementation)
   const handleCancelClaim = async (claimId: string) => {
@@ -75,7 +74,7 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
       // Cancel claim initiated
       // For now, just remove from local state
       setClaims(prev => prev.filter(claim => claim.id !== claimId));
-    } catch (error) {
+    } catch {
       setError('Failed to cancel claim. Please try again.');
     }
   };
@@ -84,7 +83,7 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
     if (userId) {
       fetchUserClaims();
     }
-  }, [userId]); 
+  }, [userId, fetchUserClaims]);
 
   // Loading state
   if (loading) {
@@ -130,7 +129,7 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
       <Card>
         <CardHeader>
           <CardTitle>Your Claims</CardTitle>
-          <CardDescription>Claims you've made on items</CardDescription>
+          <CardDescription>Claims you&apos;ve made on items</CardDescription>
         </CardHeader>
         <CardContent>
           <EmptyState

@@ -1,13 +1,11 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export interface TextareaProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+export type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, ...props }, ref) => {
     // Filter out form-specific props that aren't valid HTML attributes
-    // Use type assertion to handle form library props
     const {
       // Form validation props from libraries like React Hook Form
       error,
@@ -15,7 +13,16 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       isValid,
       // Spread the rest to the textarea element
       ...restProps
-    } = props as any;
+    } = props as TextareaProps & {
+      error?: unknown;
+      touched?: unknown;
+      isValid?: unknown;
+    };
+
+    // These props are intentionally not forwarded to the DOM
+    void error;
+    void touched;
+    void isValid;
 
     return (
       <textarea

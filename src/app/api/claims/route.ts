@@ -9,6 +9,7 @@ import { sanitizeInput } from '@/lib/security';
 import { limitClaims } from '@/lib/rateLimit';
 import { checkCSRF } from '@/lib/csrf-middleware';
 import { safeApiHandler } from '@/lib/errors';
+import type { Prisma } from '@/generated/prisma';
 
 // GET /api/claims?itemId=xxx
 export async function GET(request: NextRequest) {
@@ -20,8 +21,6 @@ export async function GET(request: NextRequest) {
       req: request,
       secret: process.env.NEXTAUTH_SECRET 
     });
-
-    const session = await getSession();
 
     const { searchParams } = new URL(request.url);
     let queryParams;
@@ -50,7 +49,7 @@ export async function GET(request: NextRequest) {
     const { itemId, userId } = queryParams;
     
     // Build authorization-aware where clause
-    let whereClause: any = {};
+    const whereClause: Prisma.ClaimWhereInput = {};
     
     // If querying by specific userId (user is looking for their own claims)
     if (userId) {
@@ -315,13 +314,13 @@ export async function POST(request: NextRequest) {
         { claim: responseClaim, message: 'Claim created successfully' },
         { status: 201 }
       );
-    } catch (dbError) {
+    } catch {
       return NextResponse.json(
         { error: 'Failed to create claim in database' },
         { status: 500 }
       );
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

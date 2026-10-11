@@ -213,13 +213,13 @@ export async function PUT(
         message: `Claim has been ${statusMessage} successfully`
       });
 
-    } catch (dbError) {
+    } catch {
       return NextResponse.json(
         { error: 'Failed to update claim in database' },
         { status: 500 }
       );
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

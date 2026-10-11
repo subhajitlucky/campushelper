@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { getSupabaseServiceRoleClient } from '@/lib/supabase';
 import { checkCSRF } from '@/lib/csrf-middleware';
 import { limitUploads } from '@/lib/rateLimit';
+import { put } from '@vercel/blob';
+import { detectImageType, extensionForImageType } from '@/lib/image-type';
 import {
   AuthenticationRequired,
   ValidationError,
+  InternalServerError,
   safeApiHandler
 } from '@/lib/errors';
 
@@ -28,8 +30,9 @@ export async function POST(request: NextRequest) {
     try {
       formData = await request.formData();
       file = formData.get('file') as File | null;
-    } catch (parseError: any) {
-      throw new Error(`Failed to parse form data: ${parseError.message}`);
+    } catch (parseError) {
+      console.error('[upload] Failed to parse form data:', parseError);
+      throw ValidationError('Unable to process the uploaded file. Please try again.');
     }
 
     if (!file) {
@@ -46,45 +49,38 @@ export async function POST(request: NextRequest) {
       throw ValidationError('File size must be less than 5MB.');
     }
 
-    const serviceRoleClient = getSupabaseServiceRoleClient();
-    if (!serviceRoleClient) {
-      throw new Error('Storage service is not configured. Please ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in your environment variables.');
+    // Never trust the declared MIME type or filename: inspect the actual bytes.
+    const headerBytes = new Uint8Array(await file.arrayBuffer()).subarray(0, 12);
+    const detectedType = detectImageType(headerBytes);
+    if (!detectedType) {
+      throw ValidationError(
+        'File content does not match an allowed image format (JPEG, PNG, or WebP).'
+      );
+    }
+
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      throw InternalServerError('Image storage is not configured. Please contact support.');
     }
 
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-
       const timestamp = Date.now();
       const randomString = Math.random().toString(36).substring(2, 15);
-      const fileExtension = file.name.split('.').pop() || 'jpg';
+      const fileExtension = extensionForImageType(detectedType);
       const fileName = `item-${timestamp}-${randomString}.${fileExtension}`;
 
-      const { data, error: uploadError } = await serviceRoleClient.storage
-        .from('item-images')
-        .upload(fileName, buffer, {
-          cacheControl: '3600',
-          upsert: false,
-          contentType: file.type,
-        });
-
-      if (uploadError) {
-        throw new Error(`Upload failed: ${uploadError.message}`);
-      }
-
-      const { data: urlData } = serviceRoleClient.storage
-        .from('item-images')
-        .getPublicUrl(data.path);
-
-      const imageUrl = urlData.publicUrl;
+      const blob = await put(fileName, file, {
+        access: 'public',
+        contentType: detectedType,
+      });
 
       return NextResponse.json({
         success: true,
-        imageUrl,
+        imageUrl: blob.url,
         message: 'Image uploaded successfully',
       });
-    } catch (error: any) {
-      throw new Error(`Failed to upload image: ${error?.message || 'Unknown error'}`);
+    } catch (error) {
+      console.error('[upload] Failed to upload image to blob storage:', error);
+      throw InternalServerError('Unable to upload the image right now. Please try again later.');
     }
   });
 }

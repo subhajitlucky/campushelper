@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "codebase-doctor": {
+      "source": "subhajitlucky/codebase-doctor",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/codebase-doctor/SKILL.md",
+      "computedHash": "e4dd7950bdad6d328f5dbc1e290f42e61f9d95829465c662e93f2d4154901b29"
+    },
+    "rls-doctor": {
+      "source": "subhajitlucky/rls-doctor",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/rls-doctor/SKILL.md",
+      "computedHash": "d2625e5ea27689528248f1e26377e277465fc1c6aec2652ded6a4c7baba4d043"
+    }
+  }
+}

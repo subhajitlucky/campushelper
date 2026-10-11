@@ -21,9 +21,6 @@ export const ValidationInput = forwardRef<HTMLInputElement, ValidationInputProps
     helperText,
     className = '',
     // Filter out props that aren't valid HTML attributes
-    touched,
-    isTouched,
-    onBlur,
     isValid, // Don't pass to DOM
     ...props
   }, ref) => {

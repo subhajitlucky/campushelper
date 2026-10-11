@@ -1,4 +1,4 @@
-import { RateLimiterMemory } from 'rate-limiter-flexible';
+import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
 
 // Different rate limiters for different use cases
 
@@ -57,8 +57,9 @@ async function rateLimit(
 ): Promise<void> {
   try {
     await limiter.consume(key);
-  } catch (rejRes: any) {
-    const secs = Math.round(rejRes.msBeforeNext / 1000) || 1;
+  } catch (rejection) {
+    const rejRes = rejection instanceof RateLimiterRes ? rejection : null;
+    const secs = rejRes ? Math.round(rejRes.msBeforeNext / 1000) || 1 : 1;
     const retryAfter = Math.max(secs, 1);
 
     throw new Error(
@@ -138,6 +139,15 @@ export async function limitProfile(request: Request, userId: string): Promise<vo
 }
 
 /**
+ * Cache of custom limiter instances keyed by endpoint name and configuration.
+ *
+ * Note: in-memory rate limiting state is per serverless instance, so limits are
+ * best-effort in multi-instance deployments. A shared store (e.g. Redis) would
+ * be required for cluster-wide enforcement.
+ */
+const customLimiters = new Map<string, RateLimiterMemory>();
+
+/**
  * Generic rate limiter for custom use cases
  */
 export async function limitCustom(
@@ -146,10 +156,17 @@ export async function limitCustom(
   durationSeconds: number,
   endpointName: string
 ): Promise<void> {
-  const customLimiter = new RateLimiterMemory({
-    points,
-    duration: durationSeconds,
-  });
+  const limiterKey = `${endpointName}:${points}:${durationSeconds}`;
+  let customLimiter = customLimiters.get(limiterKey);
+
+  if (!customLimiter) {
+    customLimiter = new RateLimiterMemory({
+      points,
+      duration: durationSeconds,
+    });
+    customLimiters.set(limiterKey, customLimiter);
+  }
+
   await rateLimit(key, customLimiter, endpointName);
 }
 

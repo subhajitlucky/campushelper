@@ -10,9 +10,13 @@ export default function LoadingIndicator() {
   const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
-    setIsNavigating(true);
-    const timer = setTimeout(() => setIsNavigating(false), 300);
-    return () => clearTimeout(timer);
+    // Deferred so state updates do not run synchronously inside the effect
+    const showTimer = setTimeout(() => setIsNavigating(true), 0);
+    const hideTimer = setTimeout(() => setIsNavigating(false), 300);
+    return () => {
+      clearTimeout(showTimer);
+      clearTimeout(hideTimer);
+    };
   }, [pathname, searchParams]);
 
   if (!isNavigating) return null;

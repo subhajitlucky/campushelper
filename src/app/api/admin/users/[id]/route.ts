@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { checkCSRF } from '@/lib/csrf-middleware';
 import { 
   AuthenticationRequired, 
   AdminAccessRequired,
@@ -35,6 +36,11 @@ export async function PUT(
     
     if (!isAdmin) {
       throw AdminAccessRequired();
+    }
+
+    const csrfError = await checkCSRF(request);
+    if (csrfError) {
+      return csrfError;
     }
 
     const { id } = await params;
@@ -83,11 +89,15 @@ export async function PUT(
     }
 
     let updatedUser;
-    const adminId = session.user.id;
     const now = new Date();
 
     switch (action) {
       case 'suspend':
+        // Moderators may only moderate regular users
+        if (userRole !== 'ADMIN' && targetUser.role === 'MODERATOR') {
+          throw CannotModifyAdmin();
+        }
+
         if (!targetUser.isActive) {
           throw UserAlreadySuspended();
         }
@@ -115,6 +125,11 @@ export async function PUT(
         });
 
       case 'activate':
+        // Moderators may only moderate regular users
+        if (userRole !== 'ADMIN' && targetUser.role === 'MODERATOR') {
+          throw CannotModifyAdmin();
+        }
+
         if (targetUser.isActive) {
           throw UserAlreadyActive();
         }
@@ -142,6 +157,11 @@ export async function PUT(
         });
 
       case 'change_role':
+        // Only ADMIN may change roles (MODERATOR cannot, even to MODERATOR)
+        if (userRole !== 'ADMIN') {
+          throw CannotModifyAdmin();
+        }
+
         if (!newRole || !['USER', 'ADMIN', 'MODERATOR'].includes(newRole)) {
           throw ValidationError('Valid role is required (USER, ADMIN, MODERATOR)');
         }

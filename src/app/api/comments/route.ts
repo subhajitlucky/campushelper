@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json(response);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to fetch comments' },
       { status: 500 }
@@ -246,13 +246,13 @@ export async function POST(request: NextRequest) {
         { comment: responseComment, message: 'Comment created successfully' },
         { status: 201 }
       );
-    } catch (dbError) {
+    } catch {
       return NextResponse.json(
         { error: 'Failed to create comment in database' },
         { status: 500 }
       );
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -31,7 +31,7 @@ export default async function AdminDashboardPage() {
         <AdminDashboard />
       </div>
     );
-  } catch (error) {
+  } catch {
     notFound();
   }
 }

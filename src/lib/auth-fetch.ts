@@ -41,7 +41,7 @@ export function useAuthFetch(requireAuth: boolean = false): AuthFetchReturn {
         if (!activeSession?.user?.id && status !== 'unauthenticated') {
           try {
             activeSession = await getSession();
-          } catch (error) {
+          } catch {
             // Session resolution failed
           }
         }
@@ -68,7 +68,7 @@ export function useAuthFetch(requireAuth: boolean = false): AuthFetchReturn {
             const csrfData = await csrfResponse.json();
             csrfToken = csrfData.csrfToken;
           }
-        } catch (error) {
+        } catch {
           // CSRF token fetch failed
         }
       }
@@ -95,7 +95,7 @@ export function useAuthFetch(requireAuth: boolean = false): AuthFetchReturn {
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
-        } catch (e) {
+        } catch {
           // Use default error message
         }
         

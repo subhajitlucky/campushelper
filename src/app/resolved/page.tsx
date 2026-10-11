@@ -2,13 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import ItemImage from "@/components/ui/ItemImage";
-import StatusBadge from "@/components/ui/StatusBadge";
-import EmptyState, { EmptyStateIcons } from "@/components/ui/EmptyState";
 import UserDisplay from "@/components/ui/UserDisplay";
 
 interface ResolvedItem {
@@ -69,7 +66,7 @@ export default function ResolvedPage() {
       const data = await response.json();
       setItems(data.items || []);
       setTotalPages(Math.ceil(data.total / limit));
-    } catch (err) {
+    } catch {
       setError('Failed to load resolved items. Please try again.');
     } finally {
       setLoading(false);

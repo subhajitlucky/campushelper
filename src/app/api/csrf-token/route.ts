@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 import { getOrCreateCSRFToken, getCSRFCookieOptions } from '@/lib/csrf';
 
 /**
@@ -13,7 +12,7 @@ import { getOrCreateCSRFToken, getCSRFCookieOptions } from '@/lib/csrf';
  * 2. Client stores the token (from response body)
  * 3. Client sends token in X-CSRF-Token header for all state-changing requests
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Get or create CSRF token
     const { token, cookieValue } = await getOrCreateCSRFToken();
@@ -38,7 +37,7 @@ export async function GET(request: NextRequest) {
     });
 
     return response;
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to generate CSRF token' },
       { status: 500 }

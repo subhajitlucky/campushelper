@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import type { Prisma, ClaimStatus, ClaimType } from '@/generated/prisma';
 
 /**
  * GET /api/admin/claims
@@ -37,14 +38,14 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.ClaimWhereInput = {};
     
     if (status && ['PENDING', 'APPROVED', 'REJECTED'].includes(status)) {
-      where.status = status;
+      where.status = status as ClaimStatus;
     }
     
     if (claimType && ['FOUND_IT', 'OWN_IT'].includes(claimType)) {
-      where.claimType = claimType;
+      where.claimType = claimType as ClaimType;
     }
 
     // Fetch claims with their associated data
@@ -97,7 +98,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

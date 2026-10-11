@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +35,6 @@ interface IncomingClaimsSectionProps {
 }
 
 export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionProps) {
-  const { data: session } = useSession();
   const { fetchWithAuth } = useAuthFetch(true);
   const [claims, setClaims] = useState<IncomingClaim[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +89,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
       allClaims.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
       setClaims(allClaims);
-    } catch (err) {
+    } catch {
       setError('Failed to load incoming claims. Please try again.');
     } finally {
       setLoading(false);
@@ -124,7 +122,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
           ? { ...claim, status: 'APPROVED', resolvedAt: new Date().toISOString() }
           : claim
       ));
-    } catch (error) {
+    } catch {
       setError('Failed to approve claim. Please try again.');
     } finally {
       setProcessingClaimId(null);
@@ -157,7 +155,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
           ? { ...claim, status: 'REJECTED', resolvedAt: new Date().toISOString() }
           : claim
       ));
-    } catch (error) {
+    } catch {
       setError('Failed to reject claim. Please try again.');
     } finally {
       setProcessingClaimId(null);

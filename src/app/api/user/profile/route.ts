@@ -78,13 +78,13 @@ export async function PUT(request: NextRequest) {
         },
         { status: 200 }
       );
-    } catch (dbError) {
+    } catch {
       return NextResponse.json(
         { error: 'Failed to update profile in database' },
         { status: 500 }
       );
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

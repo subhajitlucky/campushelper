@@ -1,10 +1,22 @@
 import NextAuth from 'next-auth';
 import { getServerSession } from 'next-auth';
 import type { NextAuthOptions, Session } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import { prisma } from './prisma';
+import { limitLogin } from './rateLimit';
 import bcrypt from 'bcryptjs';
+
+// The next-auth v4 types do not model the documented "return null from the jwt
+// callback" invalidation path, so null returns are cast at the boundary.
+function invalidateSession(): JWT {
+    return null as unknown as JWT;
+}
+
+function invalidateSessionInResponse(): Session {
+    return null as unknown as Session;
+}
 
 // Auto-detect NEXTAUTH_URL for production
 if (!process.env.NEXTAUTH_URL && process.env.VERCEL_URL) {
@@ -29,10 +41,18 @@ export const authOptions: NextAuthOptions = {
                 email: { label: 'Email', type: 'email' },
                 password: { label: 'Password', type: 'password' },
             },
-            async authorize(credentials) {
+            async authorize(credentials, req) {
                 const email = credentials?.email as string;
                 const password = credentials?.password as string;
                 if (!email || !password) return null;
+
+                // Per-account/IP throttling in addition to the account lockout below
+                try {
+                    await limitLogin(req as unknown as Request, email);
+                } catch {
+                    // Rate limited: behave like invalid credentials
+                    return null;
+                }
 
                 // Check if account is locked
                 const user = await prisma.user.findUnique({ where: { email } });
@@ -81,6 +101,7 @@ export const authOptions: NextAuthOptions = {
                     email: user.email,
                     name: user.name,
                     role: user.role,
+                    sessionVersion: user.sessionVersion,
                 };
             },
         }),
@@ -91,11 +112,11 @@ export const authOptions: NextAuthOptions = {
         }),
     ],
     events: {
-        async signIn({ user, account, profile, isNewUser }) {
+        async signIn() {
             // Handle successful sign in
             // This is called after successful authentication
         },
-        async signOut({ session, token }) {
+        async signOut() {
             // Handle sign out
         },
     },
@@ -135,14 +156,13 @@ export const authOptions: NextAuthOptions = {
     // Add explicit serialization to ensure id/role persist
     callbacks: {
         async jwt({ token, user, account, trigger, session }) {
-            
             // Initial sign in - add user data to token
             if (user) {
-                
                 token.id = user.id;
                 token.role = user.role;
                 token.email = user.email;
                 token.name = user.name || undefined;
+                token.sessionVersion = user.sessionVersion;
             }
 
             // Handle Google OAuth sign in
@@ -188,54 +208,93 @@ export const authOptions: NextAuthOptions = {
                     token.role = dbUser.role;
                     token.email = dbUser.email;
                     token.name = dbUser.name || undefined;
+                    token.sessionVersion = dbUser.sessionVersion;
                 } catch (error) {
-                    // Error logged for monitoring
-                    // Don't throw here to avoid breaking auth flow
+                    // Never trust a partially populated token when account
+                    // linking fails - force re-authentication instead.
+                    console.error('[auth] Google account linking failed:', error);
+                    return invalidateSession();
                 }
             }
 
-            // Handle session updates
+            // Allow only the display name to be updated from the client.
+            // Role and other authorization fields are never client-writable.
+            let nameUpdatedFromClient = false;
             if (trigger === 'update' && session) {
-                if (session.name) token.name = session.name;
-                if (session.role) token.role = session.role;
+                const sessionName = (session as { name?: unknown }).name;
+                if (typeof sessionName === 'string') {
+                    token.name = sessionName.slice(0, 100);
+                    nameUpdatedFromClient = true;
+                }
             }
+
+            // Re-validate against the database on every invocation so that
+            // suspensions, role changes, and forced invalidation take effect
+            // without waiting for the JWT to expire.
+            if (!token.id) {
+                return invalidateSession();
+            }
+
+            const dbUser = await prisma.user.findUnique({
+                where: { id: token.id },
+                select: {
+                    id: true,
+                    role: true,
+                    isActive: true,
+                    sessionVersion: true,
+                    email: true,
+                    name: true,
+                },
+            });
+
+            if (!dbUser || !dbUser.isActive) {
+                return invalidateSession();
+            }
+
+            if (
+                typeof token.sessionVersion === 'number' &&
+                dbUser.sessionVersion !== token.sessionVersion
+            ) {
+                return invalidateSession();
+            }
+
+            // Refresh authorization data from the database only.
+            token.role = dbUser.role;
+            token.email = dbUser.email;
+            if (dbUser.name && !nameUpdatedFromClient) {
+                token.name = dbUser.name;
+            }
+            token.sessionVersion = dbUser.sessionVersion;
 
             return token;
         },
         async session({ session, token }) {
-            
-            // Safely copy token data to session
-            if (session.user && token) {
-                
+            // A missing token means the jwt callback invalidated the session.
+            if (!token || !token.id) {
+                return invalidateSessionInResponse();
+            }
+
+            if (session.user) {
                 // Set user ID (critical for authentication)
-                if (token.id) {
-                    session.user.id = token.id as string;
-                } else {
-                    // This case should ideally not happen if jwt callback works correctly
-                }
-                
+                session.user.id = token.id;
+
                 // Set user role
                 if (token.role) {
-                    session.user.role = token.role as string;
-                } else {
-                    // This case should ideally not happen if jwt callback works correctly
+                    session.user.role = token.role;
                 }
-                
+
                 // Set additional user data
                 if (token.email) {
-                    session.user.email = token.email as string;
+                    session.user.email = token.email;
                 }
                 if (token.name) {
-                    session.user.name = token.name as string;
+                    session.user.name = token.name;
                 }
-                
-            } else {
-                // This case should ideally not happen if jwt callback works correctly
             }
-            
+
             return session;
         },
-        async signIn({ user, account, profile }) {
+        async signIn() {
             // Additional sign-in logic if needed
             // This runs before jwt callback
             return true;
@@ -265,7 +324,7 @@ export async function auth(): Promise<Session | null> {
         }
 
         return session;
-    } catch (error) {
+    } catch {
         // Session validation failed
         return null;
     }

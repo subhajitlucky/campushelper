@@ -1,17 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ListSkeleton } from "@/components/ui/skeleton";
-import ItemImage from "@/components/ui/ItemImage";
-import StatusBadge from "@/components/ui/StatusBadge";
 import EmptyState, { EmptyStateIcons } from "@/components/ui/EmptyState";
 import { ItemListSkeleton } from "@/components/ui/LoadingSkeleton";
-import UserDisplay from "@/components/ui/UserDisplay";
 import ItemCard from "@/components/ui/ItemCard";
 import Pagination from "@/components/ui/Pagination";
 import ClaimsModal from "@/components/ClaimsModal";
@@ -84,7 +77,7 @@ export default function LostItemsPage() {
       
       // Store user authentication status
       setUser(data.user || { isLoggedIn: false });
-    } catch (err) {
+    } catch {
       setError('Failed to load lost items. Please try again.');
     } finally {
       setLoading(false);
@@ -137,7 +130,6 @@ export default function LostItemsPage() {
             },
             body: JSON.stringify({
               status: 'RESOLVED',
-              claimedById: user.userId, // Set owner as the person who resolved it
             }),
           });
 
@@ -148,7 +140,7 @@ export default function LostItemsPage() {
           toast.success('Item marked as resolved!');
           // Refresh the items list
           fetchLostItems(currentPage);
-        } catch (err) {
+        } catch {
           toast.error('Failed to update item status. Please try again.');
         }
       }

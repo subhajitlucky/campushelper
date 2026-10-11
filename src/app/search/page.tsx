@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
 import { ButtonSpinner } from "@/components/ui/loading-spinner";
 import ItemImage from "@/components/ui/ItemImage";
 import StatusBadge from "@/components/ui/StatusBadge";
-import EmptyState, { EmptyStateIcons } from "@/components/ui/EmptyState";
 import UserDisplay from "@/components/ui/UserDisplay";
 import Pagination from "@/components/ui/Pagination";
 
@@ -102,7 +100,7 @@ export default function SearchPage() {
       // Store user authentication status
       setUser(data.user || { isLoggedIn: false });
       
-    } catch (error) {
+    } catch {
       setItems([]);
       setSearchError('Network error. Please check your connection and try again.');
     } finally {
@@ -305,7 +303,7 @@ export default function SearchPage() {
                   <ul className="space-y-2 text-sm text-blue-800">
                     <li className="flex items-start">
                       <span className="mr-2">•</span>
-                      <span>Type item names: "laptop", "phone", "keys", "wallet"</span>
+                      <span>{'Type item names: "laptop", "phone", "keys", "wallet"'}</span>
                     </li>
                     <li className="flex items-start">
                       <span className="mr-2">•</span>

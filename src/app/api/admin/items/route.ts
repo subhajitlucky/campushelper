@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import type { Prisma, ItemStatus } from '@/generated/prisma';
 
 /**
  * GET /api/admin/items
@@ -37,10 +38,10 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.ItemWhereInput = {};
     
     if (status && ['LOST', 'FOUND', 'CLAIMED', 'RESOLVED', 'DELETED'].includes(status)) {
-      where.status = status;
+      where.status = status as ItemStatus;
     }
     
     if (search) {
@@ -118,7 +119,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

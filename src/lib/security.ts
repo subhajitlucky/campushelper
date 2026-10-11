@@ -117,7 +117,7 @@ export function isSafeUrl(url: string): boolean {
     }
 
     return true;
-  } catch (error) {
+  } catch {
     // Invalid URL format
     return false;
   }

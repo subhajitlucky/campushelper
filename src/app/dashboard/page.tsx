@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -72,7 +72,7 @@ export default function DashboardPage() {
             const claimsData = await claimsResponse.json();
             claimsMade = claimsData.claims?.length || 0;
           }
-        } catch (claimsError) {
+        } catch {
         }
         
         setUserStats({
@@ -82,7 +82,7 @@ export default function DashboardPage() {
           claimsMade
         });
       }
-    } catch (error) {
+    } catch {
       // Keep default values on error
     } finally {
       setLoading(false);

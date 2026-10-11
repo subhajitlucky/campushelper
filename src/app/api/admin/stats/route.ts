@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
  * GET /api/admin/stats
  * Get overview statistics for admin dashboard
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Check admin authentication
     const session = await getSession();
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(stats);
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

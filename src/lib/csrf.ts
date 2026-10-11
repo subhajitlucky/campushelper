@@ -66,6 +66,27 @@ export async function getOrCreateCSRFToken(): Promise<{
 }
 
 /**
+ * Compare two CSRF tokens in constant time.
+ *
+ * Both values are hashed with SHA-256 first so the comparison always operates
+ * on equal-length buffers, avoiding `timingSafeEqual` length leaks.
+ * Empty or missing tokens never match.
+ */
+export function timingSafeTokenCompare(
+  a: string | null | undefined,
+  b: string | null | undefined
+): boolean {
+  if (!a || !b) {
+    return false;
+  }
+
+  const aDigest = crypto.createHash('sha256').update(a).digest();
+  const bDigest = crypto.createHash('sha256').update(b).digest();
+
+  return crypto.timingSafeEqual(aDigest, bDigest);
+}
+
+/**
  * Validate CSRF token from request
  */
 export async function validateCSRFToken(request: Request): Promise<boolean> {
@@ -85,8 +106,8 @@ export async function validateCSRFToken(request: Request): Promise<boolean> {
     return false;
   }
 
-  // Compare tokens
-  return csrfCookie.value === requestToken;
+  // Compare tokens in constant time
+  return timingSafeTokenCompare(csrfCookie.value, requestToken);
 }
 
 /**

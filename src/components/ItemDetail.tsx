@@ -8,7 +8,6 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import CommentsSection from './CommentsSection';
@@ -18,7 +17,7 @@ import { useAuthFetch } from '@/lib/auth-fetch';
 interface ItemUser {
   id: string;
   name: string | null;
-  email: string;
+  email?: string;
   avatar: string | null;
 }
 
@@ -30,9 +29,9 @@ interface ItemData {
   status: 'LOST' | 'FOUND' | 'CLAIMED' | 'RESOLVED' | 'DELETED';
   location: string;
   images: string[];
-  createdAt: string;
-  updatedAt: string;
-  resolvedAt: string | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  resolvedAt: string | Date | null;
   postedBy: ItemUser;
   claimedBy?: ItemUser | null;
   commentCount?: number;
@@ -172,7 +171,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
         router.push('/dashboard');
       }, 1500);
       
-    } catch (error) {
+    } catch {
       setError('Failed to delete item. Please try again.');
     } finally {
       setIsDeleting(false);

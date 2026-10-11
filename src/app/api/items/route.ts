@@ -4,14 +4,19 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import {
   AuthenticationRequired,
+  AdminAccessRequired,
   ValidationError,
-  DatabaseError,
-  NotFound,
   safeApiHandler
 } from '@/lib/errors';
-import { sanitizeInput } from '@/lib/security';
+import { isSafeUrl } from '@/lib/security';
 import { limitItems } from '@/lib/rateLimit';
 import { checkCSRF } from '@/lib/csrf-middleware';
+
+const ITEM_STATUSES = ['LOST', 'FOUND', 'CLAIMED', 'RESOLVED', 'DELETED'] as const;
+const ITEM_TYPES = ['LOST', 'FOUND'] as const;
+
+type ItemStatus = (typeof ITEM_STATUSES)[number];
+type ItemType = (typeof ITEM_TYPES)[number];
 
 /**
  * GET /api/items
@@ -21,13 +26,23 @@ export async function GET(request: NextRequest) {
   return safeApiHandler(async () => {
     const { searchParams } = new URL(request.url);
     
-    // Parse query parameters
-    const status = searchParams.get('status') as 'LOST' | 'FOUND' | 'CLAIMED' | 'RESOLVED' | 'DELETED' | undefined;
+    // Parse and validate query parameters
+    const rawStatus = searchParams.get('status');
+    const rawItemType = searchParams.get('itemType');
+
+    if (rawStatus && !ITEM_STATUSES.includes(rawStatus as ItemStatus)) {
+      throw ValidationError(`Invalid status. Allowed values: ${ITEM_STATUSES.join(', ')}`);
+    }
+    if (rawItemType && !ITEM_TYPES.includes(rawItemType as ItemType)) {
+      throw ValidationError(`Invalid itemType. Allowed values: ${ITEM_TYPES.join(', ')}`);
+    }
+
+    const status = rawStatus as ItemStatus | undefined;
+    const itemType = rawItemType as ItemType | undefined;
     const search = searchParams.get('search') || undefined;
     const postedById = searchParams.get('postedById') || undefined;
     const from = searchParams.get('from') || undefined;
     const to = searchParams.get('to') || undefined;
-    const itemType = searchParams.get('itemType') as 'LOST' | 'FOUND' | undefined;
     const location = searchParams.get('location') || undefined;
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -53,7 +68,11 @@ export async function GET(request: NextRequest) {
     // Check if user is logged in
     const session = await getSession();
     const isLoggedIn = !!session?.user?.id;
-    const userId = session?.user?.id;
+
+    // Deleted items are only visible to admins/moderators
+    if (status === 'DELETED' && session?.user?.role !== 'ADMIN' && session?.user?.role !== 'MODERATOR') {
+      throw AdminAccessRequired();
+    }
 
     // For items list: NEVER show emails (security fix)
     // Users can view individual items for contact details
@@ -245,7 +264,11 @@ export async function POST(request: NextRequest) {
       description: z.string().min(10, 'Description must be at least 10 characters').max(2000, 'Description must be less than 2000 characters'),
       itemType: z.enum(['LOST', 'FOUND']),
       location: z.string().min(1, 'Location is required').max(100, 'Location must be less than 100 characters'),
-      images: z.array(z.string().url('Invalid image URL')).max(5, 'Maximum 5 images allowed').optional().default([])
+      images: z.array(
+        z.string()
+          .url('Invalid image URL')
+          .refine(isSafeUrl, 'URL must be a safe HTTP(S) URL')
+      ).max(5, 'Maximum 5 images allowed').optional().default([])
     });
 
     let validatedData;

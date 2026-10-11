@@ -59,6 +59,35 @@ export interface DatabaseError {
 }
 
 /**
+ * Minimal structural view of an unknown thrown value so error handlers can
+ * inspect fields without resorting to `any`.
+ */
+interface ErrorLike {
+  code?: unknown;
+  message?: unknown;
+  meta?: {
+    target?: unknown;
+    field_name?: unknown;
+    column?: unknown;
+    path?: unknown;
+    argument?: unknown;
+    table?: unknown;
+  };
+}
+
+function toErrorLike(error: unknown): ErrorLike {
+  return typeof error === 'object' && error !== null ? (error as ErrorLike) : {};
+}
+
+function firstString(value: unknown, fallback: string): string {
+  if (Array.isArray(value)) {
+    const first = value[0];
+    return typeof first === 'string' ? first : fallback;
+  }
+  return typeof value === 'string' ? value : fallback;
+}
+
+/**
  * Database error handler that converts Prisma errors to user-friendly messages
  */
 export class DatabaseErrorHandler {
@@ -66,14 +95,15 @@ export class DatabaseErrorHandler {
   /**
    * Handle Prisma-specific database errors
    */
-  static handlePrismaError(error: any, context?: string): DatabaseError {
-    const prismaError = error?.code;
+  static handlePrismaError(error: unknown, context?: string): DatabaseError {
+    const err = toErrorLike(error);
+    const prismaError = err.code;
     
     switch (prismaError) {
       case 'P2002': {
         // Unique constraint violation
-        const field = error.meta?.target?.[0] || 'field';
-        return this.createUniqueConstraintError(field, context);
+        const field = firstString(err.meta?.target, 'field');
+        return this.createUniqueConstraintError(field);
       }
       
       case 'P2025': {
@@ -83,8 +113,8 @@ export class DatabaseErrorHandler {
       
       case 'P2003': {
         // Foreign key constraint violation
-        const field = error.meta?.field_name || 'field';
-        return this.createForeignKeyError(field, context);
+        const field = firstString(err.meta?.field_name, 'field');
+        return this.createForeignKeyError(field);
       }
       
       case 'P2014': {
@@ -99,8 +129,8 @@ export class DatabaseErrorHandler {
       
       case 'P2000': {
         // Column value out of range for type
-        const field = error.meta?.column || 'field';
-        return this.createValueRangeError(field, context);
+        const field = firstString(err.meta?.column, 'field');
+        return this.createValueRangeError(field);
       }
       
       case 'P2001': {
@@ -110,13 +140,13 @@ export class DatabaseErrorHandler {
       
       case 'P2012': {
         // Required value is missing
-        const field = error.meta?.path?.[0] || 'field';
-        return this.createRequiredValueError(field, context);
+        const field = firstString(err.meta?.path, 'field');
+        return this.createRequiredValueError(field);
       }
       
       case 'P2013': {
         // Missing required argument
-        const argument = error.meta?.argument || 'argument';
+        const argument = firstString(err.meta?.argument, 'argument');
         return this.createMissingArgumentError(argument, context);
       }
       
@@ -137,8 +167,8 @@ export class DatabaseErrorHandler {
       
       case 'P2019': {
         // Input value is too long
-        const field = error.meta?.column || 'field';
-        return this.createValueTooLongError(field, context);
+        const field = firstString(err.meta?.column, 'field');
+        return this.createValueTooLongError(field);
       }
       
       case 'P2020': {
@@ -148,14 +178,14 @@ export class DatabaseErrorHandler {
       
       case 'P2021': {
         // The table does not exist in the current database
-        const table = error.meta?.table || 'table';
-        return this.createTableNotExistsError(table, context);
+        const table = firstString(err.meta?.table, 'table');
+        return this.createTableNotExistsError(table);
       }
       
       case 'P2022': {
         // The column does not exist in the current database
-        const column = error.meta?.column || 'column';
-        return this.createColumnNotExistsError(column, context);
+        const column = firstString(err.meta?.column, 'column');
+        return this.createColumnNotExistsError(column);
       }
       
       case 'P2023': {
@@ -170,7 +200,7 @@ export class DatabaseErrorHandler {
       
       default: {
         // Unknown Prisma error
-        return this.createUnknownDatabaseError(error, context);
+        return this.createUnknownDatabaseError(error);
       }
     }
   }
@@ -178,8 +208,9 @@ export class DatabaseErrorHandler {
   /**
    * Handle general database connection errors
    */
-  static handleConnectionError(error: any, context?: string): DatabaseError {
-    const message = error?.message || 'Unknown connection error';
+  static handleConnectionError(error: unknown): DatabaseError {
+    const err = toErrorLike(error);
+    const message = typeof err.message === 'string' ? err.message : 'Unknown connection error';
     
     if (message.includes('connection') || message.includes('timeout')) {
       return {
@@ -214,13 +245,13 @@ export class DatabaseErrorHandler {
       };
     }
 
-    return this.createUnknownDatabaseError(error, context);
+    return this.createUnknownDatabaseError(error);
   }
 
   /**
    * Create unique constraint violation error
    */
-  private static createUniqueConstraintError(field: string, context?: string): DatabaseError {
+  private static createUniqueConstraintError(field: string): DatabaseError {
     const fieldDisplayName = this.getFieldDisplayName(field);
     
     return {
@@ -263,7 +294,7 @@ export class DatabaseErrorHandler {
   /**
    * Create foreign key constraint error
    */
-  private static createForeignKeyError(field: string, context?: string): DatabaseError {
+  private static createForeignKeyError(field: string): DatabaseError {
     const fieldDisplayName = this.getFieldDisplayName(field);
     
     return {
@@ -326,7 +357,7 @@ export class DatabaseErrorHandler {
   /**
    * Create value range error
    */
-  private static createValueRangeError(field: string, context?: string): DatabaseError {
+  private static createValueRangeError(field: string): DatabaseError {
     const fieldDisplayName = this.getFieldDisplayName(field);
     
     return {
@@ -369,11 +400,12 @@ export class DatabaseErrorHandler {
   /**
    * Create unknown database error
    */
-  private static createUnknownDatabaseError(error: any, context?: string): DatabaseError {
+  private static createUnknownDatabaseError(error: unknown): DatabaseError {
+    const err = toErrorLike(error);
     return {
       type: DatabaseErrorTypes.UNKNOWN_DATABASE_ERROR,
       message: 'Unknown database error',
-      technicalDetails: error?.message || 'Unknown error occurred',
+      technicalDetails: typeof err.message === 'string' ? err.message : 'Unknown error occurred',
       recoverySuggestions: [
         'Please try again',
         'Refresh the page',
@@ -409,7 +441,7 @@ export class DatabaseErrorHandler {
   /**
    * Create required value error
    */
-  private static createRequiredValueError(field: string, context?: string): DatabaseError {
+  private static createRequiredValueError(field: string): DatabaseError {
     const fieldDisplayName = this.getFieldDisplayName(field);
     
     return {
@@ -512,7 +544,7 @@ export class DatabaseErrorHandler {
   /**
    * Create value too long error
    */
-  private static createValueTooLongError(field: string, context?: string): DatabaseError {
+  private static createValueTooLongError(field: string): DatabaseError {
     const fieldDisplayName = this.getFieldDisplayName(field);
     
     return {
@@ -555,7 +587,7 @@ export class DatabaseErrorHandler {
   /**
    * Create table not exists error
    */
-  private static createTableNotExistsError(table: string, context?: string): DatabaseError {
+  private static createTableNotExistsError(table: string): DatabaseError {
     return {
       type: DatabaseErrorTypes.UNKNOWN_DATABASE_ERROR,
       message: `Table ${table} does not exist`,
@@ -575,7 +607,7 @@ export class DatabaseErrorHandler {
   /**
    * Create column not exists error
    */
-  private static createColumnNotExistsError(column: string, context?: string): DatabaseError {
+  private static createColumnNotExistsError(column: string): DatabaseError {
     return {
       type: DatabaseErrorTypes.UNKNOWN_DATABASE_ERROR,
       message: `Column ${column} does not exist`,
@@ -679,14 +711,15 @@ export class DatabaseErrorHandler {
 /**
  * Convenience function to handle database errors
  */
-export function handleDatabaseError(error: any, context?: string): NextResponse {
-  if (error?.code && error?.code.startsWith('P')) {
+export function handleDatabaseError(error: unknown, context?: string): NextResponse {
+  const err = toErrorLike(error);
+  if (typeof err.code === 'string' && err.code.startsWith('P')) {
     const dbError = DatabaseErrorHandler.handlePrismaError(error, context);
     return DatabaseErrorHandler.toNextResponse(dbError);
   }
   
-  if (error?.message?.includes('connection') || error?.message?.includes('timeout')) {
-    const dbError = DatabaseErrorHandler.handleConnectionError(error, context);
+  if (typeof err.message === 'string' && (err.message.includes('connection') || err.message.includes('timeout'))) {
+    const dbError = DatabaseErrorHandler.handleConnectionError(error);
     return DatabaseErrorHandler.toNextResponse(dbError);
   }
   
