@@ -7,38 +7,53 @@ export interface ErrorInfo {
   status?: number;
 }
 
-export function handleApiError(error: any): ErrorInfo {
+interface ErrorLike {
+  message?: unknown;
+  code?: unknown;
+  status?: unknown;
+}
+
+function toErrorLike(error: unknown): ErrorLike {
+  return typeof error === 'object' && error !== null ? (error as ErrorLike) : {};
+}
+
+export function handleApiError(error: unknown): ErrorInfo {
+  const err = toErrorLike(error);
   return {
-    message: error?.message || 'An API error occurred',
-    code: error?.code,
-    status: error?.status
+    message: typeof err.message === 'string' ? err.message : 'An API error occurred',
+    code: typeof err.code === 'string' ? err.code : undefined,
+    status: typeof err.status === 'number' ? err.status : undefined
   };
 }
 
-export function handleValidationError(error: any): ErrorInfo {
+export function handleValidationError(error: unknown): ErrorInfo {
+  const err = toErrorLike(error);
   return {
-    message: error?.message || 'Validation failed',
+    message: typeof err.message === 'string' ? err.message : 'Validation failed',
     code: 'VALIDATION_ERROR'
   };
 }
 
-export function handleDatabaseError(error: any): ErrorInfo {
+export function handleDatabaseError(error: unknown): ErrorInfo {
+  const err = toErrorLike(error);
   return {
-    message: error?.message || 'Database error occurred',
+    message: typeof err.message === 'string' ? err.message : 'Database error occurred',
     code: 'DATABASE_ERROR'
   };
 }
 
-export function handleAuthenticationError(error: any): ErrorInfo {
+export function handleAuthenticationError(error: unknown): ErrorInfo {
+  const err = toErrorLike(error);
   return {
-    message: error?.message || 'Authentication required',
+    message: typeof err.message === 'string' ? err.message : 'Authentication required',
     code: 'AUTH_ERROR'
   };
 }
 
-export function handleGenericError(error: any): ErrorInfo {
+export function handleGenericError(error: unknown): ErrorInfo {
+  const err = toErrorLike(error);
   return {
-    message: error?.message || 'An unexpected error occurred',
+    message: typeof err.message === 'string' ? err.message : 'An unexpected error occurred',
     code: 'GENERIC_ERROR'
   };
 }

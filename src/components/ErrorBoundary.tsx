@@ -2,7 +2,6 @@
 
 import React, { Component, ReactNode } from 'react';
 
-import { handleGenericError } from '@/lib/errorHandler';
 import { showError } from '@/lib/toast-config';
 
 interface Props {
@@ -30,11 +29,6 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log the error with structured context
-    const { level = 'component' } = this.props;
-    
-    
-
     // Update state with error info for potential debugging
     this.setState({ errorInfo });
 
@@ -82,7 +76,7 @@ function PageErrorFallback({ error }: { error?: Error }) {
         <div className="mt-4 text-center">
           <h3 className="text-lg font-medium text-gray-900">Page Error</h3>
           <p className="mt-2 text-sm text-gray-600">
-            We're sorry, but something went wrong loading this page.
+            We&apos;re sorry, but something went wrong loading this page.
               </p>
           <div className="mt-4 flex space-x-3">
             <button
@@ -118,6 +112,8 @@ function PageErrorFallback({ error }: { error?: Error }) {
 
 // Feature-level error fallback
 function FeatureErrorFallback({ error }: { error?: Error }) {
+  // The error object is intentionally not rendered to avoid leaking details
+  void error;
   return (
     <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
       <div className="flex items-center">
@@ -143,6 +139,8 @@ function FeatureErrorFallback({ error }: { error?: Error }) {
 
 // Component-level error fallback
 function ComponentErrorFallback({ error }: { error?: Error }) {
+  // The error object is intentionally not rendered to avoid leaking details
+  void error;
   return (
     <div className="p-3 bg-red-50 border border-red-200 rounded text-sm">
       <div className="flex items-center text-red-700">
@@ -173,9 +171,7 @@ export function withErrorBoundary<P extends object>(
 
 // Hook for error boundary in functional components
 export function useErrorHandler() {
-  return (error: Error, errorInfo?: React.ErrorInfo) => {
-    
-
+  return () => {
     showError('An error occurred. Please try again.');
   };
 }

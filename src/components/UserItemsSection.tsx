@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,13 +29,12 @@ interface UserItemsSectionProps {
 }
 
 export default function UserItemsSection({ userId }: UserItemsSectionProps) {
-  const { data: session } = useSession();
   const { fetchWithAuth } = useAuthFetch(true);
   const [items, setItems] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchUserItems = async () => {
+  const fetchUserItems = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -52,12 +50,12 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
       
       const data = await response.json();
       setItems(data.items || []);
-    } catch (err) {
+    } catch {
       setError('Failed to load your items. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   // Handle delete item
   const handleDeleteItem = async (itemId: string) => {
@@ -80,7 +78,7 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
 
       // Remove item from local state
       setItems(prev => prev.filter(item => item.id !== itemId));
-    } catch (error) {
+    } catch {
       setError('Failed to delete item. Please try again.');
     }
   };
@@ -95,7 +93,7 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
     if (userId) {
       fetchUserItems();
     }
-  }, [userId]);
+  }, [userId, fetchUserItems]);
 
   // Loading state
   if (loading) {

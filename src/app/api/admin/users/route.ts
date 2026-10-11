@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import type { Prisma, Role } from '@/generated/prisma';
 
 /**
  * GET /api/admin/users
@@ -38,10 +39,10 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.UserWhereInput = {};
     
     if (role && ['USER', 'ADMIN', 'MODERATOR'].includes(role)) {
-      where.role = role;
+      where.role = role as Role;
     }
     
     if (status === 'active') {
@@ -114,7 +115,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -1,4 +1,4 @@
-import { toast, Toast, ToastPosition } from 'react-hot-toast';
+import { toast, ToastPosition } from 'react-hot-toast';
 
 // Custom toast types for better type safety
 export type ToastType = 'success' | 'error' | 'loading' | 'info' | 'warning';
@@ -140,7 +140,7 @@ export class ToastManager {
     messages: {
       loading: string;
       success: string | ((data: T) => string);
-      error: string | ((error: any) => string);
+      error: string | ((error: unknown) => string);
     },
     options?: {
       position?: ToastPosition;
@@ -174,6 +174,10 @@ export class ToastManager {
   // Custom toast with advanced options
   static custom(message: string, options: ToastOptions) {
     const { type, persistent, action, ...toastOptions } = options;
+
+    // Advanced options are intentionally not forwarded to the toast API.
+    void persistent;
+    void action;
     
     switch (type) {
       case 'success':
@@ -223,7 +227,7 @@ export const showPromise = <T>(
   messages: {
     loading: string;
     success: string | ((data: T) => string);
-    error: string | ((error: any) => string);
+    error: string | ((error: unknown) => string);
   },
   options?: {
     position?: ToastPosition;
@@ -234,8 +238,12 @@ export const showPromise = <T>(
 // API-specific toast helpers
 export const API_TOASTS = {
   success: (action: string) => showSuccess(TOAST_MESSAGES.SUCCESS[`${action.toUpperCase()}_SUCCESS` as keyof typeof TOAST_MESSAGES.SUCCESS] || `${action} completed successfully!`),
-  error: (error: any) => {
-    const message = typeof error === 'string' ? error : error?.message || 'An error occurred';
+  error: (error: unknown) => {
+    const message = typeof error === 'string'
+      ? error
+      : error instanceof Error
+        ? error.message
+        : 'An error occurred';
     showError(message);
   },
   loading: (action: string) => showLoading(TOAST_MESSAGES.INFO[`${action.toUpperCase()}` as keyof typeof TOAST_MESSAGES.INFO] || `Processing ${action}...`),

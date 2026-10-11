@@ -5,6 +5,7 @@ import { updateItemSchema } from '@/lib/schemas/item';
 import { sanitizeInput } from '@/lib/security';
 import { checkCSRF } from '@/lib/csrf-middleware';
 import { limitCustom } from '@/lib/rateLimit';
+import { getItemDetailForViewer } from '@/lib/item-detail';
 
 /**
  * GET /api/items/[id]
@@ -15,13 +16,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Get session (optional - unauthenticated users can view items)
-    const session = await getSession();
-    const userId = session?.user?.id;
-    const userRole = session?.user?.role;
-
     // Extract and validate ID from params
-  const { id } = await params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
@@ -38,126 +34,24 @@ export async function GET(
       );
     }
 
-    // Query the item
-    const item = await prisma.item.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        postedById: true,
-        claimedById: true,
-        status: true,
-        itemType: true,
-      }
-    });
+    // Get session (optional - unauthenticated users can view items)
+    const session = await getSession();
+    const viewer = session?.user?.id
+      ? { id: session.user.id, role: session.user.role }
+      : null;
 
-    if (!item) {
+    const itemData = await getItemDetailForViewer(id, viewer);
+
+    if (!itemData) {
       return NextResponse.json(
         { error: 'Item not found' },
         { status: 404 }
       );
     }
 
-    // Determine authorization level
-    const isOwner = userId === item.postedById;
-    const isClaimant = userId === item.claimedById;
-    const isAdmin = userRole === 'ADMIN' || userRole === 'MODERATOR';
-    const canSeeUserData = !!(userId && (isOwner || isAdmin || isClaimant));
-
-    // Query with OPTIMAL SELECT based on authorization
-    const itemData = await prisma.item.findUnique({
-      where: { id },
-      select: {
-        // Always include these fields
-        id: true,
-        title: true,
-        description: true,
-        itemType: true,
-        status: true,
-        location: true,
-        images: true,
-        createdAt: true,
-        updatedAt: true,
-        resolvedAt: true,
-
-        // User data - always fetch, redact later if needed
-        postedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-          }
-        },
-        claimedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-          }
-        },
-
-        // Claims/comments - ONLY for owner/admin
-        ...(userId && (isOwner || isAdmin) && {
-          claims: {
-            select: {
-              id: true,
-              claimType: true,
-              message: true,
-              status: true,
-              createdAt: true,
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  // DON'T show claimant email to owner (privacy)
-                  ...(isAdmin ? { email: true } : {}),
-                  avatar: true,
-                }
-              }
-            },
-            orderBy: { createdAt: 'desc' }
-          },
-          comments: {
-            select: {
-              id: true,
-              message: true,
-              createdAt: true,
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  avatar: true,
-                }
-              }
-            },
-            orderBy: { createdAt: 'desc' }
-          }
-        }),
-      }
-    });
-
-    // Process name truncation for non-owners
-    if (itemData?.postedBy) {
-      if (!isOwner && !isAdmin) {
-        const name = itemData.postedBy.name || '';
-        const nameParts = name.split(' ');
-        if (nameParts.length >= 2) {
-          itemData.postedBy.name = `${nameParts[0]} ${nameParts[1].charAt(0)}.`;
-        }
-      }
-
-      if (!canSeeUserData) {
-        delete (itemData.postedBy as { email?: string }).email;
-      }
-    }
-
-    if (itemData?.claimedBy && !canSeeUserData) {
-      delete (itemData.claimedBy as { email?: string }).email;
-    }
-
-  return NextResponse.json({ item: itemData });
+    return NextResponse.json({ item: itemData });
   } catch (error) {
+    console.error('[items/:id] Failed to fetch item:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -265,7 +159,6 @@ export async function PUT(
         status?: 'LOST' | 'FOUND' | 'CLAIMED' | 'RESOLVED';
         location?: string;
         images?: string[];
-        claimedById?: string;
         resolvedAt?: Date;
       } = {
         title: validatedData.title ? sanitizeInput(validatedData.title) : undefined,
@@ -287,11 +180,6 @@ export async function PUT(
       } else if (validatedData.itemType) {
         // Otherwise, set status based on itemType if provided
         updateData.status = validatedData.itemType === 'LOST' ? 'LOST' : 'FOUND';
-      }
-      
-      // Handle claimedById
-      if (validatedData.claimedById) {
-        updateData.claimedById = validatedData.claimedById;
       }
 
       // Update the item
@@ -346,14 +234,14 @@ export async function PUT(
         message: 'Item updated successfully'
       });
 
-    } catch (dbError) {
+    } catch {
       return NextResponse.json(
         { error: 'Failed to update item in database' },
         { status: 500 }
       );
     }
 
-  } catch (error) {
+  } catch {
     // Step 74: General error handling
     return NextResponse.json(
       { error: 'An unexpected error occurred while updating the item' },
@@ -504,14 +392,14 @@ export async function DELETE(
         message: `Item "${existingItem.title}" has been successfully resolved`
       });
 
-    } catch (dbError) {
+    } catch {
       return NextResponse.json(
         { error: 'Failed to delete item in database' },
         { status: 500 }
       );
     }
 
-  } catch (error) {
+  } catch {
     // Step 75: General error handling
     return NextResponse.json(
       { error: 'An unexpected error occurred while deleting the item' },

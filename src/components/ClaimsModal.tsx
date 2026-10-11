@@ -59,7 +59,7 @@ export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwne
         throw new Error(errorData.error || 'Failed to submit claim');
       }
 
-      const data = await response.json();
+      await response.json();
       
       setSuccess('Claim submitted successfully!');
       

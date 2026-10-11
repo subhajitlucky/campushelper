@@ -78,13 +78,13 @@ export async function DELETE(
         comment: deletedComment,
         message: `Comment "${comment.message.substring(0, 50)}..." has been successfully deleted`
       });
-    } catch (dbError) {
+    } catch {
       return NextResponse.json(
         { error: 'Failed to delete comment from database' },
         { status: 500 }
       );
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -207,13 +207,13 @@ export async function PUT(
         comment: updatedComment,
         message: 'Comment updated successfully'
       });
-    } catch (dbError) {
+    } catch {
       return NextResponse.json(
         { error: 'Failed to update comment in database' },
         { status: 500 }
       );
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

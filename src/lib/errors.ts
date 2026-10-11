@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { ZodError } from 'zod';
 import { DatabaseErrorHandler } from './database-errors';
 
 /**
@@ -61,7 +62,7 @@ export type ErrorCode = typeof ErrorCodes[keyof typeof ErrorCodes];
 export interface ApiError {
   error: string;
   code: ErrorCode;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   timestamp: string;
 }
 
@@ -72,7 +73,7 @@ export function createErrorResponse(
   message: string,
   code: ErrorCode,
   status: number = 500,
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 ): NextResponse {
   const error: ApiError = {
     error: message,
@@ -102,7 +103,7 @@ export const ForbiddenError = (message: string = 'You do not have permission to 
   createErrorResponse(message, ErrorCodes.AUTHORIZATION_DENIED, 403);
 
 // Validation Errors
-export const ValidationError = (message: string, details?: Record<string, any>) =>
+export const ValidationError = (message: string, details?: Record<string, unknown>) =>
   createErrorResponse(message, ErrorCodes.VALIDATION_ERROR, 400, details);
 
 export const MissingRequiredField = (field: string) =>
@@ -175,10 +176,25 @@ export const UnsupportedAction = (action: string) =>
 /**
  * Parse Prisma errors and return appropriate standardized response
  */
-export function handlePrismaError(error: any): NextResponse {
+export function handlePrismaError(error: unknown): NextResponse {
   // Use our comprehensive database error handler
   const dbError = DatabaseErrorHandler.handlePrismaError(error);
   return DatabaseErrorHandler.toNextResponse(dbError);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function hasErrorName(error: unknown, name: string): boolean {
+  return isRecord(error) && error.name === name;
+}
+
+function looksLikePrismaError(error: unknown): boolean {
+  return (
+    hasErrorName(error, 'PrismaClientKnownRequestError') ||
+    (isRecord(error) && typeof error.code === 'string')
+  );
 }
 
 /**
@@ -186,7 +202,7 @@ export function handlePrismaError(error: any): NextResponse {
  */
 export async function safeApiHandler<T>(
   handler: () => Promise<T>,
-  onError?: (error: any) => NextResponse
+  onError?: (error: unknown) => NextResponse
 ): Promise<NextResponse | T> {
   try {
     return await handler();
@@ -195,35 +211,33 @@ export async function safeApiHandler<T>(
     if (error instanceof Response && 'cookies' in error) {
       return error as NextResponse;
     }
-    
+
     // If custom error handler provided, use it
     if (onError) {
       return onError(error);
     }
-    
+
     // Handle Prisma errors
-    if ((error as any)?.name === 'PrismaClientKnownRequestError' || (error as any)?.code) {
+    if (looksLikePrismaError(error)) {
       const dbError = DatabaseErrorHandler.handlePrismaError(error);
       return DatabaseErrorHandler.toNextResponse(dbError);
     }
-    
+
     // Handle validation errors
-    if ((error as any)?.name === 'ZodError') {
-      const validationErrors = (error as any).issues?.map((issue: any) => `${issue.path.join('.')}: ${issue.message}`).join(', ');
-      return ValidationError(`Validation failed: ${validationErrors}`, { issues: (error as any).issues });
+    if (error instanceof ZodError) {
+      const validationErrors = error.issues
+        .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+        .join(', ');
+      return ValidationError(`Validation failed: ${validationErrors}`, { issues: error.issues });
     }
-    
+
     // Handle NextAuth errors
-    if ((error as any)?.name === 'NextAuthError') {
+    if (hasErrorName(error, 'NextAuthError')) {
       return AuthenticationRequired('Authentication failed. Please log in again.');
     }
-    
-    // Handle generic Error objects
-    if (error instanceof Error) {
-      return InternalServerError(error.message);
-    }
-    
-    // Return internal server error
+
+    // Unexpected errors: log full details server-side, never leak them to clients
+    console.error('[safeApiHandler] Unhandled error:', error);
     return InternalServerError();
   }
 }

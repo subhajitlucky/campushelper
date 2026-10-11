@@ -101,7 +101,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
       // Add new comment to the top of the list
       setComments(prev => [data.comment, ...prev]);
 
-    } catch (err) {
+    } catch {
       setFormError('Failed to post comment. Please try again.');
     } finally {
       setFormLoading(false);
@@ -167,7 +167,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
 
       // Remove comment from local state
       setComments(prev => prev.filter(comment => comment.id !== commentId));
-    } catch (err) {
+    } catch {
       setDeleteError('Failed to delete comment. Please try again.');
     }
   };
@@ -223,7 +223,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
       // Exit edit mode
       setEditingCommentId(null);
       setEditMessage('');
-    } catch (err) {
+    } catch {
       setEditError('Failed to update comment. Please try again.');
     } finally {
       setEditLoading(false);

@@ -42,7 +42,6 @@ export default function PostItemForm({ className }: PostItemFormProps) {
   const {
     values,
     errors,
-    touched,
     isValid,
     isSubmitting,
     setFieldValue,
@@ -113,7 +112,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
       } else {
         localStorage.removeItem('editItem');
       }
-    } catch (err) {
+    } catch {
       localStorage.removeItem('editItem');
       hasPrefilledFromStorage.current = true;
     }
@@ -197,12 +196,13 @@ export default function PostItemForm({ className }: PostItemFormProps) {
 
       resetForm();
       setImageUrl(null);
-    } catch (err: any) {
-      const errorMessage = err.message || (isEditMode ? 'Failed to update item. Please try again.' : 'Failed to post item. Please try again.');
+    } catch (err: unknown) {
+      const rawMessage = err instanceof Error ? err.message : '';
+      const errorMessage = rawMessage || (isEditMode ? 'Failed to update item. Please try again.' : 'Failed to post item. Please try again.');
       setError(errorMessage);
       showError(errorMessage);
 
-      if (err.message?.toLowerCase().includes('auth')) {
+      if (rawMessage.toLowerCase().includes('auth')) {
         setTimeout(() => {
           router.push('/auth/login');
         }, 1500);

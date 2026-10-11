@@ -28,7 +28,9 @@ export async function checkCSRF(request: NextRequest): Promise<NextResponse | nu
   const isValid = await validateCSRFToken(request);
 
   if (!isValid) {
-    throw ForbiddenError(
+    // Return a 403 response instead of throwing so that routes which do not
+    // wrap their handler in safeApiHandler can propagate the status correctly.
+    return ForbiddenError(
       'Invalid CSRF token. This could be a cross-site request forgery (CSRF) attack.'
     );
   }

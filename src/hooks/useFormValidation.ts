@@ -24,7 +24,7 @@ interface UseFormValidationReturn<T> {
   
   // Field validation
   validateField: (field: keyof T) => boolean;
-  setFieldValue: (field: keyof T, value: any) => void;
+  setFieldValue: (field: keyof T, value: T[keyof T]) => void;
   setFieldTouched: (field: keyof T, touched?: boolean) => void;
   setFieldError: (field: keyof T, error?: string) => void;
   
@@ -35,7 +35,7 @@ interface UseFormValidationReturn<T> {
   
   // Utility
   getFieldProps: (field: keyof T) => {
-    value: any;
+    value: T[keyof T];
     error?: string;
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
     onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
@@ -44,14 +44,14 @@ interface UseFormValidationReturn<T> {
   };
 }
 
-export function useFormValidation<T extends Record<string, any>>(
+export function useFormValidation<T extends Record<string, string>>(
   options: UseFormValidationOptions<T>
 ): UseFormValidationReturn<T> {
   const { schema, initialValues, validateOnChange = true, validateOnBlur = true } = options;
   
   // Initialize form state
   const [formState, setFormState] = useState<Record<keyof T, FormField>>(() => {
-    const initial: Record<keyof T, FormField> = {} as any;
+    const initial: Record<keyof T, FormField> = {} as Record<keyof T, FormField>;
     Object.keys(initialValues).forEach((key) => {
       initial[key as keyof T] = {
         value: initialValues[key as keyof T],
@@ -71,9 +71,12 @@ export function useFormValidation<T extends Record<string, any>>(
     
     try {
       // Create a partial object with just this field for validation
-      const partialResult = (schema as any).pick({ [field]: true } as any).safeParse({
-        [field]: fieldState.value
-      });
+      const pickMask = { [field]: true } as { [key: string]: true };
+      const partialResult = (schema as unknown as z.ZodObject<z.ZodRawShape>)
+        .pick(pickMask)
+        .safeParse({
+          [field]: fieldState.value
+        });
       
       let error = '';
       let isValid = false;
@@ -82,7 +85,7 @@ export function useFormValidation<T extends Record<string, any>>(
         isValid = true;
       } else {
         const fieldError = partialResult.error.issues.find(
-          (issue: any) => issue.path[0] === field
+          (issue) => issue.path[0] === field
         );
         error = fieldError?.message || '';
       }
@@ -97,7 +100,7 @@ export function useFormValidation<T extends Record<string, any>>(
       }));
       
       return !error;
-    } catch (error) {
+    } catch {
       return false;
     }
   }, [formState, schema]);
@@ -106,7 +109,7 @@ export function useFormValidation<T extends Record<string, any>>(
   const validateForm = useCallback((): boolean => {
     try {
       // Get current values first
-      const currentValues: any = {};
+      const currentValues: Record<string, unknown> = {};
       Object.keys(formState).forEach((key) => {
         currentValues[key] = formState[key as keyof T].value;
       });
@@ -115,7 +118,7 @@ export function useFormValidation<T extends Record<string, any>>(
 
       if (result.success) {
         // Clear all errors
-        const clearedState: Record<keyof T, FormField> = {} as any;
+        const clearedState: Record<keyof T, FormField> = {} as Record<keyof T, FormField>;
         Object.keys(formState).forEach((key) => {
           clearedState[key as keyof T] = {
             ...formState[key as keyof T],
@@ -143,18 +146,18 @@ export function useFormValidation<T extends Record<string, any>>(
         setFormState(newState);
         return false;
       }
-    } catch (error) {
+    } catch {
       return false;
     }
   }, [formState, schema]);
   
   // Get current values
   const values = useMemo(() => {
-    const currentValues: any = {};
+    const currentValues: Record<string, unknown> = {};
     Object.keys(formState).forEach((key) => {
       currentValues[key] = formState[key as keyof T].value;
     });
-    return currentValues;
+    return currentValues as T;
   }, [formState]);
   
   // Get current errors
@@ -192,7 +195,7 @@ export function useFormValidation<T extends Record<string, any>>(
   }, [formState]);
   
   // Set field value
-  const setFieldValue = useCallback((field: keyof T, value: any) => {
+  const setFieldValue = useCallback((field: keyof T, value: T[keyof T]) => {
     setFormState(prev => ({
       ...prev,
       [field]: {
@@ -237,7 +240,7 @@ export function useFormValidation<T extends Record<string, any>>(
   
   // Reset form
   const resetForm = useCallback(() => {
-    const initial: Record<keyof T, FormField> = {} as any;
+    const initial: Record<keyof T, FormField> = {} as Record<keyof T, FormField>;
     Object.keys(initialValues).forEach((key) => {
       initial[key as keyof T] = {
         value: initialValues[key as keyof T],
@@ -275,13 +278,13 @@ export function useFormValidation<T extends Record<string, any>>(
       
       try {
         // Get current values for submission
-        const currentValues: any = {};
+        const currentValues: Record<string, unknown> = {};
         Object.keys(formState).forEach((key) => {
           currentValues[key] = formState[key as keyof T].value;
         });
         
-        await submitFn(currentValues);
-      } catch (error) {
+        await submitFn(currentValues as T);
+      } catch {
         } finally {
         setIsSubmitting(false);
       }
@@ -293,14 +296,14 @@ export function useFormValidation<T extends Record<string, any>>(
     const fieldState = formState[field];
     
     return {
-      value: fieldState?.value || '',
+      value: (fieldState?.value || '') as T[keyof T],
       error: fieldState?.error,
       touched: fieldState?.touched || false,
       isValid: fieldState?.isValid,
       onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setFieldValue(field, e.target.value);
+        setFieldValue(field, e.target.value as T[keyof T]);
       },
-      onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      onBlur: () => {
         setFieldTouched(field, true);
       }
     };

@@ -1,5 +1,10 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from 'next/server';
+import {
+  isPublicPageRoute,
+  isPublicApiRoute,
+  matchesRouteBoundary,
+} from '@/lib/public-routes';
 
 /**
  * Middleware for Authentication & Authorization
@@ -13,6 +18,9 @@ import { NextResponse } from 'next/server';
  * - Checks authentication token for protected routes
  * - Redirects to login if not authenticated
  * - Allows public access to homepage and auth pages
+ *
+ * Security headers (including the single Content-Security-Policy) are defined
+ * in next.config.ts so there is exactly one source of truth.
  */
 
 export default withAuth(
@@ -21,7 +29,7 @@ export default withAuth(
     const { pathname } = req.nextUrl;
 
     // Admin route protection
-    if (pathname.startsWith('/admin')) {
+    if (matchesRouteBoundary(pathname, '/admin')) {
       const userRole = token?.role as string;
       if (userRole !== 'ADMIN' && userRole !== 'MODERATOR') {
         // Redirect to home if not admin/moderator
@@ -29,56 +37,7 @@ export default withAuth(
       }
     }
 
-    // Add Security Headers
-    const response = NextResponse.next();
-
-    // 1. Content Security Policy (CSP) - Prevents XSS attacks
-    response.headers.set(
-      'Content-Security-Policy',
-      [
-        "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com",
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "img-src 'self' data: https: blob:",
-        "font-src 'self' https://fonts.gstatic.com",
-        "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com",
-        "frame-src 'self' https://accounts.google.com",
-        "object-src 'none'",
-        "base-uri 'self'",
-        "form-action 'self'",
-      ].join('; ')
-    );
-
-    // 2. HTTP Strict Transport Security (HSTS) - Forces HTTPS
-    response.headers.set(
-      'Strict-Transport-Security',
-      'max-age=31536000; includeSubDomains; preload'
-    );
-
-    // 3. X-Frame-Options - Prevents clickjacking
-    response.headers.set('X-Frame-Options', 'DENY');
-
-    // 4. X-Content-Type-Options - Prevents MIME sniffing
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-
-    // 5. Referrer-Policy - Controls referrer information
-    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-
-    // 6. X-XSS-Protection - Legacy XSS protection (for older browsers)
-    response.headers.set('X-XSS-Protection', '1; mode=block');
-
-    // 7. Permissions-Policy - Controls browser features
-    response.headers.set(
-      'Permissions-Policy',
-      'camera=(), microphone=(), geolocation=(), payment=(), usb=()'
-    );
-
-    // Cache-Control for sensitive pages
-    if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.includes('/api')) {
-      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    }
-
-    return response;
+    return NextResponse.next();
   },
   {
     callbacks: {
@@ -87,17 +46,10 @@ export default withAuth(
         const { pathname } = req.nextUrl;
 
         // Public routes that don't require authentication
-        const publicRoutes = ['/', '/auth/login', '/auth/signup', '/search', '/resolved'];
-        const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+        const isPublicRoute = isPublicPageRoute(pathname);
 
         // Public API routes that don't require authentication
-        const publicAPIRoutes = [
-          '/api/csrf-token',
-          '/api/auth/session',  // NextAuth needs this to be public
-          '/api/auth/signin',
-          '/api/auth/signout',
-        ];
-        const isPublicAPIRoute = publicAPIRoutes.some(route => pathname.startsWith(route));
+        const isPublicAPIRoute = isPublicApiRoute(pathname);
 
         // Allow public access to resolved items API requests
         const isResolvedItemsAPI = pathname === '/api/items' &&

@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
 import { limitSignup } from '@/lib/rateLimit';
-
-const signupSchema = z.object(
-    {
-        email: z.string().email('Invalid email address'),
-        password: z.string().min(6, 'Password must be at least 6 characters long'),
-        name: z.string().min(2, 'Name must be at least 2 characters long').max(100, 'Name must be at most 100 characters long'),
-    }
-);
+import { signupSchema } from '@/lib/schemas/user';
 
 export async function POST(request: NextRequest){
     try{
@@ -30,13 +22,16 @@ export async function POST(request: NextRequest){
             }
         );
 
-        // If user exists, return error response
+        // If user exists, return a generic error to avoid user enumeration
         if(existingUser){
-            return NextResponse.json({error: 'User already exists'}, {status: 400});
+            return NextResponse.json(
+                { error: 'Unable to create account with the provided details' },
+                { status: 400 }
+            );
         }
 
         // Hash the password
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, 12);
 
         // Create new user in the database
         const newUser =  await prisma.user.create(

@@ -77,7 +77,7 @@ export default function LoginForm() {
                 // Redirect to dashboard or specified callback URL
                 window.location.href = result.url;
             }
-        } catch (error) {
+        } catch {
             setErrorMessage(setSafeErrorMessage('Something went wrong with Google sign-in.'));
         } finally {
             setIsLoading(false);
@@ -101,7 +101,7 @@ export default function LoginForm() {
             }
 
             router.push('/dashboard');
-        } catch (error) {
+        } catch {
             setErrorMessage(setSafeErrorMessage('Something went wrong. Please try again.'));
         } finally {
             setIsLoading(false);

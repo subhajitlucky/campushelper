@@ -236,6 +236,10 @@ src/
 - ✅ XSS protection via input sanitization
 - ✅ File type and size validation
 
+### Database Row Level Security
+- ✅ RLS policies protect `User`, `Item`, `Comment`, and `Claim`
+- ⚠️ RLS requires the `campushelper_runtime` operator role provisioning (`prisma/operator/`) and is **not enforced when connecting as the table owner**; verification fails by default until that role and its policies are applied
+
 ---
 
 ## 🚀 Deployment

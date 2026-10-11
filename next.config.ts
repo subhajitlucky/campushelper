@@ -1,50 +1,16 @@
 import type { NextConfig } from "next";
 
-type RemotePatternConfig = {
-  protocol: 'http' | 'https';
-  hostname: string;
-  port?: string;
-  pathname: string;
-};
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  || process.env.NEXT_PUBLIC_SUPABASE_STORAGE_HOST
-  || 'http://localhost:3000';
-
-const supabaseRemotePattern: RemotePatternConfig | null = (() => {
-  try {
-    const parsed = new URL(supabaseUrl);
-    const protocol = parsed.protocol.replace(':', '') as 'http' | 'https';
-    const pattern: RemotePatternConfig = {
-      protocol,
-      hostname: parsed.hostname,
-      pathname: '/storage/v1/object/public/**',
-    };
-
-    if (parsed.port) {
-      pattern.port = parsed.port;
-    }
-
-    return pattern;
-  } catch {
-    return null;
-  }
-})();
-
 const nextConfig: NextConfig = {
   /* config options here */
 
   // Image Optimization Configuration
   images: {
     remotePatterns: [
-      // Supabase Storage - for uploaded item images
-      ...(supabaseRemotePattern ? [supabaseRemotePattern] : []),
       {
         protocol: 'https',
-        hostname: '**.supabase.co',
-        pathname: '/storage/v1/object/public/**',
+        hostname: '*.public.blob.vercel-storage.com',
+        pathname: '/**',
       },
-      // Google avatars - for OAuth users
       {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
@@ -58,7 +24,7 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Security Headers for XSS Protection
+  // Security Headers (single source of truth; middleware no longer sets these)
   async headers() {
     return [
       {
@@ -82,18 +48,56 @@ const nextConfig: NextConfig = {
             value: 'strict-origin-when-cross-origin',
           },
           {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+          },
+          {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js needs 'unsafe-inline' for dynamic features
-              "style-src 'self' 'unsafe-inline'", // Tailwind CSS needs 'unsafe-inline'
-              "img-src 'self' data: https: http:", // Allow images from self, data URLs, and external sources
-              "font-src 'self' data:", // Allow fonts from self and data URLs
-              "connect-src 'self' https: http:", // Allow API calls to self and external sources
-              "frame-ancestors 'none'", // Prevent clickjacking attacks
-              "base-uri 'self'", // Restrict base URI to same origin
-              "form-action 'self'", // Restrict form submissions to same origin
+              "script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "img-src 'self' data: blob: https: https://*.public.blob.vercel-storage.com",
+              "font-src 'self' data: https://fonts.gstatic.com",
+              "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com",
+              "frame-src 'self' https://accounts.google.com",
+              "object-src 'none'",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
             ].join('; ')
+          },
+        ],
+      },
+      {
+        // Prevent caching of sensitive authenticated pages and APIs
+        source: '/dashboard/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          },
+        ],
+      },
+      {
+        source: '/admin/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          },
+        ],
+      },
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate, proxy-revalidate',
           },
         ],
       },

@@ -4,7 +4,7 @@ interface DatabaseError {
   type: string;
   message: string;
   timestamp: Date;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 interface DatabaseStats {
@@ -32,8 +32,6 @@ export function useDatabaseMonitoring(
   const recordQuery = useCallback((duration: number, success: boolean) => {
     if (!enabled) return;
 
-    const timestamp = new Date();
-    
     setStats(prevStats => {
       if (!prevStats) {
         return {
@@ -68,7 +66,7 @@ export function useDatabaseMonitoring(
     });
   }, [enabled, thresholdMs, errorRateThreshold]);
 
-  const recordError = useCallback((errorType: string, message: string, context?: Record<string, any>) => {
+  const recordError = useCallback((errorType: string, message: string, context?: Record<string, unknown>) => {
     if (!enabled) return;
 
     const error: DatabaseError = {
@@ -117,10 +115,14 @@ export function useDatabaseMonitoring(
     // Check connection every 30 seconds
     const interval = setInterval(checkConnection, 30000);
 
-    // Initial connection check
-    checkConnection();
+    // Initial connection check (deferred so state updates do not run
+    // synchronously inside the effect body)
+    const initialCheck = setTimeout(checkConnection, 0);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(initialCheck);
+    };
   }, [enabled, checkConnection]);
 
   return {
@@ -139,7 +141,7 @@ export function createDatabaseMonitor() {
       return success;
     },
 
-    recordError: (errorType: string, message: string, context?: Record<string, any>) => {
+    recordError: (errorType: string, message: string, context?: Record<string, unknown>) => {
       // No logging - just record the error info
       return {
         type: errorType,

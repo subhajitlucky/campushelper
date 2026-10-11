@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { checkCSRF } from '@/lib/csrf-middleware';
 import { 
   AuthenticationRequired, 
   AdminAccessRequired,
   NotFound,
   ValidationError,
-  DatabaseError,
-  UserAlreadySuspended,
-  UserAlreadyActive,
-  RoleAlreadyAssigned,
-  SelfModificationDenied,
-  CannotModifyAdmin,
   safeApiHandler 
 } from '@/lib/errors';
 
@@ -36,6 +31,11 @@ export async function PUT(
     
     if (!isAdmin) {
       throw AdminAccessRequired();
+    }
+
+    const csrfError = await checkCSRF(request);
+    if (csrfError) {
+      return csrfError;
     }
 
     const { id } = await params;
@@ -65,6 +65,7 @@ export async function PUT(
         title: true,
         description: true,
         status: true,
+        itemType: true,
         postedById: true,
         // Add any spam-related fields if they exist in schema
         // isFlagged: boolean,
@@ -78,7 +79,6 @@ export async function PUT(
     }
 
     let updatedItem;
-    const adminId = session.user.id;
     const now = new Date();
 
     switch (action) {
@@ -151,11 +151,11 @@ export async function PUT(
         });
 
       case 'unflag_spam':
-        // Unflag item and restore visibility
+        // Unflag item and restore visibility based on its original type
         updatedItem = await prisma.item.update({
           where: { id },
           data: {
-            status: item.status === 'RESOLVED' ? 'LOST' : item.status, // Restore to original status or LOST
+            status: item.itemType === 'FOUND' ? 'FOUND' : 'LOST',
             resolvedAt: null,
             // isFlagged: false,
             // flaggedAt: null,

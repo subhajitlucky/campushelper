@@ -75,7 +75,7 @@ const SignupForm = () => {
 
       setSuccess(true);
       setTimeout(() => router.push('/auth/login'), 1500);
-    } catch (error) {
+    } catch {
       setServerError('Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);

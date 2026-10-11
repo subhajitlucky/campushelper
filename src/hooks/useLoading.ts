@@ -3,7 +3,7 @@ import { useState, useCallback, useRef } from 'react';
 interface UseLoadingOptions {
   initialState?: boolean;
   onSuccess?: () => void;
-  onError?: (error: any) => void;
+  onError?: (error: unknown) => void;
   successDelay?: number;
 }
 
@@ -136,7 +136,7 @@ export function useSimpleLoading(initialState = false) {
 export function useApiLoading(initialState = false) {
   const [loading, setLoading] = useState(initialState);
   const [progress, setProgressValue] = useState(0);
-  const [error, setErrorValue] = useState<any>(null);
+  const [error, setErrorValue] = useState<unknown>(null);
 
   const startLoading = useCallback(() => {
     setLoading(true);
@@ -149,7 +149,7 @@ export function useApiLoading(initialState = false) {
     setProgressValue(100);
   }, []);
 
-  const setError = useCallback((error: any) => {
+  const setError = useCallback((error: unknown) => {
     setErrorValue(error);
     setLoading(false);
   }, []);

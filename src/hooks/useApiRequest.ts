@@ -7,7 +7,7 @@ import { useState, useCallback } from 'react';
 export interface ApiError {
   error: string;
   code?: string;
-  details?: any;
+  details?: unknown;
   timestamp?: string;
 }
 
@@ -16,7 +16,7 @@ export interface UseApiRequestOptions {
   successMessage?: string;
   errorMessage?: string;
   onError?: (error: ApiError) => void;
-  onSuccess?: (data: any) => void;
+  onSuccess?: (data: unknown) => void;
   retryCount?: number;
   retryDelay?: number;
   logLevel?: 'debug' | 'info' | 'warn' | 'error';
@@ -28,7 +28,7 @@ export interface UseApiRequestReturn<T> {
   isLoading: boolean;
   isError: boolean;
   isSuccess: boolean;
-  execute: (...args: any[]) => Promise<T | null>;
+  execute: (...args: unknown[]) => Promise<T | null>;
   reset: () => void;
   retry: () => Promise<T | null>;
 }
@@ -45,31 +45,50 @@ const DEFAULT_ERROR_MESSAGES: Record<string, string> = {
   'UNKNOWN_ERROR': 'An unexpected error occurred'
 };
 
-function getErrorMessage(error: any): { userMessage: string; logMessage: string; code: string } {
+interface HttpLikeError {
+  error?: unknown;
+  code?: unknown;
+  name?: unknown;
+  message?: unknown;
+  response?: {
+    status: number;
+    statusText: string;
+    data?: { error?: string } & Record<string, unknown>;
+  };
+}
+
+function toHttpLikeError(error: unknown): HttpLikeError {
+  return typeof error === 'object' && error !== null ? (error as HttpLikeError) : {};
+}
+
+function getErrorMessage(error: unknown): { userMessage: string; logMessage: string; code: string } {
+  const err = toHttpLikeError(error);
+
   // If it's already an API error from our standardized system
-  if (error?.error && error?.code) {
-    const userMessage = DEFAULT_ERROR_MESSAGES[error.code] || error.error;
+  if (err.error && err.code) {
+    const code = String(err.code);
+    const userMessage = DEFAULT_ERROR_MESSAGES[code] || String(err.error);
     return {
       userMessage,
-      logMessage: `API Error [${error.code}]: ${error.error}`,
-      code: error.code
+      logMessage: `API Error [${code}]: ${String(err.error)}`,
+      code
     };
   }
 
   // Handle network errors
-  if (!error?.response) {
-    if (error?.name === 'TypeError' && error?.message?.includes('fetch')) {
+  if (!err.response) {
+    if (err.name === 'TypeError' && typeof err.message === 'string' && err.message.includes('fetch')) {
       return {
         userMessage: DEFAULT_ERROR_MESSAGES.NETWORK_ERROR,
-        logMessage: `Network Error: ${error.message}`,
+        logMessage: `Network Error: ${err.message}`,
         code: 'NETWORK_ERROR'
       };
     }
     
-    if (error?.code === 'ECONNABORTED') {
+    if (err.code === 'ECONNABORTED') {
       return {
         userMessage: DEFAULT_ERROR_MESSAGES.TIMEOUT_ERROR,
-        logMessage: `Timeout Error: ${error.code}`,
+        logMessage: `Timeout Error: ${String(err.code)}`,
         code: 'TIMEOUT_ERROR'
       };
     }
@@ -82,80 +101,79 @@ function getErrorMessage(error: any): { userMessage: string; logMessage: string;
   }
 
   // Handle HTTP response errors
-  const status = error.response.status;
-  const statusText = error.response.statusText;
+  const status = err.response.status;
+  const statusText = err.response.statusText;
+  const responseError = err.response.data?.error;
 
   switch (status) {
     case 400:
       return {
-        userMessage: error.response.data?.error || 'Invalid request',
-        logMessage: `HTTP 400: ${statusText} - ${JSON.stringify(error.response.data)}`,
+        userMessage: responseError || 'Invalid request',
+        logMessage: `HTTP 400: ${statusText} - ${JSON.stringify(err.response.data)}`,
         code: 'BAD_REQUEST'
       };
     case 401:
       return {
         userMessage: DEFAULT_ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
-        logMessage: `HTTP 401: ${statusText} - ${JSON.stringify(error.response.data)}`,
+        logMessage: `HTTP 401: ${statusText} - ${JSON.stringify(err.response.data)}`,
         code: 'AUTHENTICATION_REQUIRED'
       };
     case 403:
       return {
         userMessage: DEFAULT_ERROR_MESSAGES.AUTHORIZATION_DENIED,
-        logMessage: `HTTP 403: ${statusText} - ${JSON.stringify(error.response.data)}`,
+        logMessage: `HTTP 403: ${statusText} - ${JSON.stringify(err.response.data)}`,
         code: 'AUTHORIZATION_DENIED'
       };
     case 404:
       return {
         userMessage: DEFAULT_ERROR_MESSAGES.NOT_FOUND,
-        logMessage: `HTTP 404: ${statusText} - ${JSON.stringify(error.response.data)}`,
+        logMessage: `HTTP 404: ${statusText} - ${JSON.stringify(err.response.data)}`,
         code: 'NOT_FOUND'
       };
     case 409:
       return {
-        userMessage: error.response.data?.error || 'Conflict occurred',
-        logMessage: `HTTP 409: ${statusText} - ${JSON.stringify(error.response.data)}`,
+        userMessage: responseError || 'Conflict occurred',
+        logMessage: `HTTP 409: ${statusText} - ${JSON.stringify(err.response.data)}`,
         code: 'CONFLICT'
       };
     case 422:
       return {
-        userMessage: error.response.data?.error || 'Validation failed',
-        logMessage: `HTTP 422: ${statusText} - ${JSON.stringify(error.response.data)}`,
+        userMessage: responseError || 'Validation failed',
+        logMessage: `HTTP 422: ${statusText} - ${JSON.stringify(err.response.data)}`,
         code: 'VALIDATION_ERROR'
       };
     case 500:
       return {
         userMessage: DEFAULT_ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-        logMessage: `HTTP 500: ${statusText} - ${JSON.stringify(error.response.data)}`,
+        logMessage: `HTTP 500: ${statusText} - ${JSON.stringify(err.response.data)}`,
         code: 'INTERNAL_SERVER_ERROR'
       };
     case 503:
       return {
         userMessage: 'Service temporarily unavailable. Please try again later',
-        logMessage: `HTTP 503: ${statusText} - ${JSON.stringify(error.response.data)}`,
+        logMessage: `HTTP 503: ${statusText} - ${JSON.stringify(err.response.data)}`,
         code: 'SERVICE_UNAVAILABLE'
       };
     default:
       return {
         userMessage: `HTTP ${status}: ${statusText}`,
-        logMessage: `HTTP ${status}: ${statusText} - ${JSON.stringify(error.response.data)}`,
+        logMessage: `HTTP ${status}: ${statusText} - ${JSON.stringify(err.response.data)}`,
         code: `HTTP_${status}`
       };
   }
 }
 
-export function useApiRequest<T = any>(
-  apiFunction: (...args: any[]) => Promise<T>,
+export function useApiRequest<T = unknown>(
+  apiFunction: (...args: unknown[]) => Promise<T>,
   options: UseApiRequestOptions = {}
 ): UseApiRequestReturn<T> {
   const {
     showToast = true,
     successMessage,
-    errorMessage,
     onError,
     onSuccess,
     retryCount = 0,
-    retryDelay = 1000,
-    logLevel = 'info'
+    retryDelay = 1000
   } = options;
 
   const [data, setData] = useState<T | null>(null);
@@ -168,18 +186,13 @@ export function useApiRequest<T = any>(
     setIsLoading(false);
   }, []);
 
-  const execute = useCallback(async (...args: any[]): Promise<T | null> => {
+  const execute = useCallback(async (...args: unknown[]): Promise<T | null> => {
     setIsLoading(true);
     setError(null);
-    
-    const startTime = Date.now();
 
     try {
-      
       const result = await apiFunction(...args);
-      
-      const duration = Date.now() - startTime;
-      
+
       setData(result);
       
       if (onSuccess) {
@@ -198,14 +211,14 @@ export function useApiRequest<T = any>(
   
       return result;
   
-    } catch (err: any) {
+    } catch (err: unknown) {
       const { userMessage } = getErrorMessage(err);
-      const duration = Date.now() - startTime;
+      const errRecord = toHttpLikeError(err);
       
       const apiError = {
         error: userMessage,
-        code: err?.code || 'API_ERROR',
-        details: err?.response?.data || err,
+        code: typeof errRecord.code === 'string' ? errRecord.code : 'API_ERROR',
+        details: errRecord.response?.data ?? err,
         timestamp: new Date().toISOString()
       };
 
@@ -213,7 +226,7 @@ export function useApiRequest<T = any>(
   
       // Call custom error handler
       if (onError) {
-        onError(err);
+        onError(apiError);
       }
   
       // Use React state management for error display instead of toasts
@@ -226,7 +239,7 @@ export function useApiRequest<T = any>(
     } finally {
       setIsLoading(false);
     }
-  }, [apiFunction, showToast, successMessage, errorMessage, onError, onSuccess]);
+  }, [apiFunction, showToast, successMessage, onError, onSuccess]);
 
   const retry = useCallback(async (): Promise<T | null> => {
     if (retryCount <= 0) {

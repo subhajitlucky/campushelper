@@ -3,7 +3,7 @@
 /**
  * ImageUpload Component
  *
- * Handles image upload, compression, and storage to Supabase.
+ * Handles image upload, compression, and storage to Vercel Blob.
  * Features:
  * - File validation (type, size)
  * - Client-side compression
@@ -17,7 +17,7 @@ import { Upload, X, Loader2 } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { UPLOAD_CONFIG } from '@/lib/supabase';
+import { UPLOAD_CONFIG } from '@/lib/upload';
 import { useAuthFetch } from '@/lib/auth-fetch';
 
 interface ImageUploadProps {
@@ -37,7 +37,6 @@ export default function ImageUpload({
   onImageUpload,
   onImageRemove,
   currentImage,
-  maxImages = 1,
   className = '',
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
@@ -84,7 +83,8 @@ export default function ImageUpload({
     setError(null);
 
     // Validate file type
-    if (!UPLOAD_CONFIG.allowedImageTypes.includes(file.type as any)) {
+    const allowedImageTypes: readonly string[] = UPLOAD_CONFIG.allowedImageTypes;
+    if (!allowedImageTypes.includes(file.type)) {
       setError('Please upload a valid image file (JPEG, PNG, or WebP)');
       return;
     }
@@ -120,7 +120,7 @@ export default function ImageUpload({
       const formData = new FormData();
       formData.append('file', finalFile);
 
-      // Check if we can upload (API will handle Supabase availability)
+      // Check if we can upload (API will handle Vercel Blob availability)
       const response = await fetchWithAuth('/api/upload', {
         method: 'POST',
         body: formData,
@@ -130,7 +130,7 @@ export default function ImageUpload({
         let errorData;
         try {
           errorData = await response.json();
-        } catch (jsonErr) {
+        } catch {
           errorData = {};
         }
         
@@ -138,7 +138,7 @@ export default function ImageUpload({
         if (response.status === 500) {
           throw new Error(
             errorData.error || 
-            'Server error occurred. This might be due to missing Supabase configuration. Please check the setup guide.'
+            'Server error occurred. This might be due to missing Vercel Blob configuration. Please check the setup guide.'
           );
         } else if (response.status === 401) {
           throw new Error('You must be logged in to upload images.');
@@ -165,8 +165,8 @@ export default function ImageUpload({
       setImageLoading(false);
       setUploading(false);
       onImageUpload(imageUrl);
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload image. Please try again.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to upload image. Please try again.');
       setImageLoading(false);
       setUploading(false);
       if (localPreviewRef.current) {

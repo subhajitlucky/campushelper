@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { ReactNode, useEffect } from 'react';
+import { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import React from 'react';
 
@@ -104,8 +104,7 @@ interface StaggerContainerProps {
 
 export function StaggerContainer({ 
   children, 
-  className = '',
-  delay = 0 
+  className = ''
 }: StaggerContainerProps) {
   return (
     <motion.div
@@ -229,10 +228,7 @@ const hoverEffects = {
 export function HoverEffect({ 
   children, 
   className = '',
-  effect = 'scale',
-  scale = 1.05,
-  lift = -8,
-  glow = '0 0 20px rgba(59, 130, 246, 0.5)'
+  effect = 'scale'
 }: HoverEffectProps) {
   const baseEffect = hoverEffects[effect];
   
