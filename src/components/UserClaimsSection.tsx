@@ -110,10 +110,10 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <div className="text-red-600 mb-4">
+            <div className="text-destructive mb-4">
               <AlertCircle className="w-12 h-12 mx-auto" />
             </div>
-            <p className="text-red-600 mb-4">{error}</p>
+            <p className="text-destructive mb-4">{error}</p>
             <Button onClick={fetchUserClaims} variant="outline">
               Try Again
             </Button>
@@ -155,16 +155,16 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
       <CardContent>
         <div className="space-y-4">
           {claims.map((claim) => (
-            <div key={claim.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+            <div key={claim.id} className="border rounded-lg p-4 hover:bg-muted/40 transition-colors">
               <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-lg text-gray-900 mb-1">
+                  <h3 className="font-semibold text-lg text-foreground mb-1">
                     {claim.item.title}
                   </h3>
                   {claim.message && (
-                    <p className="text-gray-600 text-sm mb-2">{claim.message}</p>
+                    <p className="text-muted-foreground text-sm mb-2">{claim.message}</p>
                   )}
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       {new Date(claim.createdAt).toLocaleDateString()}
@@ -187,9 +187,9 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
                   <Badge 
                     variant="outline"
                     className={`text-xs ${
-                      claim.status === 'PENDING' ? 'border-yellow-300 text-yellow-700' :
-                      claim.status === 'APPROVED' ? 'border-green-300 text-green-700' :
-                      'border-red-300 text-red-700'
+                      claim.status === 'PENDING' ? 'border-warning/30 text-warning' :
+                      claim.status === 'APPROVED' ? 'border-success/30 text-success' :
+                      'border-destructive/30 text-destructive'
                     }`}
                   >
                     {claim.status}

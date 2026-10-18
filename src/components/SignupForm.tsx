@@ -170,7 +170,7 @@ const SignupForm = () => {
           <div
             role="status"
             aria-live="polite"
-            className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
+            className="rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success"
           >
             Signup successful! Redirecting you to the login page...
           </div>

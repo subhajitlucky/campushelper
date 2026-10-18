@@ -30,20 +30,36 @@ export default function StatusBadge({ status, className = '', size = 'sm' }: Sta
     }
   };
 
+  /**
+   * The single source of truth for item-status colour.
+   *
+   * Tokenisation collapsed CLAIMED and RESOLVED onto the same pair (both were a
+   * tinted blue after the mechanical migration), which made two different states
+   * visually identical. The states are deliberately distinguished here — and
+   * only here — so StatusBadge, the admin tables, and the claim panels cannot
+   * disagree about what "resolved" looks like:
+   *
+   *   LOST      amber    — something is missing, it needs attention
+   *   FOUND     green    — good news, outlined
+   *   CLAIMED   blue     — in progress
+   *   RESOLVED  green    — terminal, and *filled* so it reads as finished
+   *                        rather than merely found
+   *   DELETED   muted    — greyed out, out of play
+   */
   const getColorClasses = (status: string) => {
     switch (status) {
       case 'LOST':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-warning/10 text-warning border-warning/30';
       case 'FOUND':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-success/10 text-success border-success/30';
       case 'CLAIMED':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-info/10 text-info border-info/30';
       case 'RESOLVED':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
+        return 'bg-success text-success-foreground border-success';
       case 'DELETED':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-muted text-muted-foreground border-border';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-muted text-muted-foreground border-border';
     }
   };
 

@@ -14,8 +14,8 @@ import IncomingClaimsSection from '@/components/IncomingClaimsSection';
 // Simple PageLoader component
 const PageLoader = ({ text }: { text: string }) => (
   <div className="text-center py-8">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-    <p className="text-gray-600">{text}</p>
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-info/30 mx-auto mb-4"></div>
+    <p className="text-muted-foreground">{text}</p>
   </div>
 );
 
@@ -100,7 +100,7 @@ export default function DashboardPage() {
   if (status === 'loading' || (status === 'authenticated' && loading)) {
     const loadingText = status === 'loading' ? 'Checking authentication...' : 'Loading dashboard...';
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen bg-muted/40 py-8">
         <div className="container mx-auto px-4">
           <PageLoader text={loadingText} />
         </div>
@@ -125,51 +125,51 @@ export default function DashboardPage() {
         <div className="grid gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-4">
           <Card className="hover:shadow-lg transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-700">My Items</CardTitle>
-              <Package className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-sm font-medium text-foreground/85">My Items</CardTitle>
+              <Package className="h-5 w-5 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{userStats.myItems}</div>
-              <p className="text-xs text-gray-500 mt-1">Items posted</p>
+              <div className="text-3xl font-bold text-foreground">{userStats.myItems}</div>
+              <p className="text-xs text-muted-foreground mt-1">Items posted</p>
             </CardContent>
           </Card>
 
           <Card className="hover:shadow-lg transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-700">Claims Made</CardTitle>
-              <MessageSquare className="h-5 w-5 text-green-600" />
+              <CardTitle className="text-sm font-medium text-foreground/85">Claims Made</CardTitle>
+              <MessageSquare className="h-5 w-5 text-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{userStats.claimsMade}</div>
-              <p className="text-xs text-gray-500 mt-1">Claims submitted</p>
+              <div className="text-3xl font-bold text-foreground">{userStats.claimsMade}</div>
+              <p className="text-xs text-muted-foreground mt-1">Claims submitted</p>
             </CardContent>
           </Card>
 
           <Card className="hover:shadow-lg transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-700">Resolved</CardTitle>
-              <CheckCircle className="h-5 w-5 text-emerald-600" />
+              <CardTitle className="text-sm font-medium text-foreground/85">Resolved</CardTitle>
+              <CheckCircle className="h-5 w-5 text-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{userStats.resolvedItems}</div>
-              <p className="text-xs text-gray-500 mt-1">Items resolved</p>
+              <div className="text-3xl font-bold text-foreground">{userStats.resolvedItems}</div>
+              <p className="text-xs text-muted-foreground mt-1">Items resolved</p>
             </CardContent>
           </Card>
 
           <Card className="hover:shadow-lg transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-700">This Week</CardTitle>
-              <Search className="h-5 w-5 text-purple-600" />
+              <CardTitle className="text-sm font-medium text-foreground/85">This Week</CardTitle>
+              <Search className="h-5 w-5 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{userStats.thisWeek}</div>
-              <p className="text-xs text-gray-500 mt-1">New items posted</p>
+              <div className="text-3xl font-bold text-foreground">{userStats.thisWeek}</div>
+              <p className="text-xs text-muted-foreground mt-1">New items posted</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Quick Actions */}
-        <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-info/30">
           <CardHeader>
             <CardTitle className="text-lg">Quick Actions</CardTitle>
             <CardDescription>
@@ -178,13 +178,13 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button asChild className="flex-1 bg-blue-600 hover:bg-blue-700">
+              <Button asChild className="flex-1 bg-primary hover:bg-primary/90">
                 <Link href="/post">
                   <Plus className="mr-2 h-4 w-4" />
                   Post New Item
                 </Link>
               </Button>
-              <Button variant="outline" asChild className="flex-1 border-blue-300 hover:bg-blue-50">
+              <Button variant="outline" asChild className="flex-1 border-info/30 hover:bg-info/90/10">
                 <Link href="/search">
                   <Search className="mr-2 h-4 w-4" />
                   Search Items

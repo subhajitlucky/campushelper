@@ -51,14 +51,14 @@ export default function UserDisplay({
           className={`rounded-full object-cover ${sizeClasses[size]}`}
         />
       ) : (
-        <div className={`${sizeClasses[size]} bg-gray-200 rounded-full flex items-center justify-center`}>
-          <span className={`text-gray-500 font-medium ${size === 'lg' ? 'text-sm' : 'text-xs'}`}>
+        <div className={`${sizeClasses[size]} bg-muted rounded-full flex items-center justify-center`}>
+          <span className={`text-muted-foreground font-medium ${size === 'lg' ? 'text-sm' : 'text-xs'}`}>
             {name.charAt(0).toUpperCase()}
           </span>
         </div>
       )}
       {showLabel && (
-        <span className={`text-gray-600 ${textSizeClasses[size]}`}>
+        <span className={`text-muted-foreground ${textSizeClasses[size]}`}>
           {labelPrefix} {name}
         </span>
       )}

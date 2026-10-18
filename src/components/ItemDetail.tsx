@@ -202,7 +202,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
         {/* Back Button */}
         <button
           onClick={() => window.history.back()}
-          className="mb-4 flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors group"
+          className="mb-4 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
         >
           <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -211,53 +211,53 @@ export default function ItemDetail({ item }: ItemDetailProps) {
         </button>
 
         {/* Header Section */}
-        <div className="mb-6 bg-white rounded-xl shadow-sm p-6 border border-gray-200/60">
+        <div className="mb-6 bg-card rounded-xl shadow-sm p-6 border border-border/60">
           {isEditMode ? (
             /* EDIT MODE */
             <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                <p className="text-sm text-blue-800 font-medium">✏️ Edit Mode - Update item details below</p>
+              <div className="bg-info/10 border border-info/30 rounded-lg p-3 mb-4">
+                <p className="text-sm text-primary font-medium">✏️ Edit Mode - Update item details below</p>
               </div>
               
               {/* Title Input */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                <label className="block text-sm font-medium text-foreground/85 mb-2">Title</label>
                 <input
                   type="text"
                   value={editForm.title}
                   onChange={(e) => setEditForm({...editForm, title: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
                   placeholder="Item title"
                 />
               </div>
               
               {/* Description Input */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <label className="block text-sm font-medium text-foreground/85 mb-2">Description</label>
                 <textarea
                   value={editForm.description}
                   onChange={(e) => setEditForm({...editForm, description: e.target.value})}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
                   placeholder="Item description"
                 />
               </div>
               
               {/* Location Input */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                <label className="block text-sm font-medium text-foreground/85 mb-2">Location</label>
                 <input
                   type="text"
                   value={editForm.location}
                   onChange={(e) => setEditForm({...editForm, location: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
                   placeholder="Where was it lost/found?"
                 />
               </div>
               
               {/* Item Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Item Type</label>
+                <label className="block text-sm font-medium text-foreground/85 mb-2">Item Type</label>
                 <div className="flex gap-4">
                   <label className="flex items-center">
                     <input
@@ -289,7 +289,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                 <Button
                   onClick={handleSaveEdit}
                   disabled={isSaving || !editForm.title || !editForm.description || !editForm.location}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  className="flex-1 bg-primary hover:bg-primary/90"
                 >
                   {isSaving ? 'Saving...' : 'Save Changes'}
                 </Button>
@@ -308,7 +308,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
             <>
               <div className="flex items-start justify-between gap-4 mb-3">
                 <div className="flex-1">
-                  <h1 className="text-2xl font-bold tracking-tight text-gray-900 mb-3">
+                  <h1 className="text-2xl font-bold tracking-tight text-foreground mb-3">
                     {item.title}
                   </h1>
                   <div className="flex flex-wrap items-center gap-2">
@@ -320,11 +320,11 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                     {/* Status Badge */}
                     <Badge 
                       className={`px-3 py-0.5 text-xs font-semibold ${
-                        itemStatus === 'LOST' ? 'bg-red-100 text-red-800 hover:bg-red-200' :
-                        itemStatus === 'FOUND' ? 'bg-green-100 text-green-800 hover:bg-green-200' :
-                        itemStatus === 'CLAIMED' ? 'bg-blue-100 text-blue-800 hover:bg-blue-200' :
-                        itemStatus === 'RESOLVED' ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' :
-                        'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                        itemStatus === 'LOST' ? 'bg-destructive/10 text-destructive hover:bg-destructive/90/15' :
+                        itemStatus === 'FOUND' ? 'bg-success/10 text-success hover:bg-success/90/15' :
+                        itemStatus === 'CLAIMED' ? 'bg-info/10 text-primary hover:bg-info/90/15' :
+                        itemStatus === 'RESOLVED' ? 'bg-info/10 text-primary hover:bg-info/90/15' :
+                        'bg-muted text-foreground hover:bg-muted'
                       }`}
                     >
                       {itemStatus === 'RESOLVED' ? '✅ Resolved' : 
@@ -336,22 +336,22 @@ export default function ItemDetail({ item }: ItemDetailProps) {
               </div>
 
               {/* Location & Date */}
-              <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
+              <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                   <span className="font-medium">{item.location}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <span>Posted {new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                 </div>
                 {item.resolvedAt && (
-                  <div className="flex items-center gap-1.5 text-green-600">
+                  <div className="flex items-center gap-1.5 text-success">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -365,20 +365,20 @@ export default function ItemDetail({ item }: ItemDetailProps) {
 
         {/* Show message if item is deleted */}
         {itemStatus === 'DELETED' && (
-          <div className="mb-6 bg-red-50 border-l-4 border-red-500 rounded-lg p-4 shadow-sm">
+          <div className="mb-6 bg-destructive/10 border-l-4 border-destructive/30 rounded-lg p-4 shadow-sm">
             <div className="flex items-start gap-2">
-              <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
               <div>
-                <p className="text-red-800 font-semibold text-sm mb-0.5">
+                <p className="text-destructive font-semibold text-sm mb-0.5">
                   Item Deleted
                 </p>
-                <p className="text-red-700 text-xs">
+                <p className="text-destructive text-xs">
                   This item has been deleted and is no longer available.
                 </p>
                 {canEdit && (
-                  <p className="text-red-600 text-xs mt-1">
+                  <p className="text-destructive text-xs mt-1">
                     Only admins/moderators can see deleted items.
                   </p>
                 )}
@@ -393,15 +393,15 @@ export default function ItemDetail({ item }: ItemDetailProps) {
           <div className="lg:col-span-2 space-y-5">
             {/* Description - Hidden in edit mode */}
             {!isEditMode && (
-              <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200/60">
+              <div className="bg-card rounded-xl shadow-sm p-5 border border-border/60">
                 <div className="flex items-center gap-2 mb-3">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
                   </svg>
-                  <h2 className="text-sm font-bold text-gray-900">Description</h2>
+                  <h2 className="text-sm font-bold text-foreground">Description</h2>
                 </div>
                 <div className="prose prose-sm prose-gray max-w-none">
-                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap text-sm">
+                  <p className="text-foreground/85 leading-relaxed whitespace-pre-wrap text-sm">
                     {item.description}
                   </p>
                 </div>
@@ -410,16 +410,16 @@ export default function ItemDetail({ item }: ItemDetailProps) {
 
             {/* Images Section */}
             {item.images && item.images.length > 0 && (
-              <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200/60">
+              <div className="bg-card rounded-xl shadow-sm p-5 border border-border/60">
                 <div className="flex items-center gap-2 mb-4">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <h2 className="text-sm font-bold text-gray-900">Images</h2>
+                  <h2 className="text-sm font-bold text-foreground">Images</h2>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {item.images.map((image: string, index: number) => (
-                    <div key={index} className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
+                    <div key={index} className="group relative aspect-square bg-muted rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
                       <img
                         src={image}
                         alt={`${item.title} - Image ${index + 1}`}
@@ -446,18 +446,18 @@ export default function ItemDetail({ item }: ItemDetailProps) {
             
             {/* Show message for non-logged-in users */}
             {!isLoggedIn && itemStatus !== 'DELETED' && (
-              <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200/60">
+              <div className="bg-card rounded-xl shadow-sm p-5 border border-border/60">
                 <div className="flex items-center gap-2 mb-3">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
-                  <h2 className="text-sm font-bold text-gray-900">Comments</h2>
+                  <h2 className="text-sm font-bold text-foreground">Comments</h2>
                 </div>
                 <div className="text-center py-6">
-                  <p className="text-gray-600 mb-4 text-sm">Sign in to view and add comments</p>
+                  <p className="text-muted-foreground mb-4 text-sm">Sign in to view and add comments</p>
                   <a
                     href="/auth/login"
-                    className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    className="inline-block px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm"
                   >
                     Sign In
                   </a>
@@ -471,32 +471,32 @@ export default function ItemDetail({ item }: ItemDetailProps) {
             {/* User Information - Show differently if resolved */}
             {isResolved && item.claimedBy ? (
               /* RESOLVED: Show Lost → Found flow */
-              <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200/60">
+              <div className="bg-card rounded-xl shadow-sm p-5 border border-border/60">
                 <div className="flex items-center gap-2 mb-4">
-                  <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <h2 className="text-sm font-bold text-gray-900">Resolution Details</h2>
+                  <h2 className="text-sm font-bold text-foreground">Resolution Details</h2>
                 </div>
 
                 {/* Lost By */}
                 <div className="relative">
-                  <div className="bg-red-50 rounded-lg p-3 border border-red-100">
-                    <p className="text-xs font-medium text-red-700 mb-2 flex items-center gap-1">
+                  <div className="bg-destructive/10 rounded-lg p-3 border border-destructive/30">
+                    <p className="text-xs font-medium text-destructive mb-2 flex items-center gap-1">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </svg>
                       Lost By
                     </p>
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                      <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center text-primary-foreground font-bold text-xs shadow-sm">
                         {item.postedBy?.name?.charAt(0).toUpperCase() || 'U'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-gray-900 font-semibold text-xs truncate">
+                        <p className="text-foreground font-semibold text-xs truncate">
                           {item.postedBy?.name || 'Anonymous'}
                         </p>
-                        <p className="text-gray-600 text-xs truncate">{item.postedBy?.email}</p>
+                        <p className="text-muted-foreground text-xs truncate">{item.postedBy?.email}</p>
                         <div className="mt-1 flex flex-wrap items-center gap-1">
                           {typeof item.postedBy?.reputation === 'number' && (
                             <ReputationBadge total={item.postedBy.reputation} />
@@ -512,16 +512,16 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                   {/* Arrow */}
                   <div className="flex justify-center my-2">
                     <div className="flex flex-col items-center">
-                      <svg className="w-6 h-6 text-green-600 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-6 h-6 text-success animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                       </svg>
-                      <span className="text-xs font-bold text-green-600 mt-1">FOUND</span>
+                      <span className="text-xs font-bold text-success mt-1">FOUND</span>
                     </div>
                   </div>
 
                   {/* Found By */}
-                  <div className="bg-green-50 rounded-lg p-3 border border-green-100">
-                    <p className="text-xs font-medium text-green-700 mb-2 flex items-center gap-1">
+                  <div className="bg-success/10 rounded-lg p-3 border border-success/30">
+                    <p className="text-xs font-medium text-success mb-2 flex items-center gap-1">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
@@ -529,20 +529,20 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                     </p>
                     <div className="flex items-center gap-2">
                       <div className="relative">
-                        <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                        <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-primary-foreground font-bold text-xs shadow-sm">
                           {item.claimedBy?.name?.charAt(0).toUpperCase() || 'U'}
                         </div>
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border border-white flex items-center justify-center">
-                          <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-success rounded-full border border-border flex items-center justify-center">
+                          <svg className="w-2 h-2 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                           </svg>
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-gray-900 font-semibold text-xs truncate">
+                        <p className="text-foreground font-semibold text-xs truncate">
                           {item.claimedBy?.name || 'Anonymous'}
                         </p>
-                        <p className="text-gray-600 text-xs truncate">{item.claimedBy?.email}</p>
+                        <p className="text-muted-foreground text-xs truncate">{item.claimedBy?.email}</p>
                         <div className="mt-1 flex flex-wrap items-center gap-1">
                           {typeof item.claimedBy?.reputation === 'number' && (
                             <ReputationBadge total={item.claimedBy.reputation} />
@@ -552,7 +552,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                       </div>
                     </div>
                     {item.resolvedAt && (
-                      <div className="flex items-center gap-1 mt-2 text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                      <div className="flex items-center gap-1 mt-2 text-xs text-success bg-success/10 px-2 py-1 rounded">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -572,27 +572,27 @@ export default function ItemDetail({ item }: ItemDetailProps) {
               </div>
             ) : (
               /* NOT RESOLVED: Show normal Posted By */
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm p-5 border border-blue-100/60">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm p-5 border border-info/30/60">
                 <div className="flex items-center gap-2 mb-4">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
-                  <h2 className="text-sm font-bold text-gray-900">Posted By</h2>
+                  <h2 className="text-sm font-bold text-foreground">Posted By</h2>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-primary-foreground font-bold text-sm shadow-md">
                       {item.postedBy?.name?.charAt(0).toUpperCase() || 'U'}
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-gray-900 font-semibold text-sm truncate">
+                    <p className="text-foreground font-semibold text-sm truncate">
                       {item.postedBy?.name || 'Anonymous User'}
                     </p>
-                    <p className="text-gray-600 text-xs truncate break-all">
+                    <p className="text-muted-foreground text-xs truncate break-all">
                       {item.postedBy?.email || 'No email'}
                     </p>
-                    <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
+                    <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
@@ -610,49 +610,49 @@ export default function ItemDetail({ item }: ItemDetailProps) {
             )}
 
             {/* Item Statistics */}
-            <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200/60">
-              <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-card rounded-xl shadow-sm p-5 border border-border/60">
+              <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 Statistics
               </h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2 text-gray-600">
+                <div className="flex items-center justify-between p-2 bg-muted/40 rounded-lg">
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                     <span className="text-xs">Views</span>
                   </div>
-                  <span className="font-semibold text-gray-900 text-sm">{item.views || 0}</span>
+                  <span className="font-semibold text-foreground text-sm">{item.views || 0}</span>
                 </div>
-                <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2 text-gray-600">
+                <div className="flex items-center justify-between p-2 bg-muted/40 rounded-lg">
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                     </svg>
                     <span className="text-xs">Comments</span>
                   </div>
-                  <span className="font-semibold text-gray-900 text-sm">{item.commentCount || 0}</span>
+                  <span className="font-semibold text-foreground text-sm">{item.commentCount || 0}</span>
                 </div>
-                <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2 text-gray-600">
+                <div className="flex items-center justify-between p-2 bg-muted/40 rounded-lg">
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <span className="text-xs">Claims</span>
                   </div>
-                  <span className="font-semibold text-gray-900 text-sm">{item.claimCount || 0}</span>
+                  <span className="font-semibold text-foreground text-sm">{item.claimCount || 0}</span>
                 </div>
               </div>
             </div>
 
             {/* Step 111 & 112: Actions */}
-            <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200/60">
-              <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-card rounded-xl shadow-sm p-5 border border-border/60">
+              <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                 </svg>
                 Actions
@@ -660,23 +660,23 @@ export default function ItemDetail({ item }: ItemDetailProps) {
               
               {/* Fix: Add error/success message display */}
               {error && (
-                <div className="mb-3 bg-red-50 border-l-4 border-red-500 rounded-lg p-3 shadow-sm">
+                <div className="mb-3 bg-destructive/10 border-l-4 border-destructive/30 rounded-lg p-3 shadow-sm">
                   <div className="flex items-start gap-2">
-                    <svg className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <p className="text-xs text-red-700 font-medium">{error}</p>
+                    <p className="text-xs text-destructive font-medium">{error}</p>
                   </div>
                 </div>
               )}
               
               {success && (
-                <div className="mb-3 bg-green-50 border-l-4 border-green-500 rounded-lg p-3 shadow-sm">
+                <div className="mb-3 bg-success/10 border-l-4 border-success/30 rounded-lg p-3 shadow-sm">
                   <div className="flex items-start gap-2">
-                    <svg className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-success flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <p className="text-xs text-green-700 font-medium">{success}</p>
+                    <p className="text-xs text-success font-medium">{success}</p>
                   </div>
                 </div>
               )}
@@ -687,7 +687,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                   <>
                     <Button
                       onClick={handleEdit}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200 text-sm h-9"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm hover:shadow-md transition-all duration-200 text-sm h-9"
                     >
                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -712,7 +712,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                 {isLoggedIn && !isOwner && itemStatus !== 'DELETED' && !isEditMode && !isResolved && (
                   <Button
                     onClick={() => setIsClaimsModalOpen(true)}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200 text-sm h-9"
+                    className="w-full bg-success hover:bg-success/90 text-primary-foreground font-semibold shadow-sm hover:shadow-md transition-all duration-200 text-sm h-9"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -725,7 +725,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                 {!isLoggedIn && itemStatus !== 'DELETED' && !isEditMode && !isResolved && (
                   <Button
                     onClick={() => window.location.href = '/auth/login'}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all duration-200"
                   >
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
@@ -736,11 +736,11 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                 
                 {/* Show owner message */}
                 {isLoggedIn && isOwner && itemStatus !== 'DELETED' && !canEdit && (
-                  <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <svg className="w-8 h-8 text-blue-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="text-center p-4 bg-info/10 rounded-lg border border-info/30">
+                    <svg className="w-8 h-8 text-primary mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <p className="text-sm text-blue-800 font-medium">
+                    <p className="text-sm text-primary font-medium">
                       This is your posted item
                     </p>
                   </div>

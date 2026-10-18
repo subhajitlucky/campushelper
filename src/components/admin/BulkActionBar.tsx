@@ -115,22 +115,22 @@ export default function BulkActionBar({
   return (
     <div
       className={cn(
-        'sticky bottom-0 z-10 flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 shadow-sm',
+        'sticky bottom-0 z-10 flex flex-wrap items-center gap-3 rounded-lg border border-info/30 bg-info/10 p-3 shadow-sm',
         className
       )}
       role="region"
       aria-label={`Bulk actions for ${selectedIds.length} selected ${target}`}
     >
-      <p className="text-sm font-medium text-blue-900">
+      <p className="text-sm font-medium text-primary">
         {selectedIds.length} selected
       </p>
 
-      <label className="text-sm text-blue-900">
+      <label className="text-sm text-primary">
         <span className="sr-only">Bulk action</span>
         <select
           value={action}
           onChange={(event) => setAction(event.target.value)}
-          className="rounded-md border border-blue-300 bg-white px-2 py-1.5 text-sm"
+          className="rounded-md border border-info/30 bg-card px-2 py-1.5 text-sm"
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -140,14 +140,14 @@ export default function BulkActionBar({
         </select>
       </label>
 
-      <label className="min-w-[12rem] flex-1 text-sm text-blue-900">
+      <label className="min-w-[12rem] flex-1 text-sm text-primary">
         <span className="sr-only">Reason (recorded in the audit log)</span>
         <input
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           placeholder={reasonRequired ? 'Reason (required, recorded in audit log)' : 'Reason (optional)'}
           maxLength={500}
-          className="w-full rounded-md border border-blue-300 px-2 py-1.5 text-sm"
+          className="w-full rounded-md border border-info/30 px-2 py-1.5 text-sm"
         />
       </label>
 
@@ -155,7 +155,7 @@ export default function BulkActionBar({
         type="button"
         onClick={() => void submit()}
         disabled={isSubmitting}
-        className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
       >
         {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
         Apply
@@ -166,7 +166,7 @@ export default function BulkActionBar({
         onClick={onClear}
         disabled={isSubmitting}
         aria-label="Clear selection"
-        className="rounded p-1.5 text-blue-800 transition-colors hover:bg-blue-100 disabled:opacity-50"
+        className="rounded p-1.5 text-primary transition-colors hover:bg-info/90/10 disabled:opacity-50"
       >
         <X className="h-4 w-4" aria-hidden="true" />
       </button>

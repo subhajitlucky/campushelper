@@ -30,9 +30,9 @@ export const ValidationInput = forwardRef<HTMLInputElement, ValidationInputProps
     const inputClasses = `
       w-full px-3 py-2 border rounded-md transition-colors bg-background shadow-xs
       ${hasError 
-        ? 'border-red-300 focus:border-red-500'
+        ? 'border-destructive/30 focus:border-destructive/30'
         : hasSuccess 
-          ? 'border-green-300 focus:border-green-500'
+          ? 'border-success/30 focus:border-success/30'
           : 'border-input focus:border-ring'
       }
       focus:outline-none focus:ring-0 focus-visible:ring-0
@@ -43,7 +43,7 @@ export const ValidationInput = forwardRef<HTMLInputElement, ValidationInputProps
     return (
       <div className="space-y-1">
         {label && (
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-foreground/85">
             {label}
           </label>
         )}
@@ -57,14 +57,14 @@ export const ValidationInput = forwardRef<HTMLInputElement, ValidationInputProps
           
           {/* Status icons */}
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            {hasError && <AlertCircle className="w-5 h-5 text-red-500" />}
-            {hasSuccess && showCheckIcon && <CheckCircle className="w-5 h-5 text-green-500" />}
+            {hasError && <AlertCircle className="w-5 h-5 text-destructive" />}
+            {hasSuccess && showCheckIcon && <CheckCircle className="w-5 h-5 text-success" />}
           </div>
         </div>
         
         {/* Helper text */}
         {helperText && !error && (
-          <p className="text-sm text-gray-500">{helperText}</p>
+          <p className="text-sm text-muted-foreground">{helperText}</p>
         )}
         
         {/* Error message */}

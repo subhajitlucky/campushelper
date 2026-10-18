@@ -17,6 +17,14 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
       {
+        // Legacy item images live in Supabase Storage. Without this, next/image
+        // throws "Invalid src prop" for every item that still uses one, which is
+        // 8 of 19 rows -- the error boundary catches it and the page breaks.
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+      {
         protocol: 'https',
         hostname: '*.googleusercontent.com',
         pathname: '/**',

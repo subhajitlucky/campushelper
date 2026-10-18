@@ -31,26 +31,26 @@ export function ProgressBar({
   };
 
   const variantClasses = {
-    default: "bg-blue-600",
-    success: "bg-green-600",
-    error: "bg-red-600"
+    default: "bg-primary",
+    success: "bg-success",
+    error: "bg-destructive"
   };
 
   return (
     <div className={cn("w-full", className)} {...props}>
       {(showLabel || label) && (
         <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-gray-700">
+          <span className="text-sm font-medium text-foreground/85">
             {label || "Progress"}
           </span>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted-foreground">
             {Math.round(percentage)}%
           </span>
         </div>
       )}
       <div
         className={cn(
-          "w-full bg-gray-200 rounded-full overflow-hidden",
+          "w-full bg-muted rounded-full overflow-hidden",
           sizeClasses[size]
         )}
       >
@@ -132,7 +132,7 @@ export function CircularProgress({
         </svg>
         {(showLabel && percentage > 0 && percentage < 100) && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-xs font-medium text-gray-700">
+            <span className="text-xs font-medium text-foreground/85">
               {Math.round(percentage)}%
             </span>
           </div>
@@ -140,7 +140,7 @@ export function CircularProgress({
       </div>
       {label && (
         <div className="mt-2 text-center">
-          <span className="text-sm text-gray-600">{label}</span>
+          <span className="text-sm text-muted-foreground">{label}</span>
         </div>
       )}
     </div>
@@ -183,7 +183,7 @@ export function UploadProgress({
   return (
     <div
       className={cn(
-        "bg-white border rounded-lg p-4 space-y-3",
+        "bg-card border rounded-lg p-4 space-y-3",
         className
       )}
       {...props}
@@ -195,7 +195,7 @@ export function UploadProgress({
             {fileName}
           </span>
         </div>
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-muted-foreground">
           {Math.round(progress)}%
         </span>
       </div>
@@ -209,7 +209,7 @@ export function UploadProgress({
       />
       
       {(speed || timeRemaining) && status === "uploading" && (
-        <div className="flex justify-between text-xs text-gray-500">
+        <div className="flex justify-between text-xs text-muted-foreground">
           {speed && <span>Speed: {speed}</span>}
           {timeRemaining && <span>Time: {timeRemaining}</span>}
         </div>

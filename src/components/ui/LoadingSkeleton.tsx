@@ -10,7 +10,7 @@ interface SkeletonProps {
 
 export function Skeleton({ className = '' }: SkeletonProps) {
   return (
-    <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
+    <div className={`animate-pulse bg-muted rounded ${className}`} />
   );
 }
 
@@ -20,7 +20,7 @@ interface ItemCardSkeletonProps {
 
 export function ItemCardSkeleton({ showImage = true }: ItemCardSkeletonProps) {
   return (
-    <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+    <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
       {showImage && (
         <Skeleton className="aspect-video w-full" />
       )}

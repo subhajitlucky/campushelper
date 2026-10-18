@@ -14,7 +14,7 @@ export default function VerifiedStudentBadge({ className }: { className?: string
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800',
+        'inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-xs font-medium text-success',
         className
       )}
       title="Student status confirmed by a moderator"

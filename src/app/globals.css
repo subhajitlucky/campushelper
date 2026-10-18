@@ -41,6 +41,13 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
 }
 
 :root {
@@ -60,6 +67,7 @@
   --accent: oklch(0.967 0.001 286.375);
   --accent-foreground: oklch(0.21 0.006 285.885);
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.705 0.015 286.067);
@@ -76,6 +84,18 @@
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.705 0.015 286.067);
+
+  /* Domain semantics. shadcn's vocabulary has no success/warning/info, so pages
+     hand-picked green-600/amber-600/red-600 and drifted apart — StatusBadge, the
+     admin tables, and the claim panels disagreed about what "resolved" looks
+     like. Luminance is tuned for text on a near-white tint, since the dominant
+     usage is `bg-success/10 text-success` style badges. */
+  --success: oklch(0.52 0.14 155);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.52 0.12 70);
+  --warning-foreground: oklch(0.985 0 0);
+  --info: oklch(0.52 0.15 250);
+  --info-foreground: oklch(0.985 0 0);
 }
 
 .dark {
@@ -94,6 +114,7 @@
   --accent: oklch(0.274 0.006 286.033);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.16 0.03 27);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.552 0.016 285.938);
@@ -110,6 +131,13 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.552 0.016 285.938);
+
+  --success: oklch(0.75 0.15 155);
+  --success-foreground: oklch(0.16 0.03 155);
+  --warning: oklch(0.80 0.13 80);
+  --warning-foreground: oklch(0.18 0.04 80);
+  --info: oklch(0.75 0.13 250);
+  --info-foreground: oklch(0.16 0.03 250);
 }
 
 @tailwind base;

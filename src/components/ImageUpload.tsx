@@ -229,25 +229,25 @@ export default function ImageUpload({
 
       {/* Upload Area */}
       {!preview && (
-        <Card className="border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors">
+        <Card className="border-2 border-dashed border-border hover:border-border transition-colors">
           <div className="p-8 text-center">
             {uploading ? (
               <div className="flex flex-col items-center">
-                <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-                <p className="text-gray-600 font-medium">Processing your image...</p>
-                <p className="text-sm text-gray-500 mt-2">Compressing and uploading</p>
-                <p className="text-xs text-gray-400 mt-1">Please wait, this may take a moment</p>
+                <Loader2 className="w-12 h-12 text-info animate-spin mb-4" />
+                <p className="text-muted-foreground font-medium">Processing your image...</p>
+                <p className="text-sm text-muted-foreground mt-2">Compressing and uploading</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">Please wait, this may take a moment</p>
               </div>
             ) : (
               <div className="flex flex-col items-center cursor-pointer" onClick={handleClick}>
-                <Upload className="w-12 h-12 text-gray-400 mb-4" />
-                <p className="text-lg font-medium text-gray-700 mb-2">
+                <Upload className="w-12 h-12 text-muted-foreground/70 mb-4" />
+                <p className="text-lg font-medium text-foreground/85 mb-2">
                   Upload an image (optional)
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Click to browse or drag and drop
                 </p>
-                <p className="text-xs text-gray-400 mt-2">
+                <p className="text-xs text-muted-foreground/70 mt-2">
                   JPEG, PNG, or WebP • Max {UPLOAD_CONFIG.maxFileSize}MB
                 </p>
               </div>
@@ -261,7 +261,7 @@ export default function ImageUpload({
         <div className="space-y-4">
           {/* Image container with hover actions */}
           <div className="relative group">
-            <div className="relative w-full max-w-md mx-auto rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50 shadow-sm">
+            <div className="relative w-full max-w-md mx-auto rounded-lg overflow-hidden border-2 border-border bg-muted/40 shadow-sm">
               <img
                 src={preview}
                 alt="Preview"
@@ -301,14 +301,14 @@ export default function ImageUpload({
 
       {/* Error Message */}
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-600">{error}</p>
+        <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+          <p className="text-sm text-destructive">{error}</p>
         </div>
       )}
 
       {/* Help Text */}
       {!preview && !uploading && !error && (
-        <p className="text-xs text-gray-500 text-center">
+        <p className="text-xs text-muted-foreground text-center">
           Adding an image helps others identify the item. Images are automatically compressed for faster loading.
         </p>
       )}

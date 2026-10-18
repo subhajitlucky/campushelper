@@ -86,7 +86,7 @@ export default function UserProfileSection({ userStats }: UserProfileSectionProp
                     className="w-16 h-16 rounded-full object-cover"
                   />
                 ) : (
-                  <span className="text-white font-bold text-xl">
+                  <span className="text-primary-foreground font-bold text-xl">
                     {(name || 'U')[0].toUpperCase()}
                   </span>
                 )}
@@ -94,14 +94,14 @@ export default function UserProfileSection({ userStats }: UserProfileSectionProp
               
               {/* User Details */}
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-foreground">
                   {name || 'Anonymous User'}
                 </h3>
-                <div className="flex items-center gap-1 text-sm text-gray-600">
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <Mail className="w-3 h-3" />
                   {email}
                 </div>
-                <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
+                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                   <Calendar className="w-3 h-3" />
                   Member since {new Date(createdAt || Date.now()).toLocaleDateString()}
                 </div>
@@ -117,69 +117,69 @@ export default function UserProfileSection({ userStats }: UserProfileSectionProp
 
           {/* Activity Stats Column */}
           <div className="lg:col-span-2">
-            <h4 className="text-md font-semibold text-gray-900 mb-4">Activity Overview</h4>
+            <h4 className="text-md font-semibold text-foreground mb-4">Activity Overview</h4>
             
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {/* Items Posted */}
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-info/30">
                 <div className="flex items-center justify-between mb-2">
-                  <Package className="w-5 h-5 text-blue-600" />
+                  <Package className="w-5 h-5 text-primary" />
                   <Badge variant="secondary" className="text-xs">
                     Items
                   </Badge>
                 </div>
-                <div className="text-2xl font-bold text-blue-900">{userStats.myItems}</div>
-                <div className="text-xs text-blue-700">Items posted</div>
+                <div className="text-2xl font-bold text-primary">{userStats.myItems}</div>
+                <div className="text-xs text-primary">Items posted</div>
               </div>
 
               {/* Claims Made */}
-              <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+              <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-success/30">
                 <div className="flex items-center justify-between mb-2">
-                  <MessageSquare className="w-5 h-5 text-green-600" />
+                  <MessageSquare className="w-5 h-5 text-success" />
                   <Badge variant="secondary" className="text-xs">
                     Claims
                   </Badge>
                 </div>
-                <div className="text-2xl font-bold text-green-900">{userStats.claimsMade}</div>
-                <div className="text-xs text-green-700">Claims submitted</div>
+                <div className="text-2xl font-bold text-success">{userStats.claimsMade}</div>
+                <div className="text-xs text-success">Claims submitted</div>
               </div>
 
               {/* Resolved Items */}
-              <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-info/30">
                 <div className="flex items-center justify-between mb-2">
-                  <CheckCircle className="w-5 h-5 text-purple-600" />
+                  <CheckCircle className="w-5 h-5 text-primary" />
                   <Badge variant="secondary" className="text-xs">
                     Success
                   </Badge>
                 </div>
-                <div className="text-2xl font-bold text-purple-900">{userStats.resolvedItems}</div>
-                <div className="text-xs text-purple-700">Items resolved</div>
+                <div className="text-2xl font-bold text-primary">{userStats.resolvedItems}</div>
+                <div className="text-xs text-primary">Items resolved</div>
               </div>
 
               {/* This Week */}
-              <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg border border-orange-200">
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg border border-warning/30">
                 <div className="flex items-center justify-between mb-2">
-                  <Calendar className="w-5 h-5 text-orange-600" />
+                  <Calendar className="w-5 h-5 text-warning" />
                   <Badge variant="secondary" className="text-xs">
                     Week
                   </Badge>
                 </div>
-                <div className="text-2xl font-bold text-orange-900">{userStats.thisWeek}</div>
-                <div className="text-xs text-orange-700">New this week</div>
+                <div className="text-2xl font-bold text-warning">{userStats.thisWeek}</div>
+                <div className="text-xs text-warning">New this week</div>
               </div>
             </div>
 
             {/* Additional Stats Row */}
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <div className="mt-4 p-4 bg-muted/40 rounded-lg">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Success Rate:</span>
-                <span className="font-semibold text-gray-900">
+                <span className="text-muted-foreground">Success Rate:</span>
+                <span className="font-semibold text-foreground">
                   {successRate}% ({userStats.resolvedItems}/{userStats.myItems} items)
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm mt-2">
-                <span className="text-gray-600">Average Claims per Item:</span>
-                <span className="font-semibold text-gray-900">
+                <span className="text-muted-foreground">Average Claims per Item:</span>
+                <span className="font-semibold text-foreground">
                   {userStats.myItems > 0 ? (userStats.claimsMade / userStats.myItems).toFixed(1) : '0'}
                 </span>
               </div>

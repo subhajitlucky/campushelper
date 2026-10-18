@@ -65,7 +65,7 @@ export default function ItemCard({
 
   return (
     <Card
-      className={`flex h-full flex-col overflow-hidden border border-gray-200 bg-white transition-shadow ${
+      className={`flex h-full flex-col overflow-hidden border border-border bg-card transition-shadow ${
         isCompact ? 'hover:shadow-sm' : 'hover:shadow-md'
       } ${className}`}
     >
@@ -80,26 +80,26 @@ export default function ItemCard({
       {/* Card Header */}
       <CardHeader className={`${isCompact ? 'px-3 pt-3 pb-1' : 'px-6 pt-6 pb-3'}`}>
         <div className={`flex items-start justify-between gap-2 ${isCompact ? 'mb-1' : 'mb-2'}`}>
-          <h3 className={`${isCompact ? 'text-sm' : 'text-lg'} font-semibold text-gray-900 line-clamp-1`}
+          <h3 className={`${isCompact ? 'text-sm' : 'text-lg'} font-semibold text-foreground line-clamp-1`}
           >
             {item.title}
           </h3>
           <StatusBadge status={item.status} />
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-muted-foreground">
           {formatDate(item.createdAt)}
         </p>
       </CardHeader>
 
       {/* Card Content */}
       <CardContent className={`${isCompact ? 'px-3 pb-3 pt-0' : 'px-6 pb-6 pt-0'} flex flex-col gap-2`}> 
-        <p className={`${isCompact ? 'text-xs' : 'text-sm'} text-gray-700 ${isCompact ? 'line-clamp-2' : 'line-clamp-3'}`}>
+        <p className={`${isCompact ? 'text-xs' : 'text-sm'} text-foreground/85 ${isCompact ? 'line-clamp-2' : 'line-clamp-3'}`}>
           {item.description}
         </p>
 
         {/* Item Details */}
         <div className={`${isCompact ? 'space-y-1' : 'space-y-2'}`}>
-          <div className={`${isCompact ? 'text-xs' : 'text-sm'} flex items-center text-gray-500`}> 
+          <div className={`${isCompact ? 'text-xs' : 'text-sm'} flex items-center text-muted-foreground`}> 
             <svg className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'} mr-1.5`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -108,7 +108,7 @@ export default function ItemCard({
           </div>
 
           {isCompact ? (
-            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <UserDisplay user={item.postedBy} size="sm" showLabel={false} />
               <span className="truncate">{item.postedBy.name || 'Anonymous'}</span>
               {typeof item.postedBy.reputation === 'number' && (

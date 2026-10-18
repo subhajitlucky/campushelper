@@ -64,7 +64,7 @@ export default function CampusMap({
     return (
       <div
         className={cn(
-          'flex min-h-[16rem] items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white p-10 text-sm text-gray-500',
+          'flex min-h-[16rem] items-center justify-center rounded-lg border border-dashed border-border bg-card p-10 text-sm text-muted-foreground',
           className
         )}
       >
@@ -103,12 +103,12 @@ export default function CampusMap({
           width="98"
           height="98"
           rx="6"
-          className="fill-gray-100 stroke-gray-300"
+          className="fill-muted stroke-border"
           strokeWidth="0.5"
         />
 
         {/* Decorative roads */}
-        <g aria-hidden="true" className="stroke-gray-200" fill="none" strokeLinecap="round">
+        <g aria-hidden="true" className="stroke-border" fill="none" strokeLinecap="round">
           <path d="M4 42 H60 Q68 42 70 48 L76 90" strokeWidth="3" />
           <path d="M8 88 Q24 62 48 56 L96 46" strokeWidth="2.5" />
           <path d="M52 4 V34" strokeWidth="2" />
@@ -149,8 +149,8 @@ export default function CampusMap({
                 cy={zone.mapY}
                 r={ringRadius + 1.6}
                 className={cn(
-                  'fill-none group-focus-visible/zone:stroke-blue-400',
-                  isSelected ? 'stroke-blue-300' : 'stroke-transparent'
+                  'fill-none group-focus-visible/zone:stroke-info',
+                  isSelected ? 'stroke-info' : 'stroke-transparent'
                 )}
                 strokeWidth="1"
               />
@@ -162,7 +162,7 @@ export default function CampusMap({
                     cx={zone.mapX}
                     cy={zone.mapY}
                     r={ringRadius}
-                    className="fill-none stroke-green-500"
+                    className="fill-none stroke-success"
                     strokeWidth="1.2"
                   />
                   {lostShare > 0 && (
@@ -170,7 +170,7 @@ export default function CampusMap({
                       cx={zone.mapX}
                       cy={zone.mapY}
                       r={ringRadius}
-                      className="fill-none stroke-red-500"
+                      className="fill-none stroke-destructive"
                       strokeWidth="1.2"
                       strokeDasharray={`${lostShare * circumference} ${circumference}`}
                     />
@@ -186,8 +186,8 @@ export default function CampusMap({
                 className={cn(
                   'transition-colors',
                   isSelected
-                    ? 'fill-blue-600 stroke-blue-800'
-                    : 'fill-gray-400 stroke-gray-500 group-hover/zone:fill-gray-500'
+                    ? 'fill-info stroke-info'
+                    : 'fill-muted-foreground/50 stroke-muted-foreground group-hover/zone:fill-muted-foreground'
                 )}
                 strokeWidth="0.6"
               />
@@ -213,7 +213,7 @@ export default function CampusMap({
                 aria-hidden="true"
                 className={cn(
                   'pointer-events-none text-[2.9px] font-medium',
-                  isSelected ? 'fill-blue-700' : 'fill-gray-600'
+                  isSelected ? 'fill-info' : 'fill-muted-foreground'
                 )}
               >
                 {zone.name}
@@ -224,20 +224,20 @@ export default function CampusMap({
       </svg>
 
       {/* Legend */}
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-600">
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full border-2 border-red-500" aria-hidden="true" />
+          <span className="h-2.5 w-2.5 rounded-full border-2 border-destructive/30" aria-hidden="true" />
           Lost
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full border-2 border-green-500" aria-hidden="true" />
+          <span className="h-2.5 w-2.5 rounded-full border-2 border-success/30" aria-hidden="true" />
           Found
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-gray-400" aria-hidden="true" />
+          <span className="h-2.5 w-2.5 rounded-full bg-muted" aria-hidden="true" />
           Pin size = number of items
         </span>
-        <span className="text-gray-500">Schematic map — not to scale.</span>
+        <span className="text-muted-foreground">Schematic map — not to scale.</span>
       </div>
     </div>
   );

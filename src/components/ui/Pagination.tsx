@@ -44,11 +44,11 @@ export default function Pagination({
   };
 
   return (
-    <div className={`bg-white rounded-lg shadow p-6 ${className}`}>
+    <div className={`bg-card rounded-lg shadow p-6 ${className}`}>
       <div className="flex items-center justify-between">
         {/* Page Info */}
         {total && (
-          <div className="text-sm text-gray-700">
+          <div className="text-sm text-foreground/85">
             Showing page <span className="font-medium">{currentPage}</span> of{' '}
             <span className="font-medium">{totalPages}</span> ({total} total items)
           </div>
@@ -81,7 +81,7 @@ export default function Pagination({
                 >
                   1
                 </Button>
-                {currentPage > 4 && <span className="text-gray-400">...</span>}
+                {currentPage > 4 && <span className="text-muted-foreground/70">...</span>}
               </>
             )}
 
@@ -100,7 +100,7 @@ export default function Pagination({
             {/* Last page */}
             {currentPage < totalPages - 2 && totalPages > 5 && (
               <>
-                {currentPage < totalPages - 3 && <span className="text-gray-400">...</span>}
+                {currentPage < totalPages - 3 && <span className="text-muted-foreground/70">...</span>}
                 <Button
                   variant="outline"
                   size="sm"

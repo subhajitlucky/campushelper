@@ -28,32 +28,32 @@ const sampleItems = [
 
 export default function Home() {
   return (
-    <main className="flex-1 bg-white">
+    <main className="flex-1 bg-card">
       {/* Hero Section */}
       <section className="relative py-12 sm:py-16 lg:py-20 bg-gradient-to-b from-gray-50 to-white">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left Column - Content */}
             <div className="text-center lg:text-left">
-              <div className="inline-block px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded mb-6">
+              <div className="inline-block px-3 py-1 bg-muted text-foreground/85 text-sm rounded mb-6">
                 Campus Lost & Found
               </div>
               
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
                 Reunite people with their belongings
               </h1>
               
-              <p className="text-base text-gray-600 mb-6 max-w-lg mx-auto lg:mx-0">
+              <p className="text-base text-muted-foreground mb-6 max-w-lg mx-auto lg:mx-0">
                 Post what you&apos;ve lost, browse recent finds, and track resolved cases.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                <Button asChild className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-2">
+                <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2">
                   <Link href="/post">
                     Report Item
                   </Link>
                 </Button>
-                <Button variant="outline" asChild className="border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-2">
+                <Button variant="outline" asChild className="border-border text-foreground/85 hover:bg-muted/40 px-6 py-2">
                   <Link href="/search">
                     Browse Items
                   </Link>
@@ -63,31 +63,31 @@ export default function Home() {
 
             {/* Right Column - Stats Card */}
             <div className="lg:justify-self-end">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 w-full max-w-sm mx-auto lg:mx-0">
+              <div className="bg-card rounded-lg shadow-sm border border-border p-6 w-full max-w-sm mx-auto lg:mx-0">
                 <div className="text-center mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Platform Stats</h3>
-                  <p className="text-sm text-gray-600">Current activity</p>
+                  <h3 className="text-lg font-semibold text-foreground mb-1">Platform Stats</h3>
+                  <p className="text-sm text-muted-foreground">Current activity</p>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-6 mb-6">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900 mb-1">120+</div>
-                    <div className="text-xs text-gray-600">Items reunited</div>
+                    <div className="text-2xl font-bold text-foreground mb-1">120+</div>
+                    <div className="text-xs text-muted-foreground">Items reunited</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900 mb-1">48h</div>
-                    <div className="text-xs text-gray-600">Avg resolution</div>
+                    <div className="text-2xl font-bold text-foreground mb-1">48h</div>
+                    <div className="text-xs text-muted-foreground">Avg resolution</div>
                   </div>
                 </div>
                 
-                <div className="space-y-3 pt-4 border-t border-gray-100">
+                <div className="space-y-3 pt-4 border-t border-border">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Users</span>
-                    <span className="text-sm font-medium text-gray-900">2,341</span>
+                    <span className="text-sm text-muted-foreground">Users</span>
+                    <span className="text-sm font-medium text-foreground">2,341</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Success rate</span>
-                    <span className="text-sm font-medium text-gray-900">89%</span>
+                    <span className="text-sm text-muted-foreground">Success rate</span>
+                    <span className="text-sm font-medium text-foreground">89%</span>
                   </div>
                 </div>
               </div>
@@ -97,36 +97,36 @@ export default function Home() {
       </section>
 
       {/* Latest Items Section */}
-      <section className="py-12 bg-white">
+      <section className="py-12 bg-card">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            <h2 className="text-2xl font-bold text-foreground mb-2">
               Recent Items
             </h2>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Recently reported items across campus
             </p>
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-8">
             {sampleItems.map((item) => (
-              <div key={item.title} className="bg-white rounded border border-gray-200 p-4 hover:shadow-sm">
+              <div key={item.title} className="bg-card rounded border border-border p-4 hover:shadow-sm">
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-900 flex-1 pr-2">{item.title}</h3>
+                  <h3 className="text-sm font-semibold text-foreground flex-1 pr-2">{item.title}</h3>
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
                     item.status === 'Lost' 
-                      ? 'bg-red-50 text-red-700 border border-red-200' 
+                      ? 'bg-destructive/10 text-destructive border border-destructive/30' 
                       : item.status === 'Found'
-                      ? 'bg-green-50 text-green-700 border border-green-200'
-                      : 'bg-blue-50 text-blue-700 border border-blue-200'
+                      ? 'bg-success/10 text-success border border-success/30'
+                      : 'bg-info/10 text-primary border border-info/30'
                   }`}>
                     {item.status}
                   </span>
                 </div>
-                <p className="text-xs text-gray-600 mb-3 leading-relaxed">{item.description}</p>
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  <span className="text-xs text-gray-500">{item.location}</span>
-                  <Button variant="ghost" size="sm" asChild className="h-6 px-2 text-xs text-gray-600 hover:text-gray-900">
+                <p className="text-xs text-muted-foreground mb-3 leading-relaxed">{item.description}</p>
+                <div className="flex items-center justify-between pt-3 border-t border-border">
+                  <span className="text-xs text-muted-foreground">{item.location}</span>
+                  <Button variant="ghost" size="sm" asChild className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground">
                     <Link href="/search">View</Link>
                   </Button>
                 </div>
@@ -135,7 +135,7 @@ export default function Home() {
           </div>
 
           <div className="text-center">
-            <Button asChild className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-2 text-sm">
+            <Button asChild className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 text-sm">
               <Link href="/search">View All</Link>
             </Button>
           </div>
@@ -143,10 +143,10 @@ export default function Home() {
       </section>
 
       {/* How It Works Section */}
-      <section className="py-12 bg-gray-50">
+      <section className="py-12 bg-muted/40">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            <h2 className="text-2xl font-bold text-foreground mb-2">
               How It Works
             </h2>
           </div>
@@ -170,11 +170,11 @@ export default function Home() {
               }
             ].map((step) => (
               <div key={step.number} className="text-center">
-                <div className="w-8 h-8 bg-gray-900 text-white rounded-full flex items-center justify-center mx-auto mb-3 text-sm font-medium">
+                <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center mx-auto mb-3 text-sm font-medium">
                   {step.number}
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{step.title}</h3>
-                <p className="text-sm text-gray-600">{step.description}</p>
+                <h3 className="text-lg font-semibold text-foreground mb-2">{step.title}</h3>
+                <p className="text-sm text-muted-foreground">{step.description}</p>
               </div>
             ))}
           </div>

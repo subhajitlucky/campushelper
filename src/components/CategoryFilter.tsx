@@ -90,14 +90,14 @@ export default function CategoryFilter({
 
   if (error && visibleCategories.length === 0) {
     return (
-      <div className={cn('flex flex-wrap items-center gap-2 text-sm text-gray-500', className)}>
+      <div className={cn('flex flex-wrap items-center gap-2 text-sm text-muted-foreground', className)}>
         <span>{error}</span>
         <button
           type="button"
           onClick={() => {
             void loadCategories();
           }}
-          className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
+          className="font-medium text-primary hover:text-primary hover:underline"
         >
           Try again
         </button>
@@ -108,10 +108,10 @@ export default function CategoryFilter({
   const chipClasses = (isActive: boolean) =>
     cn(
       'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
       isActive
-        ? 'border-blue-600 bg-blue-600 text-white'
-        : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+        ? 'border-info/30 bg-primary text-primary-foreground'
+        : 'border-border bg-card text-foreground/85 hover:bg-muted/40'
     );
 
   return (
@@ -143,7 +143,7 @@ export default function CategoryFilter({
           >
             <Icon className="h-4 w-4" aria-hidden="true" />
             <span>{category.name}</span>
-            <span className={cn('text-xs', isActive ? 'text-blue-100' : 'text-gray-500')}>
+            <span className={cn('text-xs', isActive ? 'text-info' : 'text-muted-foreground')}>
               {category.itemCount}
             </span>
           </button>

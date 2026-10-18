@@ -27,7 +27,7 @@ export default function ItemImage({
 
   if (images && images.length > 0) {
     return (
-      <div className={`bg-gray-100 overflow-hidden ${aspectClass} ${className}`}>
+      <div className={`bg-muted overflow-hidden ${aspectClass} ${className}`}>
         <Image
           src={images[0]}
           alt={alt}
@@ -44,9 +44,9 @@ export default function ItemImage({
   }
 
   return (
-    <div className={`bg-gray-100 flex items-center justify-center ${aspectClass} ${className}`}>
+    <div className={`bg-muted flex items-center justify-center ${aspectClass} ${className}`}>
       <svg
-        className="w-12 h-12 text-gray-400"
+        className="w-12 h-12 text-muted-foreground/70"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

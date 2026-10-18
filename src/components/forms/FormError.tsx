@@ -13,7 +13,7 @@ export const FormError: React.FC<FormErrorProps> = ({
   if (!error) return null;
 
   return (
-    <div className={`bg-red-50 border border-red-200 rounded-lg p-4 text-red-800 ${className}`}>
+    <div className={`bg-destructive/10 border border-destructive/30 rounded-lg p-4 text-destructive ${className}`}>
       <div className="flex items-center gap-2">
         <AlertTriangle className="w-5 h-5 flex-shrink-0" />
         <div>

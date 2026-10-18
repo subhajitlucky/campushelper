@@ -138,7 +138,7 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-muted/40 py-8">
       <div className="container mx-auto px-4">
         {user.isLoggedIn && (
           <SavedSearches
@@ -157,8 +157,8 @@ export default function SearchPage() {
         )}
 
         {/* Category facets */}
-        <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <h2 className="mb-3 text-sm font-medium text-gray-900">Browse by category</h2>
+        <div className="bg-card rounded-lg shadow p-4 mb-6">
+          <h2 className="mb-3 text-sm font-medium text-foreground">Browse by category</h2>
           <CategoryFilter
             value={filters.category || null}
             onChange={(slug) => updateFilters({ category: slug ?? '' })}
@@ -166,11 +166,11 @@ export default function SearchPage() {
         </div>
 
         {/* Search and filters */}
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
+        <div className="bg-card rounded-lg shadow p-6 mb-8">
           <div className="space-y-4">
             {/* Search Input */}
             <div>
-              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="search" className="block text-sm font-medium text-foreground/85 mb-2">
                 Search Items
               </label>
               <div className="flex gap-2">
@@ -180,13 +180,13 @@ export default function SearchPage() {
                   placeholder="Search by title, description, or location..."
                   value={filters.search}
                   onChange={(e) => updateFilters({ search: e.target.value })}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="flex-1 px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                   onKeyDown={(e) => e.key === 'Enter' && fetchItems()}
                 />
                 <button
                   onClick={() => fetchItems()}
                   disabled={loading}
-                  className="px-6 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {loading ? (
                     <>
@@ -207,13 +207,13 @@ export default function SearchPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Item Type Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground/85 mb-2">
                   Item Type
                 </label>
                 <select
                   value={filters.itemType}
                   onChange={(e) => updateFilters({ itemType: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                 >
                   <option value="">All Types</option>
                   <option value="LOST">Lost Items</option>
@@ -223,13 +223,13 @@ export default function SearchPage() {
 
               {/* Status Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground/85 mb-2">
                   Status
                 </label>
                 <select
                   value={filters.status}
                   onChange={(e) => updateFilters({ status: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                 >
                   <option value="">All Statuses</option>
                   <option value="LOST">Lost</option>
@@ -241,13 +241,13 @@ export default function SearchPage() {
 
               {/* Location Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground/85 mb-2">
                   Location
                 </label>
                 <select
                   value={filters.location}
                   onChange={(e) => updateFilters({ location: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                 >
                   <option value="">All Locations</option>
                   <option value="Library">Library</option>
@@ -262,13 +262,13 @@ export default function SearchPage() {
 
             {/* Quick Filter Buttons */}
             <div className="flex flex-wrap gap-2">
-              <span className="text-sm font-medium text-gray-700 mr-2">Quick Filters:</span>
+              <span className="text-sm font-medium text-foreground/85 mr-2">Quick Filters:</span>
               <button
                 onClick={() => updateFilters({ itemType: 'LOST' })}
                 className={`px-3 py-1 rounded-full text-sm border ${
                   filters.itemType === 'LOST'
-                    ? 'bg-red-100 text-red-800 border-red-300'
-                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                    ? 'bg-destructive/10 text-destructive border-destructive/30'
+                    : 'bg-muted text-foreground/85 border-border hover:bg-muted'
                 }`}
               >
                 Lost Items
@@ -277,15 +277,15 @@ export default function SearchPage() {
                 onClick={() => updateFilters({ itemType: 'FOUND' })}
                 className={`px-3 py-1 rounded-full text-sm border ${
                   filters.itemType === 'FOUND'
-                    ? 'bg-green-100 text-green-800 border-green-300'
-                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                    ? 'bg-success/10 text-success border-success/30'
+                    : 'bg-muted text-foreground/85 border-border hover:bg-muted'
                 }`}
               >
                 Found Items
               </button>
               <button
                 onClick={() => updateFilters({ itemType: '', status: '' })}
-                className="px-3 py-1 rounded-full text-sm border bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
+                className="px-3 py-1 rounded-full text-sm border bg-muted text-foreground/85 border-border hover:bg-muted"
               >
                 Clear Filters
               </button>
@@ -294,9 +294,9 @@ export default function SearchPage() {
         </div>
 
         {/* Items display */}
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-card rounded-lg shadow">
           <div className="p-6 border-b">
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-foreground">
               {hasSearched ? `Search Results (${total})` : 'Search Items'}
             </h2>
           </div>
@@ -304,21 +304,21 @@ export default function SearchPage() {
           <div className="p-6">
             {searchError ? (
               <div className="text-center py-8">
-                <div className="text-red-500 mb-4">
+                <div className="text-destructive mb-4">
                   <svg className="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                   </svg>
                 </div>
-                <p className="text-red-600 font-medium mb-2">{searchError}</p>
-                <p className="text-gray-500 text-sm">
+                <p className="text-destructive font-medium mb-2">{searchError}</p>
+                <p className="text-muted-foreground text-sm">
                   {searchError.includes('login') ? (
                     <>
                       Please{' '}
-                      <a href="/auth/login" className="text-blue-600 hover:text-blue-500 underline">
+                      <a href="/auth/login" className="text-primary hover:text-info underline">
                         log in
                       </a>{' '}
                       to search for items, or try{' '}
-                      <a href="/resolved" className="text-blue-600 hover:text-blue-500 underline">
+                      <a href="/resolved" className="text-primary hover:text-info underline">
                         browsing resolved items
                       </a>.
                     </>
@@ -329,18 +329,18 @@ export default function SearchPage() {
               </div>
             ) : !hasSearched ? (
               <div className="text-center py-16">
-                <div className="text-gray-400 mb-4">
+                <div className="text-muted-foreground/70 mb-4">
                   <svg className="w-20 h-20 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Start Your Search</h3>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                <h3 className="text-xl font-semibold text-foreground mb-3">Start Your Search</h3>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                   Use the search box and filters above to find lost and found items across campus.
                 </p>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-lg mx-auto text-left">
-                  <p className="text-sm font-medium text-blue-900 mb-3">💡 Search Tips:</p>
-                  <ul className="space-y-2 text-sm text-blue-800">
+                <div className="bg-info/10 border border-info/30 rounded-lg p-6 max-w-lg mx-auto text-left">
+                  <p className="text-sm font-medium text-primary mb-3">💡 Search Tips:</p>
+                  <ul className="space-y-2 text-sm text-primary">
                     <li className="flex items-start">
                       <span className="mr-2">•</span>
                       <span>{'Type item names: "laptop", "phone", "keys", "wallet"'}</span>
@@ -355,22 +355,22 @@ export default function SearchPage() {
                     </li>
                   </ul>
                 </div>
-                <p className="text-sm text-gray-500 mt-6">
+                <p className="text-sm text-muted-foreground mt-6">
                   Looking for only lost items?{' '}
-                  <a href="/lost-items" className="text-blue-600 hover:text-blue-500 font-medium underline">
+                  <a href="/lost-items" className="text-primary hover:text-info font-medium underline">
                     Browse Lost Items
                   </a>
                 </p>
               </div>
             ) : items.length === 0 ? (
               <div className="text-center py-8">
-                <div className="text-gray-400 mb-4">
+                <div className="text-muted-foreground/70 mb-4">
                   <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0012 15c-2.34 0-4.5-.785-6.172-2.172M12 3c3.314 0 6 2.686 6 6 0 1.86-.792 3.542-2.073 4.828" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Items Found</h3>
-                <p className="text-gray-500 mb-4">
+                <h3 className="text-lg font-medium text-foreground mb-2">No Items Found</h3>
+                <p className="text-muted-foreground mb-4">
                   {filters.search 
                     ? `No items found for "${filters.search}". Try different keywords or check your filters.`
                     : 'No items match your current filters. Try adjusting your search criteria.'
@@ -378,7 +378,7 @@ export default function SearchPage() {
                 </p>
                 <button 
                   onClick={() => updateFilters({ search: '', itemType: '', status: '', location: '', from: '', to: '' })}
-                  className="text-blue-600 hover:text-blue-500 text-sm font-medium"
+                  className="text-primary hover:text-info text-sm font-medium"
                 >
                   Clear all filters
                 </button>
@@ -395,26 +395,26 @@ export default function SearchPage() {
                   };
 
                   return (
-                    <div key={item.id} className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+                    <div key={item.id} className="bg-card rounded-lg border shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
                       {/* Item Image */}
                       <ItemImage images={item.images} alt={item.title} />
 
                       {/* Card Header */}
-                      <div className="p-4 border-b bg-gray-50">
+                      <div className="p-4 border-b bg-muted/40">
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">{item.title}</h3>
+                          <h3 className="text-lg font-semibold text-foreground line-clamp-2">{item.title}</h3>
                           <StatusBadge status={item.status} />
                         </div>
-                        <p className="text-sm text-gray-600">{formatDate(item.createdAt)}</p>
+                        <p className="text-sm text-muted-foreground">{formatDate(item.createdAt)}</p>
                       </div>
 
                       {/* Card Body */}
                       <div className="p-4">
-                        <p className="text-gray-600 mb-4 line-clamp-3 text-sm">{item.description}</p>
+                        <p className="text-muted-foreground mb-4 line-clamp-3 text-sm">{item.description}</p>
 
                         {/* Item Details */}
                         <div className="space-y-2">
-                          <div className="flex items-center text-sm text-gray-500">
+                          <div className="flex items-center text-sm text-muted-foreground">
                             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -434,13 +434,13 @@ export default function SearchPage() {
                       </div>
 
                       {/* Card Footer */}
-                      <div className="p-4 bg-gray-50 border-t">
+                      <div className="p-4 bg-muted/40 border-t">
                         {user.isLoggedIn ? (
                           // Logged-in user actions
                           <div className="space-y-2">
                             <button 
                               onClick={() => window.location.href = `/item/${item.id}`}
-                              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
+                              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
                               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -450,7 +450,7 @@ export default function SearchPage() {
                             {item.status === 'LOST' && (
                               <button 
                                 onClick={() => window.location.href = `/item/${item.id}`}
-                                className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
+                                className="w-full bg-success hover:bg-success/90 text-primary-foreground text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
                                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                                 </svg>
@@ -463,7 +463,7 @@ export default function SearchPage() {
                           <div className="space-y-2">
                             <button 
                               onClick={() => window.location.href = '/auth/login'}
-                              className="w-full bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center"
+                              className="w-full bg-muted hover:bg-muted text-primary-foreground text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center"
                             >
                               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -473,7 +473,7 @@ export default function SearchPage() {
                             </button>
                             <button 
                               onClick={() => window.location.href = '/auth/login'}
-                              className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center"
+                              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center"
                             >
                               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />

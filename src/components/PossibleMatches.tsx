@@ -47,9 +47,9 @@ interface PossibleMatchesProps {
 }
 
 function scoreTone(score: number): string {
-  if (score >= 80) return 'bg-green-50 text-green-700 border-green-200';
-  if (score >= 65) return 'bg-blue-50 text-blue-700 border-blue-200';
-  return 'bg-amber-50 text-amber-700 border-amber-200';
+  if (score >= 80) return 'bg-success/10 text-success border-success/30';
+  if (score >= 65) return 'bg-info/10 text-primary border-info/30';
+  return 'bg-warning/10 text-warning border-warning/30';
 }
 
 /** Compact "3 days ago" style label; falls back to an empty string if unparseable. */
@@ -141,19 +141,19 @@ export default function PossibleMatches({ itemId, className }: PossibleMatchesPr
   return (
     <section
       className={cn(
-        'bg-white rounded-lg border border-blue-200 shadow-sm overflow-hidden',
+        'bg-card rounded-lg border border-info/30 shadow-sm overflow-hidden',
         className
       )}
       aria-labelledby="possible-matches-heading"
     >
-      <header className="flex items-start justify-between gap-3 border-b border-blue-100 bg-blue-50 px-4 py-3">
+      <header className="flex items-start justify-between gap-3 border-b border-info/30 bg-info/10 px-4 py-3">
         <div className="flex items-start gap-2">
-          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" aria-hidden="true" />
+          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
           <div>
-            <h2 id="possible-matches-heading" className="font-medium text-gray-900">
+            <h2 id="possible-matches-heading" className="font-medium text-foreground">
               Possible {matches.length === 1 ? 'match' : 'matches'}
             </h2>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               These reports look like they could describe the same item.
             </p>
           </div>
@@ -162,14 +162,14 @@ export default function PossibleMatches({ itemId, className }: PossibleMatchesPr
         <button
           type="button"
           onClick={() => setHidden(true)}
-          className="rounded p-1 text-gray-500 transition-colors hover:bg-blue-100 hover:text-gray-700"
+          className="rounded p-1 text-muted-foreground transition-colors hover:bg-info/90/10 hover:text-foreground/85"
           aria-label="Hide possible matches"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
       </header>
 
-      <ul className="divide-y divide-gray-100">
+      <ul className="divide-y divide-border">
         {matches.map((match) => {
           const isPending = pendingId === match.id;
 
@@ -184,11 +184,11 @@ export default function PossibleMatches({ itemId, className }: PossibleMatchesPr
                 >
                   {match.score}% match
                 </span>
-                <span className="rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-600">
+                <span className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground">
                   {match.counterpart.itemType === 'FOUND' ? 'Found report' : 'Lost report'}
                 </span>
                 {match.status === 'CONFIRMED' && (
-                  <span className="flex items-center gap-1 rounded-md border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+                  <span className="flex items-center gap-1 rounded-md border border-success/30 bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
                     <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
                     Confirmed
                   </span>
@@ -197,16 +197,16 @@ export default function PossibleMatches({ itemId, className }: PossibleMatchesPr
 
               <Link
                 href={`/item/${match.counterpart.id}`}
-                className="mt-2 block font-medium text-gray-900 transition-colors hover:text-blue-700"
+                className="mt-2 block font-medium text-foreground transition-colors hover:text-primary"
               >
                 {match.counterpart.title}
               </Link>
 
-              <p className="mt-1 line-clamp-2 text-sm text-gray-600">
+              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                 {match.counterpart.description}
               </p>
 
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {match.counterpart.location}
                 {relativeDate(match.counterpart.createdAt) &&
                   ` · ${relativeDate(match.counterpart.createdAt)}`}
@@ -217,7 +217,7 @@ export default function PossibleMatches({ itemId, className }: PossibleMatchesPr
                   {match.reasons.map((reason) => (
                     <li
                       key={reason.code}
-                      className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-700"
+                      className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-foreground/85"
                       title={`Contributes ${reason.weight} points`}
                     >
                       {reason.label}
@@ -229,7 +229,7 @@ export default function PossibleMatches({ itemId, className }: PossibleMatchesPr
               <div className="mt-3 flex gap-2">
                 <Link
                   href={`/item/${match.counterpart.id}`}
-                  className="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                  className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                 >
                   View report
                 </Link>
@@ -239,7 +239,7 @@ export default function PossibleMatches({ itemId, className }: PossibleMatchesPr
                     type="button"
                     onClick={() => void act(match.id, 'confirm')}
                     disabled={isPending}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground/85 transition-colors hover:bg-muted/40 disabled:opacity-50"
                   >
                     {isPending && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
                     This is the same item
@@ -250,7 +250,7 @@ export default function PossibleMatches({ itemId, className }: PossibleMatchesPr
                   type="button"
                   onClick={() => void act(match.id, 'dismiss')}
                   disabled={isPending}
-                  className="inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-50"
+                  className="inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
                 >
                   Not a match
                 </button>

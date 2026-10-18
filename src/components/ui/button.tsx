@@ -8,15 +8,15 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 btn-enhanced ripple",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 btn-enhanced ripple",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90/90 btn-enhanced ripple",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90/90 btn-enhanced ripple",
         outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground input-enhanced",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 btn-enhanced ripple",
         ghost: "hover:bg-accent hover:text-accent-foreground interactive-element",
         link: "text-primary underline-offset-4 hover:underline transition-colors duration-200",
-        success: "bg-green-600 text-white hover:bg-green-700 btn-enhanced ripple",
-        warning: "bg-yellow-600 text-white hover:bg-yellow-700 btn-enhanced ripple",
-        info: "bg-blue-600 text-white hover:bg-blue-700 btn-enhanced ripple",
+        success: "bg-success text-success-foreground hover:bg-success/90 btn-enhanced ripple",
+        warning: "bg-warning text-warning-foreground hover:bg-warning/90 btn-enhanced ripple",
+        info: "bg-primary text-primary-foreground hover:bg-primary/90 btn-enhanced ripple",
       },
       size: {
         default: "h-10 px-4 py-2",
@@ -78,7 +78,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
         {/* Ripple effect overlay */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-white opacity-0 hover:opacity-10 transition-opacity duration-200" />
+          <div className="absolute inset-0 bg-card opacity-0 hover:opacity-10 transition-opacity duration-200" />
         </div>
       </Comp>
     );

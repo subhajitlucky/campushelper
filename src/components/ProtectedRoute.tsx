@@ -37,8 +37,8 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600 mx-auto"></div>
-          <p className="text-gray-600">Checking authentication...</p>
+          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-border border-t-blue-600 mx-auto"></div>
+          <p className="text-muted-foreground">Checking authentication...</p>
         </div>
       </div>
     );

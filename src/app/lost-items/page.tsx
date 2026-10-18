@@ -175,12 +175,12 @@ export default function LostItemsPage() {
   }, [currentPage, fetchLostItems]);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-muted/40 py-8">
       <div className="container mx-auto px-4">
 
         {/* Category facets */}
-        <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <h2 className="mb-3 text-sm font-medium text-gray-900">Browse by category</h2>
+        <div className="bg-card rounded-lg shadow p-4 mb-6">
+          <h2 className="mb-3 text-sm font-medium text-foreground">Browse by category</h2>
           <CategoryFilter
             value={filters.category || null}
             onChange={(slug) => handleFilterChange('category', slug ?? '')}
@@ -196,13 +196,13 @@ export default function LostItemsPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {/* Item Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground/85 mb-1">
                   Item Type
                 </label>
                 <select
                   value={filters.itemType}
                   onChange={(e) => handleFilterChange('itemType', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring"
                 >
                   <option value="">All Types</option>
                   <option value="LOST">Lost Items</option>
@@ -212,7 +212,7 @@ export default function LostItemsPage() {
 
               {/* Location */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground/85 mb-1">
                   Location
                 </label>
                 <input
@@ -220,7 +220,7 @@ export default function LostItemsPage() {
                   value={filters.location}
                   onChange={(e) => handleFilterChange('location', e.target.value)}
                   placeholder="Filter by location..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring"
                 />
               </div>
 
@@ -245,7 +245,7 @@ export default function LostItemsPage() {
           <Card className="mb-6">
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-red-600 mb-4">{error}</p>
+                <p className="text-destructive mb-4">{error}</p>
                 <Button onClick={() => fetchLostItems(currentPage)}>
                   Try Again
                 </Button>
@@ -259,7 +259,7 @@ export default function LostItemsPage() {
           <>
             {/* Results Header */}
             <div className="flex justify-between items-center mb-6">
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 {items.length > 0 ? (
                   <>
                     Found <span className="font-semibold">{items.length}</span> lost items
@@ -272,7 +272,7 @@ export default function LostItemsPage() {
                 )}
               </p>
               {items.length > 0 && (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Total: {total} items
                 </p>
               )}

@@ -94,7 +94,7 @@ function NotificationListSkeleton({ count = 5 }: { count?: number }) {
   return (
     <div className="space-y-3" role="status" aria-label="Loading notifications">
       {Array.from({ length: count }, (_, index) => (
-        <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+        <div key={index} className="bg-card rounded-lg border border-border p-4 shadow-sm">
           <div className="flex items-start gap-3">
             <Skeleton className="size-9 rounded-full" />
             <div className="flex-1 space-y-2">
@@ -249,12 +249,12 @@ export default function NotificationsPage() {
       : 'You have no unread notifications';
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-muted/40 py-8">
       <div className="container mx-auto max-w-3xl px-4">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-            <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
+            <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
           </div>
           <Button
             variant="outline"
@@ -267,7 +267,7 @@ export default function NotificationsPage() {
         </div>
 
         <div
-          className="mb-4 inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1"
+          className="mb-4 inline-flex items-center gap-1 rounded-lg border border-border bg-card p-1"
           role="group"
           aria-label="Filter notifications"
         >
@@ -279,10 +279,10 @@ export default function NotificationsPage() {
               aria-pressed={filter === option.value}
               className={cn(
                 'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 filter === option.value
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
             >
               {option.label}
@@ -293,16 +293,16 @@ export default function NotificationsPage() {
         {loading && <NotificationListSkeleton />}
 
         {!loading && error && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6 text-center shadow-sm">
-            <p className="mb-4 text-gray-600">{error}</p>
+          <div className="bg-card rounded-lg border border-border p-6 text-center shadow-sm">
+            <p className="mb-4 text-muted-foreground">{error}</p>
             {signInRequired ? (
-              <Button asChild className="bg-blue-600 hover:bg-blue-700">
+              <Button asChild className="bg-primary hover:bg-primary/90">
                 <Link href="/auth/login?callbackUrl=/notifications">Sign In</Link>
               </Button>
             ) : (
               <Button
                 onClick={() => loadNotifications(page, filter)}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-primary hover:bg-primary/90"
               >
                 Try Again
               </Button>
@@ -311,7 +311,7 @@ export default function NotificationsPage() {
         )}
 
         {!loading && !error && notifications.length === 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div className="bg-card rounded-lg border border-border shadow-sm">
             <EmptyState
               icon={
                 filter === 'unread' ? (
@@ -332,7 +332,7 @@ export default function NotificationsPage() {
 
         {!loading && !error && notifications.length > 0 && (
           <>
-            <ul className="bg-white rounded-lg border border-gray-200 shadow-sm divide-y divide-gray-200">
+            <ul className="bg-card rounded-lg border border-border shadow-sm divide-y divide-border">
               {notifications.map((notification) => {
                 const unread = isUnread(notification.readAt);
                 const Icon = NOTIFICATION_ICONS[notificationIconName(notification.type)] ?? Bell;
@@ -344,15 +344,15 @@ export default function NotificationsPage() {
                       onClick={() => handleNotificationClick(notification)}
                       className={cn(
                         'flex w-full items-start gap-3 px-4 py-4 text-left transition-colors',
-                        'hover:bg-gray-50',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500',
-                        unread && 'border-l-4 border-blue-600 bg-blue-50'
+                        'hover:bg-muted/40',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+                        unread && 'border-l-4 border-info/30 bg-info/10'
                       )}
                     >
                       <span
                         className={cn(
                           'mt-0.5 flex size-9 flex-shrink-0 items-center justify-center rounded-full',
-                          unread ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
+                          unread ? 'bg-info/10 text-primary' : 'bg-muted text-muted-foreground'
                         )}
                       >
                         <Icon className="size-4" aria-hidden="true" />
@@ -360,23 +360,23 @@ export default function NotificationsPage() {
 
                       <span className="min-w-0 flex-1">
                         <span className="flex items-start justify-between gap-2">
-                          <span className="font-medium text-gray-900">
+                          <span className="font-medium text-foreground">
                             {unread && <span className="sr-only">Unread: </span>}
                             {notification.title}
                           </span>
                           {unread && (
                             <span
                               aria-hidden="true"
-                              className="mt-1.5 size-2 flex-shrink-0 rounded-full bg-blue-600"
+                              className="mt-1.5 size-2 flex-shrink-0 rounded-full bg-primary"
                             />
                           )}
                         </span>
-                        <span className="mt-1 block text-sm text-gray-600">
+                        <span className="mt-1 block text-sm text-muted-foreground">
                           {notification.body}
                         </span>
                         <time
                           dateTime={notification.createdAt}
-                          className="mt-1 block text-sm text-gray-500"
+                          className="mt-1 block text-sm text-muted-foreground"
                         >
                           {formatRelativeTime(notification.createdAt)}
                         </time>

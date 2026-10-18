@@ -32,9 +32,9 @@ export default function TagPill({
   className
 }: TagPillProps) {
   const pillClasses = cn(
-    'inline-flex items-center gap-1 bg-gray-100 text-gray-700 rounded-full px-2.5 py-0.5 text-xs',
-    selected && 'bg-blue-600 text-white',
-    onClick && !selected && 'hover:bg-gray-200',
+    'inline-flex items-center gap-1 bg-muted text-foreground/85 rounded-full px-2.5 py-0.5 text-xs',
+    selected && 'bg-primary text-primary-foreground',
+    onClick && !selected && 'hover:bg-muted',
     className
   );
 
@@ -47,7 +47,7 @@ export default function TagPill({
           type="button"
           onClick={onClick}
           aria-pressed={selected}
-          className="rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+          className="rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
         >
           {label}
         </button>
@@ -60,7 +60,7 @@ export default function TagPill({
           type="button"
           onClick={onRemove}
           aria-label={`Remove tag ${tag}`}
-          className="opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
+          className="opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
         >
           <X className="h-3 w-3" aria-hidden="true" />
         </button>

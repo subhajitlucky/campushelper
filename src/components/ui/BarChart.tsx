@@ -46,7 +46,7 @@ export default function BarChart({
   );
 
   if (pointCount === 0 || series.length === 0) {
-    return <p className="py-8 text-center text-sm text-gray-500">No data for this range.</p>;
+    return <p className="py-8 text-center text-sm text-muted-foreground">No data for this range.</p>;
   }
 
   const viewWidth = 100;
@@ -111,13 +111,13 @@ export default function BarChart({
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         <ul className="flex flex-wrap gap-3">
           {series.map((entry) => (
-            <li key={entry.key} className="flex items-center gap-1.5 text-xs text-gray-600">
+            <li key={entry.key} className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span className={cn('h-2.5 w-2.5 rounded-sm', entry.className)} aria-hidden="true" />
               {entry.label}
             </li>
           ))}
         </ul>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-muted-foreground">
           {labels[0]} → {labels[labels.length - 1]} · peak {formatValue(maxValue)}
         </p>
       </div>

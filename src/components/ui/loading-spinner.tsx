@@ -45,7 +45,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   return (
     <div className={cn("flex items-center justify-center gap-2", className)}>
       {renderSpinner()}
-      {text && <span className="text-sm text-gray-600">{text}</span>}
+      {text && <span className="text-sm text-muted-foreground">{text}</span>}
     </div>
   );
 };
@@ -57,7 +57,7 @@ export const ButtonSpinner: React.FC<{ className?: string }> = ({ className }) =
 export const PageLoader: React.FC<{ text?: string }> = ({ text = "Loading..." }) => (
   <div className="flex flex-col items-center justify-center min-h-[200px] space-y-4">
     <LoadingSpinner size="lg" />
-    <p className="text-sm text-gray-600">{text}</p>
+    <p className="text-sm text-muted-foreground">{text}</p>
   </div>
 );
 
@@ -67,6 +67,6 @@ export const InlineLoader: React.FC<{ text?: string; className?: string }> = ({
 }) => (
   <div className={cn("flex items-center gap-2 py-4", className)}>
     <LoadingSpinner size="sm" />
-    {text && <span className="text-sm text-gray-600">{text}</span>}
+    {text && <span className="text-sm text-muted-foreground">{text}</span>}
   </div>
 );

@@ -187,13 +187,13 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
               <div key={i} className="animate-pulse">
                 <div className="border rounded-lg p-4">
                   <div className="flex justify-between items-start mb-2">
-                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-                    <div className="h-4 bg-gray-200 rounded w-16"></div>
+                    <div className="h-4 bg-muted rounded w-1/3"></div>
+                    <div className="h-4 bg-muted rounded w-16"></div>
                   </div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3 mb-2"></div>
+                  <div className="h-3 bg-muted rounded w-2/3 mb-2"></div>
                   <div className="flex gap-2 mt-3">
-                    <div className="h-8 bg-gray-200 rounded w-20"></div>
-                    <div className="h-8 bg-gray-200 rounded w-20"></div>
+                    <div className="h-8 bg-muted rounded w-20"></div>
+                    <div className="h-8 bg-muted rounded w-20"></div>
                   </div>
                 </div>
               </div>
@@ -214,10 +214,10 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <div className="text-red-600 mb-4">
+            <div className="text-destructive mb-4">
               <AlertCircle className="w-12 h-12 mx-auto" />
             </div>
-            <p className="text-red-600 mb-4">{error}</p>
+            <p className="text-destructive mb-4">{error}</p>
             <Button onClick={fetchIncomingClaims} variant="outline">
               Try Again
             </Button>
@@ -237,10 +237,10 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <div className="text-gray-400 mb-4">
+            <div className="text-muted-foreground/70 mb-4">
               <MessageSquare className="w-12 h-12 mx-auto" />
             </div>
-            <p className="text-gray-500 mb-4">No claims received yet</p>
+            <p className="text-muted-foreground mb-4">No claims received yet</p>
             <Button asChild>
               <Link href="/dashboard">View Your Items</Link>
             </Button>
@@ -262,18 +262,18 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
           {/* Pending Claims Section */}
           {pendingClaims.length > 0 && (
             <div>
-              <h3 className="text-lg font-semibold mb-4 text-orange-700">
+              <h3 className="text-lg font-semibold mb-4 text-warning">
                 Pending Claims ({pendingClaims.length})
               </h3>
               <div className="space-y-4">
                 {pendingClaims.map((claim) => (
-                  <div key={claim.id} className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+                  <div key={claim.id} className="border border-warning/30 rounded-lg p-4 bg-warning/10">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
-                        <h4 className="font-semibold text-lg text-gray-900 mb-1">
+                        <h4 className="font-semibold text-lg text-foreground mb-1">
                           {claim.item.title}
                         </h4>
-                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
                           <div className="flex items-center gap-1">
                             <User className="w-3 h-3" />
                             {claim.user.name || claim.user.email}
@@ -284,7 +284,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
                           </div>
                         </div>
                         {claim.message && (
-                          <p className="text-gray-700 text-sm mb-2 p-2 bg-white rounded border">
+                          <p className="text-foreground/85 text-sm mb-2 p-2 bg-card rounded border">
                             &ldquo;{claim.message}&rdquo;
                           </p>
                         )}
@@ -299,7 +299,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2 pt-3 border-t border-orange-200">
+                    <div className="flex items-center gap-2 pt-3 border-t border-warning/30">
                       <Button size="sm" variant="outline" asChild>
                         <Link href={`/item/${claim.itemId}`}>
                           <Eye className="w-3 h-3 mr-1" />
@@ -321,7 +321,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
                         size="sm" 
                         onClick={() => handleApproveClaim(claim.id)}
                         disabled={processingClaimId === claim.id}
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-success hover:bg-success/90"
                       >
                         <CheckCircle className="w-3 h-3 mr-1" />
                         {processingClaimId === claim.id ? 'Processing...' : 'Approve'}
@@ -336,18 +336,18 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
           {/* Resolved Claims Section */}
           {resolvedClaims.length > 0 && (
             <div>
-              <h3 className="text-lg font-semibold mb-4 text-gray-700">
+              <h3 className="text-lg font-semibold mb-4 text-foreground/85">
                 Resolved Claims ({resolvedClaims.length})
               </h3>
               <div className="space-y-3">
                 {resolvedClaims.slice(0, 5).map((claim) => (
-                  <div key={claim.id} className="border rounded-lg p-3 bg-gray-50">
+                  <div key={claim.id} className="border rounded-lg p-3 bg-muted/40">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <p className="font-medium text-sm text-gray-900">
+                        <p className="font-medium text-sm text-foreground">
                           {claim.item.title}
                         </p>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-muted-foreground">
                           {claim.user.name || claim.user.email} • {new Date(claim.createdAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -355,9 +355,9 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
                         <Badge 
                           variant="outline"
                           className={`text-xs ${
-                            claim.status === 'COMPLETED' ? 'border-blue-300 text-blue-700' :
-                            claim.status === 'APPROVED' ? 'border-green-300 text-green-700' :
-                            'border-red-300 text-red-700'
+                            claim.status === 'COMPLETED' ? 'border-info/30 text-primary' :
+                            claim.status === 'APPROVED' ? 'border-success/30 text-success' :
+                            'border-destructive/30 text-destructive'
                           }`}
                         >
                           {claim.status}
@@ -382,7 +382,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
                   </div>
                 ))}
                 {resolvedClaims.length > 5 && (
-                  <p className="text-sm text-gray-500 text-center">
+                  <p className="text-sm text-muted-foreground text-center">
                     And {resolvedClaims.length - 5} more resolved claims...
                   </p>
                 )}

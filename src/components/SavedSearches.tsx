@@ -165,18 +165,18 @@ export default function SavedSearches({
 
   return (
     <section
-      className={cn('rounded-lg border border-gray-200 bg-white p-4 shadow-sm', className)}
+      className={cn('rounded-lg border border-border bg-card p-4 shadow-sm', className)}
       aria-labelledby="saved-searches-heading"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2
           id="saved-searches-heading"
-          className="flex items-center gap-1.5 text-sm font-medium text-gray-900"
+          className="flex items-center gap-1.5 text-sm font-medium text-foreground"
         >
-          <Bookmark className="h-4 w-4 text-blue-600" aria-hidden="true" />
+          <Bookmark className="h-4 w-4 text-primary" aria-hidden="true" />
           Saved searches
           {searches.length > 0 && (
-            <span className="text-gray-500">
+            <span className="text-muted-foreground">
               ({searches.length}/{MAX_SAVED_SEARCHES_PER_USER})
             </span>
           )}
@@ -187,7 +187,7 @@ export default function SavedSearches({
           onClick={() => void save()}
           disabled={isSaving || atLimit}
           title={atLimit ? 'Delete one to make room' : undefined}
-          className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground/85 transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSaving ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -199,23 +199,23 @@ export default function SavedSearches({
       </div>
 
       {isLoading ? (
-        <p className="mt-3 text-sm text-gray-500">Loading…</p>
+        <p className="mt-3 text-sm text-muted-foreground">Loading…</p>
       ) : searches.length === 0 ? (
-        <p className="mt-3 text-sm text-gray-500">
+        <p className="mt-3 text-sm text-muted-foreground">
           Save a filter set and you will be notified when a matching item is posted.
         </p>
       ) : (
-        <ul className="mt-3 divide-y divide-gray-100">
+        <ul className="mt-3 divide-y divide-border">
           {searches.map((search) => (
             <li key={search.id} className="flex items-center justify-between gap-3 py-2">
               <button
                 type="button"
                 onClick={() => onApply?.(search.filters)}
                 disabled={!onApply}
-                className="min-w-0 flex-1 text-left text-sm text-gray-800 transition-colors hover:text-blue-700 disabled:cursor-default"
+                className="min-w-0 flex-1 text-left text-sm text-foreground transition-colors hover:text-primary disabled:cursor-default"
               >
                 <span className="font-medium">{search.name}</span>
-                <span className="block truncate text-xs text-gray-500">
+                <span className="block truncate text-xs text-muted-foreground">
                   {describeFilters(search.filters)}
                 </span>
               </button>
@@ -225,7 +225,7 @@ export default function SavedSearches({
                 onClick={() => void remove(search.id)}
                 disabled={pendingId === search.id}
                 aria-label={`Delete saved search ${search.name}`}
-                className="rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                className="rounded p-1.5 text-muted-foreground/70 transition-colors hover:bg-destructive/90/10 hover:text-destructive disabled:opacity-50"
               >
                 {pendingId === search.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

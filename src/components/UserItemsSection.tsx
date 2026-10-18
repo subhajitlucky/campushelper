@@ -120,12 +120,12 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <div className="text-red-600 mb-4">
+            <div className="text-destructive mb-4">
               <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p className="text-red-600 mb-4">{error}</p>
+            <p className="text-destructive mb-4">{error}</p>
             <Button onClick={fetchUserItems} variant="outline">
               Try Again
             </Button>
@@ -167,16 +167,16 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
       <CardContent>
         <div className="space-y-4">
           {items.map((item) => (
-            <div key={item.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+            <div key={item.id} className="border rounded-lg p-4 hover:bg-muted/40 transition-colors">
               <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-lg text-gray-900 mb-1">{item.title}</h3>
-                  <p className="text-gray-600 text-sm mb-2 overflow-hidden" style={{
+                  <h3 className="font-semibold text-lg text-foreground mb-1">{item.title}</h3>
+                  <p className="text-muted-foreground text-sm mb-2 overflow-hidden" style={{
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical'
                   }}>{item.description}</p>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       {new Date(item.createdAt).toLocaleDateString()}
@@ -201,11 +201,11 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
                   <Badge 
                     variant="outline"
                     className={`text-xs ${
-                      item.status === 'LOST' ? 'border-red-300 text-red-700' :
-                      item.status === 'FOUND' ? 'border-green-300 text-green-700' :
-                      item.status === 'CLAIMED' ? 'border-blue-300 text-blue-700' :
-                      item.status === 'RESOLVED' ? 'border-purple-300 text-purple-700' :
-                      'border-gray-300 text-gray-700'
+                      item.status === 'LOST' ? 'border-destructive/30 text-destructive' :
+                      item.status === 'FOUND' ? 'border-success/30 text-success' :
+                      item.status === 'CLAIMED' ? 'border-info/30 text-primary' :
+                      item.status === 'RESOLVED' ? 'border-info/30 text-primary' :
+                      'border-border text-foreground/85'
                     }`}
                   >
                     {item.status}
@@ -242,7 +242,7 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDeleteItem(item.id)}
-                      className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
+                      className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/90/10 border-destructive/30 hover:border-destructive/30"
                     >
                       <Trash2 className="w-3 h-3 mr-1" />
                       Delete
@@ -252,7 +252,7 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
                 
                 {/* Show resolved message for resolved items */}
                 {item.status === 'RESOLVED' && (
-                  <div className="flex-1 text-center py-2 bg-green-50 border border-green-200 rounded text-xs text-green-700 font-medium">
+                  <div className="flex-1 text-center py-2 bg-success/10 border border-success/30 rounded text-xs text-success font-medium">
                     ✅ Resolved
                   </div>
                 )}

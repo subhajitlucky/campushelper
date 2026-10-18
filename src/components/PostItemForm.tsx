@@ -526,9 +526,9 @@ export default function PostItemForm({ className }: PostItemFormProps) {
   };
 
   return (
-    <Card className={`max-w-2xl mx-auto p-6 ${isEditMode ? 'border-2 border-blue-400 shadow-lg' : ''} ${className}`}>
+    <Card className={`max-w-2xl mx-auto p-6 ${isEditMode ? 'border-2 border-info/30 shadow-lg' : ''} ${className}`}>
       {isEditMode && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-3 text-white shadow-md">
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-3 text-primary-foreground shadow-md">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>
@@ -539,10 +539,10 @@ export default function PostItemForm({ className }: PostItemFormProps) {
         </div>
       )}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl font-bold text-foreground mb-2">
           {isEditMode ? 'Edit Item Details' : 'Post a Lost or Found Item'}
         </h1>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           {isEditMode
             ? 'Update the information for your item. Changes are saved once you submit.'
             : 'Help reunite lost items with their owners or report items you\'ve found.'}
@@ -554,19 +554,19 @@ export default function PostItemForm({ className }: PostItemFormProps) {
 
       {/* Success Message */}
       {success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 mb-6">
+        <div className="bg-success/10 border border-success/30 rounded-lg p-4 text-success mb-6">
           <p>✅ {success}</p>
         </div>
       )}
 
       {/* Duplicate warning: 409 DUPLICATE_SUSPECTED from POST /api/items */}
       {duplicateWarning && (
-        <div role="alert" className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+        <div role="alert" className="bg-warning/10 border border-warning/30 rounded-lg p-4 mb-6">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600" aria-hidden="true" />
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-warning" aria-hidden="true" />
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-amber-900">Possible duplicate</p>
-              <p className="text-sm text-amber-800 mt-1">
+              <p className="font-semibold text-warning">Possible duplicate</p>
+              <p className="text-sm text-warning mt-1">
                 {duplicateWarning.candidates.length === 1
                   ? 'You recently posted a very similar item:'
                   : 'You recently posted very similar items:'}
@@ -574,26 +574,26 @@ export default function PostItemForm({ className }: PostItemFormProps) {
 
               <ul className="mt-3 space-y-2">
                 {duplicateWarning.candidates.map((candidate) => (
-                  <li key={candidate.id} className="bg-white border border-amber-200 rounded-md p-3">
+                  <li key={candidate.id} className="bg-card border border-warning/30 rounded-md p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <Link
                           href={`/item/${candidate.id}`}
-                          className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                          className="text-sm font-medium text-foreground hover:text-primary hover:underline"
                         >
                           {candidate.title}
                         </Link>
-                        <p className="text-xs text-gray-500 mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {candidate.location} · {candidate.itemType === 'LOST' ? 'Lost' : 'Found'} ·{' '}
                           {new Date(candidate.createdAt).toLocaleDateString()}
                         </p>
                         {candidate.reasons.length > 0 && (
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             {candidate.reasons.slice(0, 3).map((reason) => reason.label).join(' · ')}
                           </p>
                         )}
                       </div>
-                      <span className="text-xs font-semibold text-amber-700 whitespace-nowrap">
+                      <span className="text-xs font-semibold text-warning whitespace-nowrap">
                         {Math.round(candidate.score)}% match
                       </span>
                     </div>
@@ -627,7 +627,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Item Type Selection */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
+          <label className="block text-sm font-medium text-foreground/85 mb-3">
             Item Status
           </label>
           <div className="flex gap-4">
@@ -641,7 +641,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
                 onBlur={getFieldProps('itemType').onBlur}
                 className="mr-2"
               />
-              <span className="text-sm font-medium text-red-700">🔍 I Lost This</span>
+              <span className="text-sm font-medium text-destructive">🔍 I Lost This</span>
             </label>
             <label className="flex items-center">
               <input
@@ -653,7 +653,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
                 onBlur={getFieldProps('itemType').onBlur}
                 className="mr-2"
               />
-              <span className="text-sm font-medium text-green-700">✨ I Found This</span>
+              <span className="text-sm font-medium text-success">✨ I Found This</span>
             </label>
           </div>
           <FieldError error={errors.itemType} />
@@ -672,7 +672,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
 
         {/* Description Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-foreground/85 mb-2">
             Description
           </label>
           <Textarea
@@ -680,12 +680,12 @@ export default function PostItemForm({ className }: PostItemFormProps) {
             placeholder="Describe the item in detail... Where did you lose/find it? What makes it unique?"
             rows={4}
             className={errors.description 
-              ? 'border-red-300 focus:border-red-500' 
+              ? 'border-destructive/30 focus:border-destructive/30' 
               : ''
             }
           />
           <FieldError error={errors.description} />
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {values.description.length}/2000 characters
           </p>
         </div>
@@ -704,7 +704,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
         {/* Category and Zone (held in local state, not in the string-only hook) */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="item-category" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="item-category" className="block text-sm font-medium text-foreground/85 mb-2">
               Category (Optional)
             </label>
             <select
@@ -712,7 +712,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
               value={categorySlug}
               onChange={(e) => setCategorySlug(e.target.value)}
               disabled={isLoading || taxonomyLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring disabled:bg-muted/40 disabled:text-muted-foreground"
             >
               <option value="">
                 {taxonomyLoading ? 'Loading categories…' : 'Select a category'}
@@ -726,7 +726,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
           </div>
 
           <div>
-            <label htmlFor="item-zone" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="item-zone" className="block text-sm font-medium text-foreground/85 mb-2">
               Campus Zone (Optional)
             </label>
             <select
@@ -734,7 +734,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
               value={zoneSlug}
               onChange={(e) => setZoneSlug(e.target.value)}
               disabled={isLoading || taxonomyLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring disabled:bg-muted/40 disabled:text-muted-foreground"
             >
               <option value="">
                 {taxonomyLoading ? 'Loading zones…' : 'Select a zone'}
@@ -750,10 +750,10 @@ export default function PostItemForm({ className }: PostItemFormProps) {
 
         {/* Tags */}
         <div>
-          <label htmlFor="item-tags" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="item-tags" className="block text-sm font-medium text-foreground/85 mb-2">
             Tags (Optional)
           </label>
-          <div className="flex flex-wrap items-center gap-2 w-full px-3 py-2 border border-gray-300 rounded-md focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500">
+          <div className="flex flex-wrap items-center gap-2 w-full px-3 py-2 border border-border rounded-md focus-within:border-ring focus-within:ring-2 focus-within:ring-ring">
             {tags.map((tag) => (
               <TagPill
                 key={tag}
@@ -776,7 +776,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
               className="flex-1 min-w-[8rem] border-0 p-0 text-sm focus:outline-none focus:ring-0 disabled:bg-transparent"
             />
           </div>
-          <p id="item-tags-help" className="text-sm text-gray-500 mt-1">
+          <p id="item-tags-help" className="text-sm text-muted-foreground mt-1">
             Press Enter or comma to add a tag — up to {MAX_TAGS_PER_ITEM} tags of{' '}
             {MIN_TAG_LENGTH}-{MAX_TAG_LENGTH} characters (letters, numbers, and hyphens).
           </p>
@@ -785,7 +785,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
 
         {/* Image Upload Field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
+          <label className="block text-sm font-medium text-foreground/85 mb-3">
             Item Image (Optional)
           </label>
           <ImageUpload

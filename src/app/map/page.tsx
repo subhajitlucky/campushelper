@@ -139,11 +139,11 @@ export default function MapPage() {
   const isAuthError = (zonesError ?? itemsError ?? '').toLowerCase().includes('auth');
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-muted/40 py-8">
       <div className="container mx-auto px-4">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Campus Map</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Campus Map</h1>
+          <p className="text-muted-foreground">
             Browse lost and found reports by campus zone. Select a zone to see what was reported there.
           </p>
         </div>
@@ -160,7 +160,7 @@ export default function MapPage() {
                 <Skeleton className="aspect-square w-full" />
               ) : zonesError ? (
                 <div className="flex min-h-[16rem] flex-col items-center justify-center gap-3 text-center">
-                  <p className="text-gray-600">{zonesError}</p>
+                  <p className="text-muted-foreground">{zonesError}</p>
                   {isAuthError ? (
                     <Button asChild>
                       <Link href="/auth/login">Sign In</Link>
@@ -197,20 +197,20 @@ export default function MapPage() {
               {selectedZone ? (
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-2xl font-semibold text-gray-900">{selectedZone.itemCount}</p>
-                    <p className="text-sm text-gray-500">Total items</p>
+                    <p className="text-2xl font-semibold text-foreground">{selectedZone.itemCount}</p>
+                    <p className="text-sm text-muted-foreground">Total items</p>
                   </div>
                   <div>
-                    <p className="text-2xl font-semibold text-red-600">{selectedZone.lostCount}</p>
-                    <p className="text-sm text-gray-500">Lost</p>
+                    <p className="text-2xl font-semibold text-destructive">{selectedZone.lostCount}</p>
+                    <p className="text-sm text-muted-foreground">Lost</p>
                   </div>
                   <div>
-                    <p className="text-2xl font-semibold text-green-600">{selectedZone.foundCount}</p>
-                    <p className="text-sm text-gray-500">Found</p>
+                    <p className="text-2xl font-semibold text-success">{selectedZone.foundCount}</p>
+                    <p className="text-sm text-muted-foreground">Found</p>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <MapPin className="h-4 w-4" aria-hidden="true" />
                   {zones.length > 0
                     ? 'No zone selected'
@@ -225,11 +225,11 @@ export default function MapPage() {
         {selectedZone && (
           <div className="mt-8">
             <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-foreground">
                 Items reported in {selectedZone.name}
               </h2>
               {!itemsLoading && !itemsError && items.length > 0 && (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Showing {items.length} of {itemsTotal} {itemsTotal === 1 ? 'item' : 'items'}
                 </p>
               )}
@@ -241,7 +241,7 @@ export default function MapPage() {
               <Card hover={false}>
                 <CardContent className="pt-6">
                   <div className="text-center">
-                    <p className="text-red-600 mb-4">{itemsError}</p>
+                    <p className="text-destructive mb-4">{itemsError}</p>
                     <Button
                       variant="outline"
                       onClick={() => setItemsReloadToken((token) => token + 1)}

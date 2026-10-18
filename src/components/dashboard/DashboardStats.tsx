@@ -26,21 +26,21 @@ export default function DashboardStats({
       value: postedCount,
       description: "Lost items you've reported",
       icon: Package,
-      color: "text-blue-600"
+      color: "text-primary"
     },
     {
       title: "Items Claimed",
       value: claimedCount,
       description: "Found items you've claimed",
       icon: CheckCircle,
-      color: "text-green-600"
+      color: "text-success"
     },
     {
       title: "Pending Claims",
       value: pendingClaimsCount,
       description: "Claims awaiting your review",
       icon: Clock,
-      color: "text-orange-600"
+      color: "text-warning"
     }
   ];
 
@@ -58,7 +58,7 @@ export default function DashboardStats({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-gray-600 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {stat.description}
               </p>
             </CardContent>

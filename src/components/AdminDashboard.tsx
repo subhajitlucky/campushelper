@@ -264,7 +264,7 @@ export default function AdminDashboard() {
           variant="outline"
           onClick={() => handleItemModeration(item.id, isSpam ? 'unflag_spam' : 'flag_spam')}
           disabled={isModerating || isDeleted}
-          className={isSpam ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' : ''}
+          className={isSpam ? 'bg-warning/10 text-warning hover:bg-warning/90/15' : ''}
         >
           <Flag className="w-4 h-4 mr-2" />
           {isModerating ? 'Processing...' : (isSpam ? 'Unflag' : 'Flag Spam')}
@@ -410,9 +410,9 @@ export default function AdminDashboard() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <Shield className="w-16 h-16 mx-auto text-red-500 mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <p className="text-gray-600">You don&apos;t have permission to access the admin dashboard.</p>
+          <Shield className="w-16 h-16 mx-auto text-destructive mb-4" />
+          <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
+          <p className="text-muted-foreground">You don&apos;t have permission to access the admin dashboard.</p>
         </div>
       </div>
     );
@@ -422,22 +422,22 @@ export default function AdminDashboard() {
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-2">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">
           Admin Dashboard
         </h1>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Welcome back, {session?.user?.name || session?.user?.email}. Manage your campus community.
         </p>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
+      <div className="flex space-x-1 mb-6 bg-muted p-1 rounded-lg">
         <button
           onClick={() => setActiveTab('overview')}
           className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
             activeTab === 'overview'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground/85'
           }`}
         >
           Overview
@@ -446,8 +446,8 @@ export default function AdminDashboard() {
           onClick={() => setActiveTab('items')}
           className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
             activeTab === 'items'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground/85'
           }`}
         >
           Items
@@ -456,8 +456,8 @@ export default function AdminDashboard() {
           onClick={() => setActiveTab('users')}
           className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
             activeTab === 'users'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground/85'
           }`}
         >
           Users
@@ -466,8 +466,8 @@ export default function AdminDashboard() {
           onClick={() => setActiveTab('claims')}
           className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
             activeTab === 'claims'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground/85'
           }`}
         >
           Claims
@@ -476,8 +476,8 @@ export default function AdminDashboard() {
           onClick={() => setActiveTab('analytics')}
           className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
             activeTab === 'analytics'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground/85'
           }`}
         >
           Analytics
@@ -486,8 +486,8 @@ export default function AdminDashboard() {
           onClick={() => setActiveTab('audit')}
           className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
             activeTab === 'audit'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground/85'
           }`}
         >
           Audit Log
@@ -497,16 +497,16 @@ export default function AdminDashboard() {
       {/* Content */}
       {loading && (
         <div className="flex justify-center items-center py-12">
-          <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
-          <span className="ml-2 text-gray-600">Loading...</span>
+          <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground/70" />
+          <span className="ml-2 text-muted-foreground">Loading...</span>
         </div>
       )}
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div className="mb-6 p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
           <div className="flex">
-            <AlertTriangle className="w-5 h-5 text-red-400" />
-            <p className="ml-3 text-sm text-red-700">{error}</p>
+            <AlertTriangle className="w-5 h-5 text-destructive" />
+            <p className="ml-3 text-sm text-destructive">{error}</p>
             <Button 
               onClick={fetchAdminData} 
               variant="outline" 
@@ -528,11 +528,11 @@ export default function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                  <Users className="h-4 w-4 text-gray-600" />
+                  <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalUsers}</div>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-muted-foreground">
                     {stats.totalUsers - stats.activeItems} inactive
                   </p>
                 </CardContent>
@@ -541,11 +541,11 @@ export default function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Items</CardTitle>
-                  <Package className="h-4 w-4 text-gray-600" />
+                  <Package className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalItems}</div>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-muted-foreground">
                     {stats.resolvedItems} resolved
                   </p>
                 </CardContent>
@@ -554,11 +554,11 @@ export default function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Pending Claims</CardTitle>
-                  <MessageSquare className="h-4 w-4 text-gray-600" />
+                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.pendingClaims}</div>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-muted-foreground">
                     {stats.totalClaims} total claims
                   </p>
                 </CardContent>
@@ -567,11 +567,11 @@ export default function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Deleted Items</CardTitle>
-                  <Trash2 className="h-4 w-4 text-gray-600" />
+                  <Trash2 className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.deletedItems}</div>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-muted-foreground">
                     {stats.activeItems} active
                   </p>
                 </CardContent>
@@ -607,7 +607,7 @@ export default function AdminDashboard() {
                             type="checkbox"
                             checked={selectedItemIds.includes(item.id)}
                             onChange={() => toggleItemSelection(item.id)}
-                            className="h-4 w-4 rounded border-gray-300"
+                            className="h-4 w-4 rounded border-border"
                             aria-label={`Select ${item.title} for a bulk action`}
                           />
                         </label>
@@ -629,11 +629,11 @@ export default function AdminDashboard() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        <p className="text-sm text-gray-600 line-clamp-2">
+                        <p className="text-sm text-muted-foreground line-clamp-2">
                           {item.description}
                         </p>
                         
-                        <div className="flex justify-between items-center text-sm text-gray-500">
+                        <div className="flex justify-between items-center text-sm text-muted-foreground">
                           <div className="flex items-center space-x-4">
                             <span>By: {item.postedBy.name || item.postedBy.email}</span>
                             <span>{item.commentCount} comments</span>
@@ -681,7 +681,7 @@ export default function AdminDashboard() {
                             type="checkbox"
                             checked={selectedUserIds.includes(user.id)}
                             onChange={() => toggleUserSelection(user.id)}
-                            className="h-4 w-4 rounded border-gray-300"
+                            className="h-4 w-4 rounded border-border"
                             aria-label={`Select ${user.name || user.email} for a bulk action`}
                           />
                         </label>
@@ -709,7 +709,7 @@ export default function AdminDashboard() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex justify-between items-center text-sm text-gray-500">
+                      <div className="flex justify-between items-center text-sm text-muted-foreground">
                         <div className="flex items-center space-x-4">
                           <span>{user.itemsCount} items posted</span>
                           <span>{user.claimsCount} claims made</span>
@@ -763,15 +763,15 @@ export default function AdminDashboard() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-muted-foreground">
                           <strong>Claimant:</strong> {claim.user.name || claim.user.email}
                         </p>
                         
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-muted-foreground">
                           <strong>Message:</strong> {claim.message}
                         </p>
 
-                        <div className="flex justify-between items-center text-sm text-gray-500">
+                        <div className="flex justify-between items-center text-sm text-muted-foreground">
                           <span>Item Status: {claim.item.status}</span>
                           <span>{new Date(claim.createdAt).toLocaleDateString()}</span>
                         </div>
@@ -811,24 +811,24 @@ export default function AdminDashboard() {
       {/* Role Change Modal */}
       {showRoleModal && selectedUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
+          <div className="bg-card rounded-lg p-6 w-96 max-w-full mx-4">
             <h3 className="text-lg font-semibold mb-4">Change User Role</h3>
             
             <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-muted-foreground mb-2">
                 User: {selectedUser.name || selectedUser.email}
               </p>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 Current Role: <Badge variant="outline">{selectedUser.role}</Badge>
               </p>
             </div>
 
             <div className="space-y-3 mb-6">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-foreground/85">
                 Select New Role
               </label>
               <select 
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring"
                 defaultValue=""
                 id="newRoleSelect"
               >

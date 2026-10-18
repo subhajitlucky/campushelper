@@ -13,7 +13,7 @@ export const FieldError: React.FC<FieldErrorProps> = ({
   if (!error) return null;
 
   return (
-    <div className={`flex items-center gap-2 text-red-600 text-sm mt-1 ${className}`}>
+    <div className={`flex items-center gap-2 text-destructive text-sm mt-1 ${className}`}>
       <AlertCircle className="w-4 h-4 flex-shrink-0" />
       <span>{error}</span>
     </div>

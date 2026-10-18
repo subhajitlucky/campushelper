@@ -42,12 +42,12 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const ACTION_TONES: Record<string, string> = {
-  ITEM_REMOVE: 'bg-red-50 text-red-700 border-red-200',
-  ITEM_DELETE: 'bg-red-50 text-red-700 border-red-200',
-  USER_DEACTIVATE: 'bg-red-50 text-red-700 border-red-200',
-  ITEM_FLAG: 'bg-amber-50 text-amber-700 border-amber-200',
-  ITEM_RESTORE: 'bg-green-50 text-green-700 border-green-200',
-  USER_REACTIVATE: 'bg-green-50 text-green-700 border-green-200',
+  ITEM_REMOVE: 'bg-destructive/10 text-destructive border-destructive/30',
+  ITEM_DELETE: 'bg-destructive/10 text-destructive border-destructive/30',
+  USER_DEACTIVATE: 'bg-destructive/10 text-destructive border-destructive/30',
+  ITEM_FLAG: 'bg-warning/10 text-warning border-warning/30',
+  ITEM_RESTORE: 'bg-success/10 text-success border-success/30',
+  USER_REACTIVATE: 'bg-success/10 text-success border-success/30',
 };
 
 export default function AuditLogTable({ className }: { className?: string }) {
@@ -94,13 +94,13 @@ export default function AuditLogTable({ className }: { className?: string }) {
   return (
     <div className={cn('space-y-4', className)}>
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
-          <ScrollText className="h-4 w-4 text-blue-600" aria-hidden="true" />
+        <h2 className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+          <ScrollText className="h-4 w-4 text-primary" aria-hidden="true" />
           Audit log
-          {total > 0 && <span className="text-gray-500">({total})</span>}
+          {total > 0 && <span className="text-muted-foreground">({total})</span>}
         </h2>
 
-        <label className="ml-auto text-sm text-gray-600">
+        <label className="ml-auto text-sm text-muted-foreground">
           <span className="sr-only">Filter by action</span>
           <select
             value={action}
@@ -108,7 +108,7 @@ export default function AuditLogTable({ className }: { className?: string }) {
               setAction(event.target.value);
               setPage(1);
             }}
-            className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-border px-2 py-1.5 text-sm"
           >
             <option value="">All actions</option>
             {Object.entries(ACTION_LABELS).map(([value, label]) => (
@@ -119,7 +119,7 @@ export default function AuditLogTable({ className }: { className?: string }) {
           </select>
         </label>
 
-        <label className="text-sm text-gray-600">
+        <label className="text-sm text-muted-foreground">
           <span className="sr-only">Filter by target type</span>
           <select
             value={targetType}
@@ -127,7 +127,7 @@ export default function AuditLogTable({ className }: { className?: string }) {
               setTargetType(event.target.value);
               setPage(1);
             }}
-            className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-border px-2 py-1.5 text-sm"
           >
             <option value="">All targets</option>
             <option value="Item">Items</option>
@@ -138,55 +138,55 @@ export default function AuditLogTable({ className }: { className?: string }) {
       </div>
 
       {isLoading ? (
-        <p className="flex items-center gap-2 py-8 text-sm text-gray-500">
+        <p className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           Loading audit entries…
         </p>
       ) : entries.length === 0 ? (
-        <p className="py-8 text-center text-sm text-gray-500">
+        <p className="py-8 text-center text-sm text-muted-foreground">
           No privileged actions recorded for this filter.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
+        <div className="overflow-x-auto rounded-lg border border-border bg-card">
+          <table className="min-w-full divide-y divide-border text-sm">
+            <thead className="bg-muted/40">
               <tr>
-                <th scope="col" className="px-4 py-2 text-left font-medium text-gray-600">When</th>
-                <th scope="col" className="px-4 py-2 text-left font-medium text-gray-600">Actor</th>
-                <th scope="col" className="px-4 py-2 text-left font-medium text-gray-600">Action</th>
-                <th scope="col" className="px-4 py-2 text-left font-medium text-gray-600">Target</th>
-                <th scope="col" className="px-4 py-2 text-left font-medium text-gray-600">Reason</th>
+                <th scope="col" className="px-4 py-2 text-left font-medium text-muted-foreground">When</th>
+                <th scope="col" className="px-4 py-2 text-left font-medium text-muted-foreground">Actor</th>
+                <th scope="col" className="px-4 py-2 text-left font-medium text-muted-foreground">Action</th>
+                <th scope="col" className="px-4 py-2 text-left font-medium text-muted-foreground">Target</th>
+                <th scope="col" className="px-4 py-2 text-left font-medium text-muted-foreground">Reason</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {entries.map((entry) => (
                 <tr key={entry.id}>
-                  <td className="whitespace-nowrap px-4 py-2 text-gray-600">
+                  <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">
                     {new Date(entry.createdAt).toLocaleString()}
                   </td>
                   <td className="px-4 py-2">
-                    <span className="block text-gray-900">
+                    <span className="block text-foreground">
                       {entry.actor?.name || entry.actorEmail}
                     </span>
-                    <span className="block text-xs text-gray-500">{entry.actorEmail}</span>
+                    <span className="block text-xs text-muted-foreground">{entry.actorEmail}</span>
                   </td>
                   <td className="px-4 py-2">
                     <span
                       className={cn(
                         'inline-block rounded-md border px-2 py-0.5 text-xs font-medium',
-                        ACTION_TONES[entry.action] ?? 'border-gray-200 bg-gray-50 text-gray-700'
+                        ACTION_TONES[entry.action] ?? 'border-border bg-muted/40 text-foreground/85'
                       )}
                     >
                       {ACTION_LABELS[entry.action] ?? entry.action}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-gray-600">
+                  <td className="px-4 py-2 text-muted-foreground">
                     <span className="block">{entry.targetType}</span>
-                    <span className="block truncate font-mono text-xs text-gray-400">
+                    <span className="block truncate font-mono text-xs text-muted-foreground/70">
                       {entry.targetId}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-gray-600">{entry.reason ?? '—'}</td>
+                  <td className="px-4 py-2 text-muted-foreground">{entry.reason ?? '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -200,19 +200,19 @@ export default function AuditLogTable({ className }: { className?: string }) {
             type="button"
             onClick={() => setPage((current) => Math.max(current - 1, 1))}
             disabled={page <= 1}
-            className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground/85 transition-colors hover:bg-muted/40 disabled:opacity-50"
           >
             <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
             Previous
           </button>
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-muted-foreground">
             Page {page} of {totalPages}
           </span>
           <button
             type="button"
             onClick={() => setPage((current) => Math.min(current + 1, totalPages))}
             disabled={page >= totalPages}
-            className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground/85 transition-colors hover:bg-muted/40 disabled:opacity-50"
           >
             Next
             <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />

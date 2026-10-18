@@ -22,25 +22,25 @@ export default function GlobalError({ error, reset }: ErrorProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+      <div className="max-w-md w-full bg-card rounded-lg shadow-lg p-8 text-center">
         <div className="mb-6">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <AlertCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-foreground mb-2">
             Oops! Something went wrong
           </h2>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             We encountered an unexpected error. Don&apos;t worry, our team has been notified.
           </p>
         </div>
 
         {process.env.NODE_ENV === 'development' && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-left">
-            <p className="text-sm font-medium text-red-800 mb-2">Error Details:</p>
-            <p className="text-xs text-red-700 font-mono break-all">
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-left">
+            <p className="text-sm font-medium text-destructive mb-2">Error Details:</p>
+            <p className="text-xs text-destructive font-mono break-all">
               {error.message}
             </p>
             {error.digest && (
-              <p className="text-xs text-red-600 mt-2">
+              <p className="text-xs text-destructive mt-2">
                 ID: {error.digest}
               </p>
             )}

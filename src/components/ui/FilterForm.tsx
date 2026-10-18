@@ -51,7 +51,7 @@ export default function FilterForm({
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {fields.map((field) => (
             <div key={field.name}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground/85 mb-1">
                 {field.label}
               </label>
               {field.type === 'text' ? (
@@ -60,13 +60,13 @@ export default function FilterForm({
                   value={values[field.name] || ''}
                   onChange={(e) => onChange(field.name, e.target.value)}
                   placeholder={field.placeholder || ''}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring"
                 />
               ) : (
                 <select
                   value={values[field.name] || ''}
                   onChange={(e) => onChange(field.name, e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring"
                 >
                   <option value="">All {field.label}</option>
                   {field.options?.map((option) => (

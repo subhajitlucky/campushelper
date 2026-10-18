@@ -66,38 +66,38 @@ export default class ErrorBoundary extends Component<Props, State> {
 // Page-level error fallback
 function PageErrorFallback({ error }: { error?: Error }) {
       return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
-        <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full">
-          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="min-h-screen flex items-center justify-center bg-muted/40">
+      <div className="max-w-md w-full bg-card rounded-lg shadow-lg p-6">
+        <div className="flex items-center justify-center w-12 h-12 mx-auto bg-destructive/10 rounded-full">
+          <svg className="w-6 h-6 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
           </svg>
         </div>
         <div className="mt-4 text-center">
-          <h3 className="text-lg font-medium text-gray-900">Page Error</h3>
-          <p className="mt-2 text-sm text-gray-600">
+          <h3 className="text-lg font-medium text-foreground">Page Error</h3>
+          <p className="mt-2 text-sm text-muted-foreground">
             We&apos;re sorry, but something went wrong loading this page.
               </p>
           <div className="mt-4 flex space-x-3">
             <button
               onClick={() => window.location.reload()}
-              className="flex-1 bg-gray-900 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800"
+              className="flex-1 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90"
             >
               Reload Page
             </button>
             <button
               onClick={() => window.history.back()}
-              className="flex-1 bg-gray-100 text-gray-900 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200"
+              className="flex-1 bg-muted text-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-muted"
               >
               Go Back
             </button>
             </div>
           {process.env.NODE_ENV === 'development' && error && (
             <details className="mt-4 text-left">
-                <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+                <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground/85">
                   Error Details (Development)
                 </summary>
-              <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
+              <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto">
                 {error.message}
                 {'\n'}
                 {error.stack}
@@ -115,19 +115,19 @@ function FeatureErrorFallback({ error }: { error?: Error }) {
   // The error object is intentionally not rendered to avoid leaking details
   void error;
   return (
-    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+    <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
       <div className="flex items-center">
-        <svg className="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 text-destructive mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
         </svg>
         <div>
-          <h4 className="text-sm font-medium text-red-800">Feature Unavailable</h4>
-          <p className="text-sm text-red-700 mt-1">
+          <h4 className="text-sm font-medium text-destructive">Feature Unavailable</h4>
+          <p className="text-sm text-destructive mt-1">
             This feature is temporarily unavailable. Please try again later.
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-2 text-sm text-red-600 hover:text-red-500 underline"
+            className="mt-2 text-sm text-destructive hover:text-destructive underline"
           >
             Reload page
           </button>
@@ -142,8 +142,8 @@ function ComponentErrorFallback({ error }: { error?: Error }) {
   // The error object is intentionally not rendered to avoid leaking details
   void error;
   return (
-    <div className="p-3 bg-red-50 border border-red-200 rounded text-sm">
-      <div className="flex items-center text-red-700">
+    <div className="p-3 bg-destructive/10 border border-destructive/30 rounded text-sm">
+      <div className="flex items-center text-destructive">
         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
         </svg>

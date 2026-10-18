@@ -80,9 +80,9 @@ export default function NotificationBell() {
       href="/notifications"
       aria-label={ariaLabel}
       className={cn(
-        'relative inline-flex size-10 items-center justify-center rounded-md text-gray-700 transition-colors',
-        'hover:bg-gray-100 hover:text-gray-900',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2'
+        'relative inline-flex size-10 items-center justify-center rounded-md text-foreground/85 transition-colors',
+        'hover:bg-muted hover:text-foreground',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
       )}
     >
       <Bell className="size-5" aria-hidden="true" />
@@ -92,7 +92,7 @@ export default function NotificationBell() {
         {hasUnread && (
           <span
             aria-hidden="true"
-            className="inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-semibold leading-5 text-white"
+            className="inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-semibold leading-5 text-destructive-foreground"
           >
             {unreadCount > MAX_DISPLAYED_COUNT ? `${MAX_DISPLAYED_COUNT}+` : unreadCount}
           </span>

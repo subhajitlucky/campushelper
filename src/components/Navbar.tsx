@@ -29,11 +29,11 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="border-b bg-white">
+    <nav className="border-b bg-card">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
         <Link
           href="/"
-          className="text-xl font-semibold tracking-tight text-gray-900"
+          className="text-xl font-semibold tracking-tight text-foreground"
           onClick={closeMenu}
         >
           Campus Helper
@@ -56,7 +56,7 @@ export default function Navbar() {
               <NotificationBell />
               <Button variant="ghost" asChild className="p-2">
                 <Link href="/dashboard" title="Go to Dashboard">
-                  <User className="size-5 text-gray-700 hover:text-gray-900" />
+                  <User className="size-5 text-foreground/85 hover:text-foreground" />
                 </Link>
               </Button>
               <Button variant="outline" onClick={handleLogout}>
@@ -89,7 +89,7 @@ export default function Navbar() {
       </div>
 
       {isMenuOpen && (
-        <div id="mobile-menu" className="border-t bg-white md:hidden">
+        <div id="mobile-menu" className="border-t bg-card md:hidden">
           <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-3">
             {navItems.map((item) => (
               <Button key={item.href} variant="ghost" className="justify-start" asChild>

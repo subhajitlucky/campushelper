@@ -27,13 +27,13 @@ export default function EmptyState({
   return (
     <div className={`text-center py-12 ${className}`}>
       {icon && (
-        <div className="text-gray-400 mb-4 flex justify-center">
+        <div className="text-muted-foreground/70 mb-4 flex justify-center">
           {icon}
         </div>
       )}
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+      <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
       {description && (
-        <p className="text-gray-500 mb-4 max-w-md mx-auto">{description}</p>
+        <p className="text-muted-foreground mb-4 max-w-md mx-auto">{description}</p>
       )}
       {action && (
         <Button onClick={action.onClick}>

@@ -237,17 +237,17 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-card rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold mb-4">Comments</h3>
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="animate-pulse">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                <div className="w-8 h-8 bg-muted rounded-full"></div>
                 <div className="flex-1">
-                  <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-full mb-1"></div>
-                  <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
+                  <div className="h-3 bg-muted rounded w-full mb-1"></div>
+                  <div className="h-3 bg-muted rounded w-3/4"></div>
                 </div>
               </div>
             </div>
@@ -261,21 +261,21 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
     const isAuthError = error.includes('Authentication required') || error.includes('Authentication');
     
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-card rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold mb-4">Comments</h3>
         <div className="text-center py-8">
-          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-muted-foreground mb-4">{error}</p>
           {isAuthError ? (
             <a
               href="/auth/login"
-              className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-block px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
               Sign In to View Comments
             </a>
           ) : (
             <button
               onClick={fetchComments}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
             >
               Try Again
             </button>
@@ -286,23 +286,23 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-card rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold mb-4">
         Comments ({comments.length})
       </h3>
       
       {/* Show info message for resolved items */}
       {itemStatus === 'RESOLVED' && (
-        <div className="mb-4 p-4 bg-green-50 border-l-4 border-green-500 rounded-lg">
+        <div className="mb-4 p-4 bg-success/10 border-l-4 border-success/30 rounded-lg">
           <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-success flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div>
-              <p className="text-green-800 font-semibold text-sm mb-1">
+              <p className="text-success font-semibold text-sm mb-1">
                 Item Resolved
               </p>
-              <p className="text-green-700 text-xs">
+              <p className="text-success text-xs">
                 This item has been resolved. You can view existing comments but cannot add new ones.
               </p>
             </div>
@@ -312,8 +312,8 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
       
       {/* Step 110: Comment Form - Only show if logged in and item is not resolved */}
       {session?.user && itemStatus !== 'RESOLVED' && (
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="text-sm font-medium text-gray-900 mb-3">Add a Comment</h4>
+        <div className="mb-6 p-4 bg-muted/40 rounded-lg">
+          <h4 className="text-sm font-medium text-foreground mb-3">Add a Comment</h4>
           <form onSubmit={submitComment}>
             <div className="space-y-3">
               <div>
@@ -324,15 +324,15 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
                   placeholder="Write your comment here..."
                   rows={3}
                   maxLength={1000}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring resize-none"
                   disabled={formLoading}
                 />
                 <div className="flex justify-between items-center mt-1">
                   {formError && (
-                    <p className="text-sm text-red-600">{formError}</p>
+                    <p className="text-sm text-destructive">{formError}</p>
                   )}
                   <p className={`text-sm ml-auto ${
-                    formData.message.length > 1000 ? 'text-red-600' : 'text-gray-500'
+                    formData.message.length > 1000 ? 'text-destructive' : 'text-muted-foreground'
                   }`}>
                     {formData.message.length}/1000
                   </p>
@@ -342,7 +342,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
                 <button
                   type="submit"
                   disabled={formLoading || !formData.message.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
                 >
                   {formLoading ? 'Posting...' : 'Post Comment'}
                 </button>
@@ -354,11 +354,11 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
       
       {/* Show login prompt if not logged in and item is not resolved */}
       {!session?.user && itemStatus !== 'RESOLVED' && (
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg text-center">
-          <p className="text-gray-600 mb-3">Sign in to add a comment</p>
+        <div className="mb-6 p-4 bg-muted/40 rounded-lg text-center">
+          <p className="text-muted-foreground mb-3">Sign in to add a comment</p>
           <a
             href="/auth/login"
-            className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-block px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
           >
             Sign In
           </a>
@@ -367,22 +367,22 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
       
       {/* Comments List */}
       {comments.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-muted-foreground">
           <p>No comments yet. Be the first to comment!</p>
         </div>
       ) : (
         <div className="space-y-4">
           {/* Fix: Add delete error display */}
           {deleteError && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
               <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <p className="text-sm text-red-700">{deleteError}</p>
+                <p className="text-sm text-destructive">{deleteError}</p>
                 <button
                   onClick={() => setDeleteError(null)}
-                  className="ml-auto text-red-600 hover:text-red-800"
+                  className="ml-auto text-destructive hover:text-destructive"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -392,10 +392,10 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
             </div>
           )}
           {comments.map((comment) => (
-            <div key={comment.id} className="border-b border-gray-200 pb-4 last:border-b-0">
+            <div key={comment.id} className="border-b border-border pb-4 last:border-b-0">
               <div className="flex items-start gap-3">
                 {/* User Avatar */}
-                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center flex-shrink-0">
                   {comment.user.avatar ? (
                     <Image
                       src={comment.user.avatar}
@@ -405,7 +405,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
                       className="rounded-full object-cover"
                     />
                   ) : (
-                    <span className="text-gray-600 text-sm font-medium">
+                    <span className="text-muted-foreground text-sm font-medium">
                       {(comment.user.name || 'U')[0].toUpperCase()}
                     </span>
                   )}
@@ -414,10 +414,10 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
                 {/* Comment Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-foreground">
                       {comment.user.name || 'Anonymous'}
                     </p>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-muted-foreground">
                       {new Date(comment.createdAt).toLocaleDateString()} at{' '}
                       {new Date(comment.createdAt).toLocaleTimeString([], {
                         hour: '2-digit',
@@ -433,26 +433,26 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
                       <textarea
                         value={editMessage}
                         onChange={(e) => setEditMessage(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full p-2 border border-border rounded-md resize-none focus:ring-2 focus:ring-ring focus:border-ring"
                         rows={3}
                         placeholder="Edit your comment..."
                         disabled={editLoading}
                       />
                       {editError && (
-                        <p className="text-sm text-red-600 mt-1">{editError}</p>
+                        <p className="text-sm text-destructive mt-1">{editError}</p>
                       )}
                       <div className="flex gap-2 mt-2">
                         <button
                           onClick={() => saveEditComment(comment.id)}
                           disabled={editLoading || !editMessage.trim()}
-                          className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                          className="px-3 py-1 bg-primary text-primary-foreground text-xs rounded hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
                         >
                           {editLoading ? 'Saving...' : 'Save'}
                         </button>
                         <button
                           onClick={cancelEdit}
                           disabled={editLoading}
-                          className="px-3 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400 disabled:cursor-not-allowed"
+                          className="px-3 py-1 bg-muted text-foreground/85 text-xs rounded hover:bg-muted disabled:cursor-not-allowed"
                         >
                           Cancel
                         </button>
@@ -460,7 +460,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
                     </div>
                   ) : (
                     // Display Mode
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+                    <p className="text-sm text-foreground/85 whitespace-pre-wrap break-words">
                       {comment.message}
                     </p>
                   )}
@@ -487,14 +487,14 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
                     <div className="mt-2 flex gap-3">
                       <button
                         onClick={() => startEditComment(comment)}
-                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                        className="text-xs text-primary hover:text-primary hover:underline"
                         disabled={editingCommentId === comment.id}
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => deleteComment(comment.id)}
-                        className="text-xs text-red-600 hover:text-red-800 hover:underline"
+                        className="text-xs text-destructive hover:text-destructive hover:underline"
                       >
                         Delete
                       </button>
@@ -503,7 +503,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
                   
                   {/* Show resolved message if item is resolved */}
                   {itemStatus === 'RESOLVED' && session?.user?.id === comment.userId && (
-                    <div className="mt-2 text-xs text-gray-500">
+                    <div className="mt-2 text-xs text-muted-foreground">
                       Comments are locked after resolution
                     </div>
                   )}
