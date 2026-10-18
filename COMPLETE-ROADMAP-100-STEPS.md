@@ -1,5 +1,10 @@
 # Campus Helper - Complete 100-Step Roadmap (Phase 1 to 8)
 
+> **Historical document — superseded.** This was the inception-to-launch plan, and its status
+> markers were never kept current: it still reports "Current Phase: 3" and 90% complete while
+> the shipped application is well past it. Treat the code as the source of truth. For the
+> current feature set see [`README.md`](README.md) and [`ROADMAP-V2.md`](ROADMAP-V2.md).
+
 A hyper-detailed roadmap from project inception to production. Each step is marked with completion status.
 
 **Legend**: ✅ = Completed | ☐ = Not Started | 🟨 = In Progress

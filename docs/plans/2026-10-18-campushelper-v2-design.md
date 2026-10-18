@@ -435,13 +435,19 @@ free-text continues to work with no zone set. Existing API responses are unchang
 `POST /api/items` (new optional fields, new 409 path) and rate-limited responses (500 → 429,
 which is a bug fix).
 
-**Testing.** ~40 new tests, all on pure modules and schemas — matching score ordering and
-threshold behaviour, duplicate detection, reputation idempotency and daily caps, tier
-boundaries, CSV escaping and formula neutralisation, analytics derivations including the
-median, notification title/body formatting, and every new Zod schema. The existing 51 tests
-must stay green. New DB-touching routes are exercised by typecheck and lint, not by
-integration tests, because there is no test database in CI — this is a known, stated
-limitation rather than a silent gap.
+**Testing.** ~120 new tests across two layers. **Unit tests** cover the pure modules —
+matching score ordering and threshold behaviour, duplicate detection, reputation idempotency and
+daily caps, tier boundaries, CSV escaping and formula neutralisation, analytics derivations
+including the median, notification formatting, and every new Zod schema. **Integration tests**
+(`tests/integration/admin-routes.test.ts`) exercise the admin routes against a real PostgreSQL
+database, stubbing only the session and CSRF checks so the Prisma aggregates, CSV serialisation,
+audit writes, and bulk updates are real code paths. They skip automatically when `DATABASE_URL`
+is unset, so CI — which has no database — stays green.
+
+This is deliberately a narrower claim than "everything is covered": the non-admin API routes
+(items, claims, notifications, comments) are still covered only by typecheck, lint, and the
+production build. That limitation is stated in the README rather than left implicit. The
+existing 51 tests stayed green throughout.
 
 **Docs.** README feature and API sections updated; a `ROADMAP-V2.md` records the 10
 features and their status; the stale 165-step roadmap gets a header note that it is a

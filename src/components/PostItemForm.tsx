@@ -2,15 +2,24 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { z } from 'zod';
+import { AlertTriangle } from 'lucide-react';
 import { sanitizeInput } from '@/lib/security';
 import { showSuccess, showError } from '@/lib/toast-config';
 import { useAuthFetch } from '@/lib/auth-fetch';
+import {
+  MAX_TAGS_PER_ITEM,
+  MAX_TAG_LENGTH,
+  MIN_TAG_LENGTH,
+  normalizeTag,
+} from '@/lib/schemas/taxonomy';
 import ImageUpload from '@/components/ImageUpload';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import TagPill from '@/components/ui/TagPill';
 import ValidationInput from '@/components/forms/ValidationInput';
 import FieldError from '@/components/forms/FieldError';
 import FormError from '@/components/forms/FormError';
@@ -34,6 +43,94 @@ const postItemSchema = createItemSchema.omit({
 
 type ItemFormValues = z.infer<typeof postItemSchema>;
 
+/** A category as returned by `GET /api/categories`. */
+interface CategoryOption {
+  id: string;
+  slug: string;
+  name: string;
+}
+
+/** A campus zone as returned by `GET /api/zones`. */
+interface ZoneOption {
+  id: string;
+  slug: string;
+  name: string;
+}
+
+/** One candidate from a 409 `DUPLICATE_SUSPECTED` response. */
+interface DuplicateCandidate {
+  id: string;
+  title: string;
+  itemType: 'LOST' | 'FOUND';
+  location: string;
+  createdAt: string;
+  score: number;
+  reasons: { code: string; label: string; weight: number }[];
+}
+
+/**
+ * A duplicate warning plus the exact payload that produced it, so "Post anyway"
+ * resubmits what the server already reviewed.
+ *
+ * The response's `details.hint` is deliberately not kept: it documents the
+ * transport flag ("resend with acknowledgeDuplicates") rather than anything a
+ * user should read.
+ */
+interface DuplicateWarning {
+  candidates: DuplicateCandidate[];
+  payload: Record<string, unknown>;
+}
+
+/** The tag shape the API accepts once normalised. */
+const TAG_PATTERN = /^[a-z0-9-]+$/;
+
+/**
+ * Normalise and validate a tag list in one pass.
+ *
+ * Duplicates are folded (the API does the same), but anything malformed is
+ * reported instead of being silently dropped, and the valid tags are kept.
+ */
+function normalizeTags(rawTags: string[]): { tags: string[]; error: string | null } {
+  const tags: string[] = [];
+  let error: string | null = null;
+
+  for (const raw of rawTags) {
+    const normalized = normalizeTag(raw);
+
+    if (!normalized) {
+      continue;
+    }
+
+    if (normalized.length < MIN_TAG_LENGTH) {
+      error ??= `Tags must be at least ${MIN_TAG_LENGTH} characters: "${normalized}" was not added.`;
+      continue;
+    }
+
+    if (normalized.length > MAX_TAG_LENGTH) {
+      error ??= `Tags must be ${MAX_TAG_LENGTH} characters or fewer: "${normalized}" was not added.`;
+      continue;
+    }
+
+    if (!TAG_PATTERN.test(normalized)) {
+      error ??= `"${normalized}" is not a valid tag: use letters, numbers, and hyphens only.`;
+      continue;
+    }
+
+    if (tags.includes(normalized)) {
+      continue;
+    }
+
+    if (tags.length >= MAX_TAGS_PER_ITEM) {
+      error ??= `You can add up to ${MAX_TAGS_PER_ITEM} tags.`;
+      continue;
+    }
+
+    tags.push(normalized);
+  }
+
+  return { tags, error };
+}
+
 interface PostItemFormProps {
   className?: string;
 }
@@ -48,6 +145,17 @@ export default function PostItemForm({ className }: PostItemFormProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const hasPrefilledFromStorage = useRef(false);
+
+  // Taxonomy lives outside the form-validation hook, which is string-only.
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [zones, setZones] = useState<ZoneOption[]>([]);
+  const [taxonomyLoading, setTaxonomyLoading] = useState(true);
+  const [categorySlug, setCategorySlug] = useState('');
+  const [zoneSlug, setZoneSlug] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+  const [tagError, setTagError] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<DuplicateWarning | null>(null);
 
   // Initialize form validation
   const {
@@ -85,6 +193,49 @@ export default function PostItemForm({ className }: PostItemFormProps) {
     }
   }, []);
 
+  // Optional taxonomy for the category and zone selects. A failure here must
+  // not block posting, so the selects simply stay empty.
+  useEffect(() => {
+    if (isAuthLoading) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchTaxonomy = async () => {
+      try {
+        const [categoriesResponse, zonesResponse] = await Promise.all([
+          fetchWithAuth('/api/categories'),
+          fetchWithAuth('/api/zones'),
+        ]);
+
+        const [categoriesData, zonesData] = await Promise.all([
+          categoriesResponse.ok ? categoriesResponse.json() : { categories: [] },
+          zonesResponse.ok ? zonesResponse.json() : { zones: [] },
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        setCategories(categoriesData.categories || []);
+        setZones(zonesData.zones || []);
+      } catch {
+        // Taxonomy is optional: the form still posts without it.
+      } finally {
+        if (!cancelled) {
+          setTaxonomyLoading(false);
+        }
+      }
+    };
+
+    fetchTaxonomy();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchWithAuth, isAuthLoading]);
+
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
@@ -112,6 +263,15 @@ export default function PostItemForm({ className }: PostItemFormProps) {
         setFieldValue('description', parsedItem.description ?? '');
         setFieldValue('itemType', parsedItem.itemType ?? 'LOST');
         setFieldValue('location', parsedItem.location ?? '');
+
+        // Taxonomy is restored too when the stored item carries it.
+        setCategorySlug(typeof parsedItem.categorySlug === 'string' ? parsedItem.categorySlug : '');
+        setZoneSlug(typeof parsedItem.zoneSlug === 'string' ? parsedItem.zoneSlug : '');
+        setTags(
+          Array.isArray(parsedItem.tags)
+            ? parsedItem.tags.filter((tag: unknown): tag is string => typeof tag === 'string')
+            : []
+        );
 
         setTimeout(() => {
           setFieldTouched('title', true);
@@ -145,14 +305,177 @@ export default function PostItemForm({ className }: PostItemFormProps) {
       itemType: values.itemType,
       location: values.location,
       images: imageUrl ? [imageUrl] : [],
+      categorySlug,
+      zoneSlug,
+      tags,
       isEdit: true,
     };
 
     localStorage.setItem('editItem', JSON.stringify(editData));
-  }, [editingItemId, imageUrl, isEditMode, values.description, values.itemType, values.title, values.location]);
+  }, [categorySlug, editingItemId, imageUrl, isEditMode, tags, values.description, values.itemType, values.title, values.location, zoneSlug]);
+
+  // Committed tags plus whatever is still typed in the tag input.
+  const collectTags = (): { tags: string[]; error: string | null } => {
+    const pending = tagInput.trim();
+    return normalizeTags(pending ? [...tags, pending] : tags);
+  };
+
+  const addTags = (rawTags: string[]) => {
+    const { tags: nextTags, error: nextError } = normalizeTags([...tags, ...rawTags]);
+    const duplicate = rawTags
+      .map(normalizeTag)
+      .find((normalized) => normalized && tags.includes(normalized));
+
+    setTags(nextTags);
+    setTagInput('');
+    setTagError(nextError ?? (duplicate ? `#${duplicate} has already been added.` : null));
+  };
+
+  const handleTagInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = event.target;
+
+    // A comma commits every complete segment, so pasting "keys, blue" works.
+    if (value.includes(',')) {
+      const segments = value.split(',');
+      const remainder = segments.pop() ?? '';
+      addTags(segments);
+      setTagInput(remainder);
+      return;
+    }
+
+    setTagInput(value);
+    if (tagError) {
+      setTagError(null);
+    }
+  };
+
+  const handleTagKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' || event.key === ',') {
+      if (tagInput.trim()) {
+        event.preventDefault();
+        addTags([tagInput]);
+      } else if (event.key === ',') {
+        // Never let a stray comma into the input.
+        event.preventDefault();
+      }
+      // Enter with an empty input falls through to submitting the form.
+      return;
+    }
+
+    // Backspace in an empty input removes the most recent tag.
+    if (event.key === 'Backspace' && !tagInput && tags.length > 0) {
+      setTags((previous) => previous.slice(0, -1));
+      setTagError(null);
+    }
+  };
+
+  const handleSubmitError = (err: unknown) => {
+    const rawMessage = err instanceof Error ? err.message : '';
+    const errorMessage = rawMessage || (isEditMode ? 'Failed to update item. Please try again.' : 'Failed to post item. Please try again.');
+    setError(errorMessage);
+    showError(errorMessage);
+
+    if (rawMessage.toLowerCase().includes('auth')) {
+      setTimeout(() => {
+        router.push('/auth/login');
+      }, 1500);
+    }
+  };
+
+  /**
+   * POST a new item.
+   *
+   * A 409 carrying `DUPLICATE_SUSPECTED` is not an error: the duplicate guard is
+   * asking for confirmation, so the candidates are surfaced with a "Post anyway"
+   * escape hatch instead of a generic failure message.
+   */
+  const postNewItem = async (payload: Record<string, unknown>, acknowledgeDuplicates: boolean) => {
+    const response = await fetchWithAuth('/api/items', {
+      method: 'POST',
+      body: JSON.stringify(acknowledgeDuplicates ? { ...payload, acknowledgeDuplicates: true } : payload),
+    });
+
+    if (response.status === 409) {
+      let errorData: {
+        error?: string;
+        code?: string;
+        details?: { candidates?: DuplicateCandidate[] };
+      } | null = null;
+
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = null;
+      }
+
+      if (errorData?.code === 'DUPLICATE_SUSPECTED') {
+        setDuplicateWarning({
+          candidates: errorData.details?.candidates ?? [],
+          payload,
+        });
+        return;
+      }
+
+      throw new Error(errorData?.error || 'Failed to post item');
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to post item');
+    }
+
+    await response.json();
+    setSuccess('Item posted successfully!');
+    showSuccess('Item posted successfully!');
+
+    resetForm();
+    setImageUrl(null);
+    setTags([]);
+    setTagInput('');
+    setTagError(null);
+    setCategorySlug('');
+    setZoneSlug('');
+  };
+
+  // Resubmit the reviewed payload, this time acknowledging the duplicates.
+  const handlePostAnyway = async () => {
+    if (!duplicateWarning) {
+      return;
+    }
+
+    const { payload } = duplicateWarning;
+    setDuplicateWarning(null);
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      await postNewItem(payload, true);
+    } catch (err: unknown) {
+      handleSubmitError(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Handle form submission with authenticated fetch
   const onSubmit = async (formData: ItemFormValues) => {
+    // Fold in whatever is still typed in the tag input, and refuse to submit a
+    // tag list the API would reject rather than dropping tags silently.
+    const { tags: finalTags, error: tagValidationError } = collectTags();
+
+    if (tagValidationError) {
+      setTags(finalTags);
+      setTagInput('');
+      setTagError(tagValidationError);
+      showError(tagValidationError);
+      return;
+    }
+
+    setTags(finalTags);
+    setTagInput('');
+    setTagError(null);
+    setDuplicateWarning(null);
     setIsLoading(true);
     setError(null);
     setSuccess(null);
@@ -162,7 +485,10 @@ export default function PostItemForm({ className }: PostItemFormProps) {
       description: sanitizeInput(formData.description),
       itemType: formData.itemType,
       location: sanitizeInput(formData.location),
-      images: imageUrl ? [imageUrl] : []
+      images: imageUrl ? [imageUrl] : [],
+      categorySlug: categorySlug || undefined,
+      zoneSlug: zoneSlug || undefined,
+      tags: finalTags
     };
 
     try {
@@ -191,33 +517,9 @@ export default function PostItemForm({ className }: PostItemFormProps) {
         return;
       }
 
-      const response = await fetchWithAuth('/api/items', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to post item');
-      }
-
-      await response.json();
-      setSuccess('Item posted successfully!');
-      showSuccess('Item posted successfully!');
-
-      resetForm();
-      setImageUrl(null);
+      await postNewItem(payload, false);
     } catch (err: unknown) {
-      const rawMessage = err instanceof Error ? err.message : '';
-      const errorMessage = rawMessage || (isEditMode ? 'Failed to update item. Please try again.' : 'Failed to post item. Please try again.');
-      setError(errorMessage);
-      showError(errorMessage);
-
-      if (rawMessage.toLowerCase().includes('auth')) {
-        setTimeout(() => {
-          router.push('/auth/login');
-        }, 1500);
-      }
+      handleSubmitError(err);
     } finally {
       setIsLoading(false);
     }
@@ -254,6 +556,71 @@ export default function PostItemForm({ className }: PostItemFormProps) {
       {success && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 mb-6">
           <p>✅ {success}</p>
+        </div>
+      )}
+
+      {/* Duplicate warning: 409 DUPLICATE_SUSPECTED from POST /api/items */}
+      {duplicateWarning && (
+        <div role="alert" className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600" aria-hidden="true" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-amber-900">Possible duplicate</p>
+              <p className="text-sm text-amber-800 mt-1">
+                {duplicateWarning.candidates.length === 1
+                  ? 'You recently posted a very similar item:'
+                  : 'You recently posted very similar items:'}
+              </p>
+
+              <ul className="mt-3 space-y-2">
+                {duplicateWarning.candidates.map((candidate) => (
+                  <li key={candidate.id} className="bg-white border border-amber-200 rounded-md p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/item/${candidate.id}`}
+                          className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                        >
+                          {candidate.title}
+                        </Link>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {candidate.location} · {candidate.itemType === 'LOST' ? 'Lost' : 'Found'} ·{' '}
+                          {new Date(candidate.createdAt).toLocaleDateString()}
+                        </p>
+                        {candidate.reasons.length > 0 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {candidate.reasons.slice(0, 3).map((reason) => reason.label).join(' · ')}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-xs font-semibold text-amber-700 whitespace-nowrap">
+                        {Math.round(candidate.score)}% match
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="flex gap-3 mt-4">
+                <Button
+                  type="button"
+                  variant="warning"
+                  onClick={handlePostAnyway}
+                  disabled={isLoading}
+                >
+                  Post anyway
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDuplicateWarning(null)}
+                  disabled={isLoading}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -333,6 +700,88 @@ export default function PostItemForm({ className }: PostItemFormProps) {
           showCheckIcon={true}
           helperText="Where was the item lost or found?"
         />
+
+        {/* Category and Zone (held in local state, not in the string-only hook) */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="item-category" className="block text-sm font-medium text-gray-700 mb-2">
+              Category (Optional)
+            </label>
+            <select
+              id="item-category"
+              value={categorySlug}
+              onChange={(e) => setCategorySlug(e.target.value)}
+              disabled={isLoading || taxonomyLoading}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+            >
+              <option value="">
+                {taxonomyLoading ? 'Loading categories…' : 'Select a category'}
+              </option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.slug}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="item-zone" className="block text-sm font-medium text-gray-700 mb-2">
+              Campus Zone (Optional)
+            </label>
+            <select
+              id="item-zone"
+              value={zoneSlug}
+              onChange={(e) => setZoneSlug(e.target.value)}
+              disabled={isLoading || taxonomyLoading}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+            >
+              <option value="">
+                {taxonomyLoading ? 'Loading zones…' : 'Select a zone'}
+              </option>
+              {zones.map((zone) => (
+                <option key={zone.id} value={zone.slug}>
+                  {zone.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Tags */}
+        <div>
+          <label htmlFor="item-tags" className="block text-sm font-medium text-gray-700 mb-2">
+            Tags (Optional)
+          </label>
+          <div className="flex flex-wrap items-center gap-2 w-full px-3 py-2 border border-gray-300 rounded-md focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500">
+            {tags.map((tag) => (
+              <TagPill
+                key={tag}
+                tag={tag}
+                onRemove={() => {
+                  setTags((previous) => previous.filter((entry) => entry !== tag));
+                  setTagError(null);
+                }}
+              />
+            ))}
+            <input
+              id="item-tags"
+              type="text"
+              value={tagInput}
+              onChange={handleTagInputChange}
+              onKeyDown={handleTagKeyDown}
+              disabled={isLoading}
+              placeholder={tags.length > 0 ? 'Add another tag…' : 'e.g., leather, blue, water-bottle'}
+              aria-describedby="item-tags-help"
+              className="flex-1 min-w-[8rem] border-0 p-0 text-sm focus:outline-none focus:ring-0 disabled:bg-transparent"
+            />
+          </div>
+          <p id="item-tags-help" className="text-sm text-gray-500 mt-1">
+            Press Enter or comma to add a tag — up to {MAX_TAGS_PER_ITEM} tags of{' '}
+            {MIN_TAG_LENGTH}-{MAX_TAG_LENGTH} characters (letters, numbers, and hyphens).
+          </p>
+          <FieldError error={tagError ?? undefined} />
+        </div>
 
         {/* Image Upload Field */}
         <div>

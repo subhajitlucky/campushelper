@@ -7,6 +7,7 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import UserDisplay from "@/components/ui/UserDisplay";
 import Pagination from "@/components/ui/Pagination";
 import SavedSearches from "@/components/SavedSearches";
+import CategoryFilter from "@/components/CategoryFilter";
 
 interface Item {
   id: string;
@@ -31,6 +32,7 @@ interface SearchFilters {
   location: string;
   from: string;
   to: string;
+  category: string;
 }
 
 export default function SearchPage() {
@@ -46,7 +48,8 @@ export default function SearchPage() {
     status: '',
     location: '',
     from: '',
-    to: ''
+    to: '',
+    category: ''
   });
 
   // Pagination state
@@ -71,6 +74,7 @@ export default function SearchPage() {
         ...(filters.location && { location: filters.location }),
         ...(filters.from && { from: filters.from }),
         ...(filters.to && { to: filters.to }),
+        ...(filters.category && { category: filters.category }),
       });
 
       const response = await fetch(`/api/items?${queryParams.toString()}`);
@@ -128,6 +132,7 @@ export default function SearchPage() {
   const savedSearchFilters = {
     ...(filters.search ? { search: filters.search } : {}),
     ...(filters.itemType ? { itemType: filters.itemType as 'LOST' | 'FOUND' } : {}),
+    ...(filters.category ? { category: filters.category } : {}),
     ...(filters.from ? { from: filters.from } : {}),
     ...(filters.to ? { to: filters.to } : {}),
   };
@@ -143,12 +148,22 @@ export default function SearchPage() {
               updateFilters({
                 search: applied.search ?? '',
                 itemType: applied.itemType ?? '',
+                category: applied.category ?? '',
                 from: applied.from ?? '',
                 to: applied.to ?? '',
               })
             }
           />
         )}
+
+        {/* Category facets */}
+        <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <h2 className="mb-3 text-sm font-medium text-gray-900">Browse by category</h2>
+          <CategoryFilter
+            value={filters.category || null}
+            onChange={(slug) => updateFilters({ category: slug ?? '' })}
+          />
+        </div>
 
         {/* Search and filters */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">

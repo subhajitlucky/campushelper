@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import EmptyState, { EmptyStateIcons } from "@/components/ui/EmptyState";
 import { ItemListSkeleton } from "@/components/ui/LoadingSkeleton";
 import ItemCard from "@/components/ui/ItemCard";
+import CategoryFilter from "@/components/CategoryFilter";
 import Pagination from "@/components/ui/Pagination";
 import ClaimsModal from "@/components/ClaimsModal";
 import { useAuthFetch } from "@/lib/auth-fetch";
@@ -31,6 +32,7 @@ interface LostItem {
 interface LostFilters {
   itemType: string;
   location: string;
+  category: string;
 }
 
 export default function LostItemsPage() {
@@ -50,6 +52,7 @@ export default function LostItemsPage() {
   const [filters, setFilters] = useState<LostFilters>({
     itemType: '',
     location: '',
+    category: '',
   });
 
   const limit = 12;
@@ -63,6 +66,9 @@ export default function LostItemsPage() {
         page: page.toString(),
         limit: limit.toString(),
         status: 'LOST',
+        ...(filters.itemType && { itemType: filters.itemType }),
+        ...(filters.location && { location: filters.location }),
+        ...(filters.category && { category: filters.category }),
       });
 
       const response = await fetch(`/api/items?${queryParams.toString()}`);
@@ -82,7 +88,7 @@ export default function LostItemsPage() {
     } finally {
       setLoading(false);
     }
-  }, [limit]);
+  }, [filters, limit]);
 
   // Handle filter changes
   const handleFilterChange = (key: keyof LostFilters, value: string) => {
@@ -101,6 +107,7 @@ export default function LostItemsPage() {
     setFilters({
       itemType: '',
       location: '',
+      category: '',
     });
     setCurrentPage(1);
   };
@@ -167,6 +174,15 @@ export default function LostItemsPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
+
+        {/* Category facets */}
+        <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <h2 className="mb-3 text-sm font-medium text-gray-900">Browse by category</h2>
+          <CategoryFilter
+            value={filters.category || null}
+            onChange={(slug) => handleFilterChange('category', slug ?? '')}
+          />
+        </div>
         {/* Filter Stories */}
         <Card className="mb-6">
           <CardHeader>
