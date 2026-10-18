@@ -152,8 +152,28 @@ export async function GET(request: NextRequest) {
         take: limit,
         where,
         orderBy: { createdAt: 'desc' },
-        // Email intentionally excluded from the items list (IDOR hardening).
-        include: {
+        // An explicit `select`, never `include`. With `include` Prisma returns
+        // every scalar, which leaked `moderationReason`, `moderatedById`, and the
+        // precise `latitude`/`longitude` pin to every signed-in student (and to
+        // anonymous callers for resolved items). The admin-only CSV export and
+        // the single-item projection both withhold these on purpose.
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          itemType: true,
+          status: true,
+          location: true,
+          images: true,
+          tags: true,
+          createdAt: true,
+          updatedAt: true,
+          resolvedAt: true,
+          postedById: true,
+          claimedById: true,
+          categoryId: true,
+          zoneId: true,
+          // Email intentionally excluded from the items list (IDOR hardening).
           postedBy: { select: { id: true, name: true, avatar: true, reputation: true } },
           category: { select: { id: true, slug: true, name: true, icon: true } },
           zone: { select: { id: true, slug: true, name: true } },
@@ -167,8 +187,6 @@ export async function GET(request: NextRequest) {
         ...item,
         commentsCount: 0,
         claimsCount: 0,
-        comments: undefined,
-        claims: undefined,
       })),
       pagination: {
         page,

@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     const result = await prisma.notification.updateMany({
       where:
-        'all' in payload
+        payload.all === true
           ? { userId: session.user.id, readAt: null }
           : { id: { in: payload.ids }, userId: session.user.id, readAt: null },
       data: { readAt: new Date() },

@@ -5,9 +5,9 @@ import type { NotificationType } from '../generated/prisma';
 /**
  * Creates in-app notifications.
  *
- * Every write goes through {@link notify} or {@link notifyMany} so the two rules
- * that matter are applied in one place: a user is never notified about their own
- * action, and repeated identical notifications collapse instead of piling up.
+ * Every write goes through {@link notify} so the two rules that matter are
+ * applied in one place: a user is never notified about their own action, and
+ * repeated identical notifications collapse instead of piling up.
  */
 
 /** Window within which an identical unread notification is treated as a repeat. */
@@ -49,6 +49,10 @@ export async function notify(input: NotifyInput): Promise<string | null> {
         userId: input.userId,
         type: input.type as NotificationType,
         itemId: input.itemId ?? null,
+        // The actor is part of the identity of the event. Without it, a second
+        // person claiming (or commenting on) the same item within the window was
+        // silently suppressed, so the poster never learned about them.
+        actorId: input.actorId ?? null,
         readAt: null,
         createdAt: { gte: since },
       },
@@ -77,69 +81,3 @@ export async function notify(input: NotifyInput): Promise<string | null> {
   }
 }
 
-/**
- * Create the same notification for several recipients, skipping the actor.
- *
- * A single `createMany` is used rather than N inserts, so a fan-out (for
- * example notifying both parties to a match) stays one round trip.
- */
-export async function notifyMany(
-  userIds: readonly string[],
-  input: Omit<NotifyInput, 'userId'>
-): Promise<number> {
-  const recipients = [...new Set(userIds)].filter(
-    (userId) => userId && !isSelfNotification(userId, input.actorId)
-  );
-
-  if (recipients.length === 0) return 0;
-
-  const { title, body } = formatNotification(input);
-
-  try {
-    const result = await prisma.notification.createMany({
-      data: recipients.map((userId) => ({
-        userId,
-        actorId: input.actorId ?? null,
-        type: input.type as NotificationType,
-        title,
-        body,
-        link: input.link ?? null,
-        itemId: input.itemId ?? null,
-      })),
-    });
-
-    return result.count;
-  } catch (error) {
-    console.error('[notifications] failed to fan out notifications', error);
-    return 0;
-  }
-}
-
-/**
- * Notify the poster of an item, loading the item once.
- *
- * No-ops when the item does not exist, so callers do not need to guard.
- */
-export async function notifyItemPoster(
-  itemId: string,
-  input: Omit<NotifyInput, 'userId' | 'itemId'>
-): Promise<string | null> {
-  try {
-    const item = await prisma.item.findUnique({
-      where: { id: itemId },
-      select: { id: true, title: true, postedById: true },
-    });
-
-    if (!item) return null;
-
-    return notify({
-      ...input,
-      userId: item.postedById,
-      itemId: item.id,
-      itemTitle: input.itemTitle ?? item.title,
-    });
-  } catch (error) {
-    console.error('[notifications] failed to notify item poster', error);
-    return null;
-  }
-}

@@ -197,6 +197,11 @@ model Claim {
   @@index([status, createdAt])
   @@index([resolvedAt])
   @@index([handoverCode, status])
+  // NOTE: a partial unique index enforces one active claim per item:
+  //   CREATE UNIQUE INDEX "Claim_approved_item_key" ON "Claim" ("itemId")
+  //     WHERE "status" IN ('APPROVED', 'COMPLETED');
+  // Prisma does not model partial indexes, so it lives in the migrations only.
+  // Widen the predicate whenever another "active return" status is added.
 }
 
 enum ClaimType {

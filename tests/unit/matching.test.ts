@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  DUPLICATE_THRESHOLD,
+  DUPLICATE_SIMILARITY_THRESHOLD,
+  duplicateSimilarity,
   MATCH_THRESHOLD,
   MATCH_WINDOW_DAYS,
   findLikelyDuplicates,
@@ -272,7 +273,10 @@ describe("rankMatches", () => {
 
 describe("findLikelyDuplicates", () => {
   it("uses the stricter duplicate threshold", () => {
-    expect(DUPLICATE_THRESHOLD).toBeGreaterThan(MATCH_THRESHOLD);
+    // A ratio, not an absolute score: an absolute threshold above the maximum
+    // achievable without a category made the guard unreachable.
+    expect(DUPLICATE_SIMILARITY_THRESHOLD).toBeGreaterThan(0);
+    expect(DUPLICATE_SIMILARITY_THRESHOLD).toBeLessThanOrEqual(1);
   });
 
   it("flags a near-identical re-post of the same type", () => {
@@ -281,7 +285,31 @@ describe("findLikelyDuplicates", () => {
 
     const duplicates = findLikelyDuplicates(repost, [original]);
     expect(duplicates.map((d) => d.item.id)).toEqual(["lost-1"]);
-    expect(duplicates[0].score).toBeGreaterThanOrEqual(DUPLICATE_THRESHOLD);
+    expect(duplicateSimilarity(repost, original)).toBeGreaterThanOrEqual(
+      DUPLICATE_SIMILARITY_THRESHOLD
+    );
+  });
+
+  it("flags a near-identical repost even with no category, zone, or tags", () => {
+    // Regression: the previous absolute threshold of 70 could not be reached by
+    // two identical reports lacking a category (maximum achievable was 68), so
+    // the guard silently never fired for a double-submitted form.
+    const bare = {
+      itemType: 'LOST' as const,
+      title: 'Black leather wallet',
+      description: 'Bifold wallet with a metro card and a library card inside',
+      location: 'Central Library',
+      categoryId: null,
+      zoneId: null,
+      tags: [],
+      createdAt: NOW,
+    };
+
+    const first = { ...bare, id: 'bare-1' };
+    const repost = { ...bare, id: 'bare-2' };
+
+    expect(duplicateSimilarity(repost, first)).toBe(1);
+    expect(findLikelyDuplicates(repost, [first]).map((d) => d.item.id)).toEqual(['bare-1']);
   });
 
   it("does not flag a different item", () => {

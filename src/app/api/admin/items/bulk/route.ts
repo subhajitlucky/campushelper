@@ -55,7 +55,9 @@ function itemActionData(
     case 'RESTORE':
       return {
         moderationStatus: 'NONE',
-        status: 'LOST',
+        // `status` is deliberately omitted here: it depends on the item's own
+        // `itemType`, and hardcoding 'LOST' left restored FOUND reports
+        // mislabelled. RESTORE writes status per item below.
         deletedAt: null,
         deletedById: null,
         deletionReason: null,
@@ -94,7 +96,7 @@ export async function POST(request: NextRequest) {
 
     const items = await prisma.item.findMany({
       where: { id: { in: ids } },
-      select: { id: true, title: true, postedById: true },
+      select: { id: true, title: true, postedById: true, itemType: true },
     });
 
     const foundIds = new Set(items.map((item) => item.id));
@@ -103,9 +105,24 @@ export async function POST(request: NextRequest) {
     // Run the write in a transaction so the whole bulk run commits or rolls back
     // as one unit if the handler ever grows additional statements.
     const updated = await prisma.$transaction(async (tx) => {
+      const data = itemActionData(action, session.user.id, reason);
+
+      if (action === 'RESTORE') {
+        // `updateMany` cannot vary a column per row, and a restored item must
+        // return to the status its own type implies.
+        for (const item of items) {
+          await tx.item.update({
+            where: { id: item.id },
+            data: { ...data, status: item.itemType === 'FOUND' ? 'FOUND' : 'LOST' },
+          });
+        }
+
+        return items.length;
+      }
+
       const result = await tx.item.updateMany({
         where: { id: { in: ids } },
-        data: itemActionData(action, session.user.id, reason),
+        data,
       });
 
       return result.count;

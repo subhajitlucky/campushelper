@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
+import { checkCSRF } from '@/lib/csrf-middleware';
 import { prisma } from '@/lib/prisma';
 import {
   AuthenticationRequired,
@@ -25,6 +26,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   return safeApiHandler(async () => {
+    const csrfCheck = await checkCSRF(request);
+    if (csrfCheck) {
+      return csrfCheck;
+    }
+
     const { id } = await params;
 
     const session = await getSession();

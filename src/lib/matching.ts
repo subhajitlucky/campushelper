@@ -12,8 +12,47 @@ import { jaccard, tokenize } from './text-similarity';
 /** Minimum score at which a pair is surfaced as a suggestion. */
 export const MATCH_THRESHOLD = 55;
 
-/** Score at or above which a new post looks like a duplicate of an existing one. */
-export const DUPLICATE_THRESHOLD = 70;
+/**
+ * Fraction of the *achievable* score at or above which a new post looks like a
+ * duplicate.
+ *
+ * This is a ratio, not an absolute score, and that is load-bearing. The signal
+ * weights include category (18) and tags (6), which are absent when the poster
+ * left those fields blank. With an absolute threshold of 70, two byte-identical
+ * reports scored 68 -- the exact maximum achievable without a category -- so the
+ * guard could never fire for the most common case, a double-submitted form.
+ * Comparing against what is achievable for that pair makes the guard work
+ * regardless of which optional fields are filled in.
+ */
+export const DUPLICATE_SIMILARITY_THRESHOLD = 0.85;
+
+/**
+ * Total weight scoreable for this pair, mirroring the branches in
+ * {@link scoreSimilarity}: category only counts when both sides have one, and
+ * zone and location text are mutually exclusive.
+ */
+export function achievableWeight(a: MatchableItem, b: MatchableItem): number {
+  let weight = MATCH_WEIGHTS.title + MATCH_WEIGHTS.description + MATCH_WEIGHTS.date;
+
+  if (a.categoryId && b.categoryId) weight += MATCH_WEIGHTS.category;
+
+  weight += a.zoneId && b.zoneId ? MATCH_WEIGHTS.zone : MATCH_WEIGHTS.location;
+
+  if ((a.tags?.length ?? 0) > 0 && (b.tags?.length ?? 0) > 0) weight += MATCH_WEIGHTS.tags;
+
+  return weight;
+}
+
+/**
+ * How duplicate-like two reports are, as a fraction in `[0, 1]` of the score
+ * that was achievable for them.
+ */
+export function duplicateSimilarity(a: MatchableItem, b: MatchableItem): number {
+  const achievable = achievableWeight(a, b);
+  if (achievable <= 0) return 0;
+
+  return Math.min(scoreSimilarity(a, b).score / achievable, 1);
+}
 
 /** Date proximity decays linearly to zero at this separation. */
 export const MATCH_WINDOW_DAYS = 180;
@@ -211,7 +250,9 @@ export function findLikelyDuplicates<T extends MatchableItem>(
     if (candidate.id === subject.id) continue;
 
     const { score, reasons } = scoreSimilarity(subject, candidate);
-    if (score >= DUPLICATE_THRESHOLD) scored.push({ item: candidate, score, reasons });
+    if (duplicateSimilarity(subject, candidate) >= DUPLICATE_SIMILARITY_THRESHOLD) {
+      scored.push({ item: candidate, score, reasons });
+    }
   }
 
   scored.sort((x, y) => {

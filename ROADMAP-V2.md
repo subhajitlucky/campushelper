@@ -43,10 +43,11 @@ re-posts happen.
 ## Close the loop
 
 ### ✅ 5. Notification centre
-Nine notification types covering claims, comments, matches, saved-search hits, handover
-lifecycle, resolution, and moderation. Content is rendered at write time so the inbox stays
-readable after a source item is deleted. Self-notifications are suppressed and repeats inside
-a five-minute window collapse.
+Ten notification types are defined; eight are actually emitted — claims, matches, saved-search
+hits, the handover lifecycle, and moderation. Content is rendered at write time so the inbox stays
+readable after a source item is deleted. Self-notifications are suppressed, and repeats of the same
+event from the same actor inside a five-minute window collapse (a *different* actor always notifies).
+`COMMENT_ON_ITEM` and `ITEM_RESOLVED` are defined but never emitted.
 
 ### ✅ 6. Handover verification
 Approving a claim issues a six-digit code with a 72-hour expiry. The item is marked resolved
@@ -65,10 +66,15 @@ filter alongside the existing free-text location, which is retained for compatib
 ## Trust and operations
 
 ### ✅ 8. Reputation and verification badges
-An append-only ledger with five point kinds (+2 post, +1 comment capped at 10/day, +5 approved
-claim, +25 completed return for both parties, −10 upheld moderation). A unique constraint on
-`(userId, kind, itemId)` makes awards idempotent, so replaying a lifecycle transition cannot
-double-credit. Tiers: Newcomer, Bronze, Silver, Gold, Champion.
+An append-only ledger. **Three of the five kinds are live**: +2 for posting, +5 for an approved
+claim, and +25 for a verified return to both parties. `COMMENT_POSTED` and `MODERATION_UPHELD` are
+defined in the rule table but awarded nowhere — the comments route does not credit reputation and
+bulk moderation applies no penalty.
+
+A unique constraint on `(userId, kind, itemId)` makes awards idempotent, so replaying a lifecycle
+transition cannot double-credit. Note the constraint does **not** protect awards that omit `itemId`,
+because PostgreSQL treats NULLs as distinct; every current caller passes one. Tiers: Newcomer,
+Bronze, Silver, Gold, Champion.
 
 Student verification is granted by a moderator and audited. The badge says "confirmed by a
 moderator", not "verified email", because no automated student-email check exists.
@@ -104,6 +110,31 @@ email addresses out of the system.
   rows, which is why it passed; ids are now verified by value.
 
 ---
+
+## Known gaps (from the 2026-10-18 adversarial review)
+
+See [`docs/audit/2026-10-18-v2-adversarial-review.md`](docs/audit/2026-10-18-v2-adversarial-review.md)
+for the full list. The Critical and Major findings have been fixed; these remain:
+
+- **Comment notifications and comment reputation are unwired** (`COMMENT_ON_ITEM`,
+  `COMMENT_POSTED`), and so is the daily comment cap that would go with them.
+- **`MODERATION_UPHELD` is not applied** — bulk moderation does not deduct reputation.
+- **The items list has no index leading with `createdAt`**, so the default listing does a sequential
+  scan plus a sort. Measured at 37 ms for a 20-row page at 20,000 items.
+- **Matching and duplicate detection are inert for non-Latin scripts.** `normalizeText` keeps only
+  `[a-z0-9]`, so a report written in Devanagari or Odia tokenises to nothing and receives no text
+  signal.
+- **Saved-search fan-out and match notification are sequential** (~5 ms per matching search, on the
+  item-create path).
+- **"Deleted" has two representations.** The user delete path sets `status = 'DELETED'` but not
+  `deletedAt`, while the zone map and analytics filter on `deletedAt` only, so user-deleted items are
+  still counted there.
+- **The CSV export silently keeps only the newest 10,000 rows** with no truncation signal.
+- **`handoverAttempts` is incremented by read-modify-write**, so concurrent wrong guesses consume
+  fewer attempts than documented. Low practical impact: only the two parties (who can read the code)
+  reach the endpoint.
+- **`SavedSearch` has no index leading with `createdAt`**, and the 500-row evaluation cap always takes
+  the newest, so with more than 500 saved searches the oldest are never evaluated again.
 
 ## Known limitations
 

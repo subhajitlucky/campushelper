@@ -35,8 +35,9 @@ CampusHelper is a full-stack campus lost-and-found platform for authenticated re
   with the candidates, so accidental double-posts are caught before they happen.
 
 ### Closing the loop
-- 🔔 **Notification centre** - In-app notifications for claims, comments, matches, saved-search
-  hits, moderation outcomes, and handovers, with an unread badge in the navbar.
+- 🔔 **Notification centre** - In-app notifications for claims, matches, saved-search hits,
+  handover lifecycle, item resolution, and moderation outcomes, with an unread badge in the
+  navbar. (Comment notifications are not wired up — see ROADMAP-V2 for known gaps.)
 - 🔑 **Handover verification** - Approving a claim issues a six-digit code. The item is only
   marked returned once the code is verified in person, so "approved" cannot be mistaken for
   "returned". Codes expire in 72 hours and are burned after five wrong attempts.
@@ -44,8 +45,9 @@ CampusHelper is a full-stack campus lost-and-found platform for authenticated re
   inline-SVG map showing report density per zone. No external map provider or API key.
 
 ### Trust and operations
-- 🏅 **Reputation and badges** - An append-only points ledger (returns are worth 25, posting 2)
-  drives tier badges; student verification is granted by a moderator and labelled as such.
+- 🏅 **Reputation and badges** - An append-only points ledger drives tier badges: posting is worth
+  2, an approved claim 5, and a verified return 25 to both parties. Student verification is granted
+  by a moderator and labelled as such.
 - 📜 **Audit log and bulk moderation** - Every privileged action is recorded with actor,
   reason, and IP. Items and users can be moderated in bulk (up to 50 at a time), each change
   individually audited.

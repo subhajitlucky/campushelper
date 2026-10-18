@@ -171,14 +171,16 @@ export async function PUT(
             throw new Error('Item has already been resolved');
           }
           
-          const newItemStatus = claim.claimType === 'OWN_IT' ? 'RESOLVED' : 'CLAIMED';
-          
+          // Approval means "the poster believes this claim", NOT "the item was
+          // returned". Marking OWN_IT items RESOLVED here bypassed the handover
+          // code entirely -- the item was recorded as returned, and analytics
+          // counted it, before any code was verified. Only verifyHandover() may
+          // set RESOLVED, once the code has been exchanged in person.
           await tx.item.update({
             where: { id: claim.itemId },
-            data: { 
-              status: newItemStatus,
-              resolvedAt: new Date(),
-              claimedById: claim.userId 
+            data: {
+              status: 'CLAIMED',
+              claimedById: claim.userId,
             },
           });
         }

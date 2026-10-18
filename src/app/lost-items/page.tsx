@@ -78,8 +78,11 @@ export default function LostItemsPage() {
 
       const data = await response.json();
       setItems(data.items || []);
-      setTotalPages(Math.ceil(data.total / limit));
-      setTotal(data.total); // Set total items
+      // The API returns a `pagination` envelope; reading a top-level `total`
+      // yielded undefined -> NaN, so page controls never rendered and items
+      // beyond the first page were unreachable.
+      setTotalPages(data.pagination?.totalPages ?? 1);
+      setTotal(data.pagination?.total ?? 0);
       
       // Store user authentication status
       setUser(data.user || { isLoggedIn: false });
