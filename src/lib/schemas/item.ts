@@ -40,6 +40,7 @@ export const baseItemSchema = z.object({
   
   images: z
     .array(urlSchema)
+    .max(5, 'Maximum 5 images allowed')
     .default([])
     .refine(
       (images) => images.every(image => !image || z.string().url().safeParse(image).success),

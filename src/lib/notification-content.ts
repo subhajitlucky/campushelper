@@ -140,6 +140,11 @@ export function formatNotification(input: NotificationContentInput): Notificatio
       body = `A handover code has been issued for ${what}. Share it only when the item is physically in your hands, and never before.`;
       break;
 
+    case 'HANDOVER_CODE_INVALIDATED':
+      title = 'Handover code no longer valid';
+      body = `The handover code for ${what} has been invalidated after too many incorrect attempts. Ask the other party to re-issue a code before you meet.`;
+      break;
+
     case 'HANDOVER_VERIFIED':
       title = 'Handover verified';
       body = `The handover for ${what} was verified in person. The item is now marked as returned.`;

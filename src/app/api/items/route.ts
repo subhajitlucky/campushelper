@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
 import {
   AuthenticationRequired,
   AdminAccessRequired,
   ValidationError,
-  safeApiHandler
+  ErrorCodes,
+  createErrorResponse,
+  safeApiHandler,
 } from '@/lib/errors';
-import { isSafeUrl } from '@/lib/security';
 import { limitItems } from '@/lib/rateLimit';
 import { checkCSRF } from '@/lib/csrf-middleware';
+import { createItemApiSchema } from '@/lib/schemas/item';
+import { findLikelyDuplicates, type MatchableItem } from '@/lib/matching';
+import { computeMatchesForItem } from '@/lib/match-service';
+import { evaluateSavedSearchesForItem } from '@/lib/saved-search-service';
+import { awardReputation } from '@/lib/reputation-service';
+import type { Prisma } from '@/generated/prisma';
 
 const ITEM_STATUSES = ['LOST', 'FOUND', 'CLAIMED', 'RESOLVED', 'DELETED'] as const;
 const ITEM_TYPES = ['LOST', 'FOUND'] as const;
@@ -18,15 +24,20 @@ const ITEM_TYPES = ['LOST', 'FOUND'] as const;
 type ItemStatus = (typeof ITEM_STATUSES)[number];
 type ItemType = (typeof ITEM_TYPES)[number];
 
+/** How far back the duplicate guard looks. */
+const DUPLICATE_LOOKBACK_DAYS = 30;
+
+/** Cap on candidates scored by the duplicate guard. */
+const DUPLICATE_CANDIDATE_LIMIT = 25;
+
 /**
  * GET /api/items
- * Fetch all items with pagination and optional filtering
+ * Fetch all items with pagination and optional filtering.
  */
 export async function GET(request: NextRequest) {
   return safeApiHandler(async () => {
     const { searchParams } = new URL(request.url);
-    
-    // Parse and validate query parameters
+
     const rawStatus = searchParams.get('status');
     const rawItemType = searchParams.get('itemType');
 
@@ -44,170 +55,126 @@ export async function GET(request: NextRequest) {
     const from = searchParams.get('from') || undefined;
     const to = searchParams.get('to') || undefined;
     const location = searchParams.get('location') || undefined;
+    const categorySlug = searchParams.get('category') || undefined;
+    const zoneSlug = searchParams.get('zone') || undefined;
+    const tagFilter = searchParams.get('tags')
+      ? searchParams
+          .get('tags')!
+          .split(',')
+          .map((tag) => tag.trim().toLowerCase())
+          .filter((tag) => tag.length > 0)
+      : undefined;
+
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
-    
-    // Validate pagination parameters
+
     if (isNaN(page) || page < 1) {
       throw ValidationError('Page must be a positive number');
     }
     if (isNaN(limit) || limit < 1 || limit > 100) {
       throw ValidationError('Limit must be between 1 and 100');
     }
-    
-    // Validate date parameters
     if (from && isNaN(Date.parse(from))) {
       throw ValidationError('From date must be valid');
     }
     if (to && isNaN(Date.parse(to))) {
       throw ValidationError('To date must be valid');
     }
-    
+
     const skip = (page - 1) * limit;
 
-    // Check if user is logged in
     const session = await getSession();
     const isLoggedIn = !!session?.user?.id;
 
     // Deleted items are only visible to admins/moderators
-    if (status === 'DELETED' && session?.user?.role !== 'ADMIN' && session?.user?.role !== 'MODERATOR') {
+    if (
+      status === 'DELETED' &&
+      session?.user?.role !== 'ADMIN' &&
+      session?.user?.role !== 'MODERATOR'
+    ) {
       throw AdminAccessRequired();
     }
 
-    // For items list: NEVER show emails (security fix)
-    // Users can view individual items for contact details
-    const items = await prisma.item.findMany({
-      skip,
-      take: limit,
-      where: {
-        // Exclude deleted items by default unless specifically requested
-        ...(status ? { status } : { status: { not: 'DELETED' } }),
+    // Resolve taxonomy slugs to ids once, rather than per row.
+    const [category, zone] = await Promise.all([
+      categorySlug
+        ? prisma.category.findUnique({ where: { slug: categorySlug }, select: { id: true } })
+        : null,
+      zoneSlug
+        ? prisma.campusZone.findUnique({ where: { slug: zoneSlug }, select: { id: true } })
+        : null,
+    ]);
 
-        ...(itemType && { itemType }),
-        ...(location && {
-          location: {
-            contains: location,
-            mode: 'insensitive'
-          }
-        }),
-        ...(from && {
-          createdAt: {
-            gte: new Date(from)
-          }
-        }),
-        ...(to && {
-          createdAt: {
-            lte: new Date(to)
-          }
-        }),
-        ...(postedById && {
-          postedById: postedById
-        }),
-        ...(search && {
-          OR: [
-            {
-              title: {
-                contains: search,
-                mode: 'insensitive'
-              }
-            },
-            {
-              description: {
-                contains: search,
-                mode: 'insensitive'
-              }
-            },
-            {
-              location: {
-                contains: search,
-                mode: 'insensitive'
-              }
-            }
-          ]
-        })
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      // Include user data but NEVER email (security fix for IDOR)
-      include: {
-        postedBy: {
-          select: {
-            id: true,
-            name: true,
-            avatar: true,
-            // Email intentionally excluded from items list
-          }
-        }
-      }
-    });
+    // An unknown slug must match nothing rather than silently dropping the
+    // filter, which would otherwise return the entire table.
+    if (categorySlug && !category) {
+      return NextResponse.json({
+        items: [],
+        pagination: { page, limit, total: 0, totalPages: 0 },
+        filters: { status, itemType, location, search, category: categorySlug, zone: zoneSlug },
+        user: { isLoggedIn, ...(isLoggedIn && { userId: session?.user?.id }) },
+      });
+    }
+    if (zoneSlug && !zone) {
+      return NextResponse.json({
+        items: [],
+        pagination: { page, limit, total: 0, totalPages: 0 },
+        filters: { status, itemType, location, search, category: categorySlug, zone: zoneSlug },
+        user: { isLoggedIn, ...(isLoggedIn && { userId: session?.user?.id }) },
+      });
+    }
 
-    // Get total count for pagination
-    const total = await prisma.item.count({
-      where: {
-        ...(status ? { status } : { status: { not: 'DELETED' } }),
-        ...(itemType && { itemType }),
-        ...(location && {
-          location: {
-            contains: location,
-            mode: 'insensitive'
-          }
-        }),
-        ...(from && {
-          createdAt: {
-            gte: new Date(from)
-          }
-        }),
-        ...(to && {
-          createdAt: {
-            lte: new Date(to)
-          }
-        }),
-        ...(postedById && {
-          postedById: postedById
-        }),
-        ...(search && {
-          OR: [
-            {
-              title: {
-                contains: search,
-                mode: 'insensitive'
-              }
-            },
-            {
-              description: {
-                contains: search,
-                mode: 'insensitive'
-              }
-            },
-            {
-              location: {
-                contains: search,
-                mode: 'insensitive'
-              }
-            }
-          ]
-        })
-      }
-    });
+    // One where-clause, reused by both the page query and the count. Keeping
+    // these in step is what makes `total` trustworthy.
+    const where: Prisma.ItemWhereInput = {
+      ...(status ? { status } : { status: { not: 'DELETED' } }),
+      ...(itemType && { itemType }),
+      ...(location && { location: { contains: location, mode: 'insensitive' } }),
+      ...(from && { createdAt: { gte: new Date(from) } }),
+      ...(to && { createdAt: { lte: new Date(to) } }),
+      ...(postedById && { postedById }),
+      ...(category && { categoryId: category.id }),
+      ...(zone && { zoneId: zone.id }),
+      // Array containment: the item must carry every requested tag.
+      ...(tagFilter && tagFilter.length > 0 && { tags: { hasEvery: tagFilter } }),
+      ...(search && {
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+          { location: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
 
-    // Format items for consistent API response
-    const formattedItems = items.map(item => ({
-      ...item,
-      commentsCount: 0, // Will be populated if we include comments in query
-      claimsCount: 0,   // Will be populated if we include claims in query
-      // Remove the arrays from the response to avoid confusion
-      comments: undefined,
-      claims: undefined
-    }));
+    const [items, total] = await Promise.all([
+      prisma.item.findMany({
+        skip,
+        take: limit,
+        where,
+        orderBy: { createdAt: 'desc' },
+        // Email intentionally excluded from the items list (IDOR hardening).
+        include: {
+          postedBy: { select: { id: true, name: true, avatar: true } },
+          category: { select: { id: true, slug: true, name: true, icon: true } },
+          zone: { select: { id: true, slug: true, name: true } },
+        },
+      }),
+      prisma.item.count({ where }),
+    ]);
 
     return NextResponse.json({
-      items: formattedItems,
+      items: items.map((item) => ({
+        ...item,
+        commentsCount: 0,
+        claimsCount: 0,
+        comments: undefined,
+        claims: undefined,
+      })),
       pagination: {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / limit),
       },
       filters: {
         status,
@@ -216,125 +183,184 @@ export async function GET(request: NextRequest) {
         search,
         postedById,
         from,
-        to
+        to,
+        category: categorySlug,
+        zone: zoneSlug,
+        tags: tagFilter,
       },
       user: {
-        isLoggedIn: isLoggedIn,
-        // Only include user ID if logged in
-        ...(isLoggedIn && { userId: session?.user?.id })
-      }
+        isLoggedIn,
+        ...(isLoggedIn && { userId: session?.user?.id }),
+      },
     });
   });
 }
 
 /**
  * POST /api/items
- * Create a new item with standardized error handling
+ * Create a new item, warning about likely duplicates first.
  */
 export async function POST(request: NextRequest) {
   return safeApiHandler(async () => {
-    // Check CSRF token first (for security)
     const csrfCheck = await checkCSRF(request);
     if (csrfCheck) {
       return csrfCheck;
     }
-    
-    // Check authentication first - getSession() now works correctly with App Router
+
     const session = await getSession();
-    
+
     if (!session?.user?.id) {
       throw AuthenticationRequired('Please log in to create an item.');
     }
 
-    // Apply rate limiting: 20 items per hour per user
-    // Only apply rate limiting AFTER authentication is confirmed
     await limitItems(request, session.user.id);
 
-    // Parse request body
-    let requestBody;
+    let requestBody: unknown;
     try {
       requestBody = await request.json();
     } catch {
       throw ValidationError('Invalid JSON in request body');
     }
 
-    // Validate request body with inline schema
-    const createItemSchema = z.object({
-      title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
-      description: z.string().min(10, 'Description must be at least 10 characters').max(2000, 'Description must be less than 2000 characters'),
-      itemType: z.enum(['LOST', 'FOUND']),
-      location: z.string().min(1, 'Location is required').max(100, 'Location must be less than 100 characters'),
-      images: z.array(
-        z.string()
-          .url('Invalid image URL')
-          .refine(isSafeUrl, 'URL must be a safe HTTP(S) URL')
-      ).max(5, 'Maximum 5 images allowed').optional().default([])
-    });
+    // Shared schema: the form and the API validate identically.
+    const data = createItemApiSchema.parse(requestBody);
 
-    let validatedData;
-    try {
-      validatedData = createItemSchema.parse(requestBody);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw ValidationError('Validation failed', { 
-          issues: error.issues.map(issue => ({
-            field: issue.path.join('.'),
-            message: issue.message
-          }))
-        });
-      }
-      throw error;
+    const [category, zone] = await Promise.all([
+      data.categorySlug
+        ? prisma.category.findUnique({ where: { slug: data.categorySlug }, select: { id: true } })
+        : null,
+      data.zoneSlug
+        ? prisma.campusZone.findUnique({ where: { slug: data.zoneSlug }, select: { id: true } })
+        : null,
+    ]);
+
+    if (data.categorySlug && !category) {
+      throw ValidationError(`Unknown category "${data.categorySlug}"`, {
+        field: 'categorySlug',
+      });
+    }
+    if (data.zoneSlug && !zone) {
+      throw ValidationError(`Unknown campus zone "${data.zoneSlug}"`, { field: 'zoneSlug' });
     }
 
-    // Create item in database with sanitized input
-    const status = validatedData.itemType === 'LOST' ? 'LOST' : 'FOUND';
-    
-    const newItem = await prisma.item.create({
-      data: {
-        title: validatedData.title,
-        description: validatedData.description,
-        itemType: validatedData.itemType,
-        status: status,
-        location: validatedData.location,
-        images: validatedData.images.filter(image => image && image.trim() !== '') as string[],
-        postedById: session.user.id,
-      },
-      include: {
-        // Include postedBy user details in response
-        postedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-          }
-        },
-        // Include counts for comments and claims
-        comments: {
-          select: {
-            id: true,
-          }
-        },
-        claims: {
-          select: {
-            id: true,
-          }
-        }
-      }
-    });
-
-    // Format response
-    const formattedItem = {
-      ...newItem,
-      commentsCount: 0, // New items have no comments
-      claimsCount: 0,   // New items have no claims
-      comments: undefined,
-      claims: undefined
+    const createdAt = new Date();
+    const candidate: MatchableItem = {
+      id: 'pending',
+      itemType: data.itemType,
+      title: data.title,
+      description: data.description,
+      location: data.location,
+      categoryId: category?.id ?? null,
+      zoneId: zone?.id ?? null,
+      tags: data.tags ?? [],
+      createdAt,
     };
 
-    return NextResponse.json({
-      message: 'Item created successfully',
-      item: formattedItem
-    }, { status: 201 });
+    if (!data.acknowledgeDuplicates) {
+      const duplicates = await findDuplicates(candidate, session.user.id);
+      if (duplicates.length > 0) {
+        // 409 with the candidates attached, so the client can show them and
+        // offer "post anyway".
+        return createErrorResponse(
+          'This looks like a duplicate of an item you already posted.',
+          ErrorCodes.DUPLICATE_SUSPECTED,
+          409,
+          {
+            candidates: duplicates,
+            hint: 'Resend with acknowledgeDuplicates: true to post anyway.',
+          }
+        );
+      }
+    }
+
+    const status = data.itemType === 'LOST' ? 'LOST' : 'FOUND';
+
+    const newItem = await prisma.item.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        itemType: data.itemType,
+        status,
+        location: data.location,
+        images: (data.images ?? []).filter((image) => image && image.trim() !== '') as string[],
+        postedById: session.user.id,
+        categoryId: category?.id ?? null,
+        zoneId: zone?.id ?? null,
+        tags: data.tags ?? [],
+        latitude: data.latitude ?? null,
+        longitude: data.longitude ?? null,
+      },
+      include: {
+        postedBy: { select: { id: true, name: true, email: true, avatar: true } },
+        category: { select: { id: true, slug: true, name: true, icon: true } },
+        zone: { select: { id: true, slug: true, name: true } },
+      },
+    });
+
+    // Side effects. None of these may fail the request: the item already exists.
+    await Promise.all([
+      computeMatchesForItem(newItem.id),
+      evaluateSavedSearchesForItem({
+        id: newItem.id,
+        title: newItem.title,
+        description: newItem.description,
+        location: newItem.location,
+        itemType: newItem.itemType,
+        categoryId: newItem.categoryId,
+        zoneId: newItem.zoneId,
+        tags: newItem.tags,
+        createdAt: newItem.createdAt,
+      }),
+      awardReputation(session.user.id, 'ITEM_POSTED', { itemId: newItem.id }),
+    ]);
+
+    return NextResponse.json(
+      {
+        message: 'Item created successfully',
+        item: { ...newItem, commentsCount: 0, claimsCount: 0, comments: undefined, claims: undefined },
+      },
+      { status: 201 }
+    );
   });
+}
+
+/**
+ * Score the poster's recent items of the same type against the candidate.
+ *
+ * Bounded to one page of recent rows so the guard stays cheap on every post.
+ */
+async function findDuplicates(candidate: MatchableItem, postedById: string) {
+  const since = new Date(candidate.createdAt.getTime() - DUPLICATE_LOOKBACK_DAYS * 86400000);
+
+  const recent = await prisma.item.findMany({
+    where: {
+      postedById,
+      itemType: candidate.itemType,
+      deletedAt: null,
+      createdAt: { gte: since },
+    },
+    select: {
+      id: true,
+      title: true,
+      itemType: true,
+      description: true,
+      location: true,
+      categoryId: true,
+      zoneId: true,
+      tags: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+    take: DUPLICATE_CANDIDATE_LIMIT,
+  });
+
+  return findLikelyDuplicates(candidate, recent).map((match) => ({
+    id: match.item.id,
+    title: match.item.title,
+    itemType: match.item.itemType,
+    location: match.item.location,
+    createdAt: match.item.createdAt.toISOString(),
+    score: match.score,
+    reasons: match.reasons,
+  }));
 }

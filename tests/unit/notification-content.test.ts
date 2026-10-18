@@ -13,6 +13,7 @@ const ALL_TYPES: NotificationType[] = [
   "MATCH_FOUND",
   "SAVED_SEARCH_HIT",
   "HANDOVER_CODE_ISSUED",
+  "HANDOVER_CODE_INVALIDATED",
   "HANDOVER_VERIFIED",
   "ITEM_RESOLVED",
   "MODERATION_ACTION",
@@ -102,7 +103,11 @@ describe("formatNotification", () => {
   });
 
   it("never leaks a handover code, because the code is not an input", () => {
-    for (const type of ["HANDOVER_CODE_ISSUED", "HANDOVER_VERIFIED"] as NotificationType[]) {
+    for (const type of [
+      "HANDOVER_CODE_ISSUED",
+      "HANDOVER_CODE_INVALIDATED",
+      "HANDOVER_VERIFIED",
+    ] as NotificationType[]) {
       const { title, body } = formatNotification({
         type,
         itemTitle: "Black wallet",
