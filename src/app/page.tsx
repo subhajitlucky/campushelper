@@ -38,59 +38,96 @@ const STEPS = [
   },
 ];
 
-async function getHomeData() {
-  const [posted, returned, members, recent, resolvedRows] = await Promise.all([
-    prisma.item.count({ where: { deletedAt: null, status: { not: "DELETED" } } }),
-    prisma.item.count({ where: { deletedAt: null, status: "RESOLVED" } }),
-    prisma.user.count({ where: { isActive: true } }),
-    prisma.item.findMany({
-      // Both representations must be excluded: the user delete path sets
-      // status='DELETED' without touching deletedAt, so filtering deletedAt
-      // alone surfaced 5 deleted items in "Recent reports".
-      where: { deletedAt: null, status: { not: "DELETED" } },
-      orderBy: { createdAt: "desc" },
-      take: 3,
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        status: true,
-        location: true,
-        createdAt: true,
-        category: { select: { name: true } },
-        zone: { select: { name: true } },
-      },
-    }),
-    prisma.item.findMany({
-      where: { deletedAt: null, status: "RESOLVED", resolvedAt: { not: null } },
-      select: { createdAt: true, resolvedAt: true },
-      take: 2000,
-    }),
-  ]);
+interface HomeData {
+  ok: boolean;
+  posted: number;
+  returned: number;
+  members: number;
+  recent: Awaited<ReturnType<typeof queryRecent>>;
+  medianReturnLabel: string;
+  resolutionRate: number | null;
+}
 
-  const durations = resolvedRows
-    .filter((row) => row.resolvedAt)
-    .map((row) => (row.resolvedAt!.getTime() - row.createdAt.getTime()) / MS_PER_HOUR);
+function queryRecent() {
+  return prisma.item.findMany({
+    // Both representations must be excluded: the user delete path sets
+    // status='DELETED' without touching deletedAt, so filtering deletedAt
+    // alone surfaced 5 deleted items in "Recent reports".
+    where: { deletedAt: null, status: { not: "DELETED" } },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      status: true,
+      location: true,
+      createdAt: true,
+      category: { select: { name: true } },
+      zone: { select: { name: true } },
+    },
+  });
+}
 
-  const medianHours = medianTimeToReturnHours(durations);
+/**
+ * Degrades rather than fails.
+ *
+ * This page is prerendered, so an unreachable database would otherwise break the
+ * build outright -- and a transient blip would break the page. On failure it
+ * reports that activity is unavailable and shows the empty state, instead of
+ * rendering a confident "0 members", which would be a lie rather than a
+ * degradation.
+ */
+async function getHomeData(): Promise<HomeData> {
+  try {
+    const [posted, returned, members, recent, resolvedRows] = await Promise.all([
+      prisma.item.count({ where: { deletedAt: null, status: { not: "DELETED" } } }),
+      prisma.item.count({ where: { deletedAt: null, status: "RESOLVED" } }),
+      prisma.user.count({ where: { isActive: true } }),
+      queryRecent(),
+      prisma.item.findMany({
+        where: { deletedAt: null, status: "RESOLVED", resolvedAt: { not: null } },
+        select: { createdAt: true, resolvedAt: true },
+        take: 2000,
+      }),
+    ]);
 
-  // formatDuration renders sub-hour values as whole minutes, so a median of a few
-  // seconds reads as the misleading "0 minutes". Say what it actually means.
-  const medianReturnLabel =
-    medianHours === null
-      ? "—"
-      : medianHours * 60 < 1
-        ? "under a minute"
-        : formatDuration(medianHours);
+    const durations = resolvedRows
+      .filter((row) => row.resolvedAt)
+      .map((row) => (row.resolvedAt!.getTime() - row.createdAt.getTime()) / MS_PER_HOUR);
 
-  return {
-    posted,
-    returned,
-    members,
-    recent,
-    medianReturnLabel,
-    resolutionRate: posted > 0 ? Math.round((returned / posted) * 100) : null,
-  };
+    const medianHours = medianTimeToReturnHours(durations);
+
+    // formatDuration renders sub-hour values as whole minutes, so a median of a
+    // few seconds reads as the misleading "0 minutes".
+    const medianReturnLabel =
+      medianHours === null
+        ? "—"
+        : medianHours * 60 < 1
+          ? "under a minute"
+          : formatDuration(medianHours);
+
+    return {
+      ok: true,
+      posted,
+      returned,
+      members,
+      recent,
+      medianReturnLabel,
+      resolutionRate: posted > 0 ? Math.round((returned / posted) * 100) : null,
+    };
+  } catch (error) {
+    console.error("[home] activity query failed; rendering degraded state", error);
+    return {
+      ok: false,
+      posted: 0,
+      returned: 0,
+      members: 0,
+      recent: [],
+      medianReturnLabel: "—",
+      resolutionRate: null,
+    };
+  }
 }
 
 function Stat({ value, label }: { value: string; label: string }) {
@@ -105,7 +142,7 @@ function Stat({ value, label }: { value: string; label: string }) {
 }
 
 export default async function Home() {
-  const { posted, returned, members, recent, medianReturnLabel, resolutionRate } =
+  const { ok, posted, returned, members, recent, medianReturnLabel, resolutionRate } =
     await getHomeData();
 
   return (
@@ -143,9 +180,16 @@ export default async function Home() {
               <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
                 <h2 className="text-sm font-medium text-foreground">Platform activity</h2>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Live counts from the database
+                  {ok ? "Live counts from the database" : "Currently unavailable"}
                 </p>
 
+                {!ok ? (
+                  <p className="mt-6 rounded-md border border-dashed border-border p-4 text-xs text-muted-foreground">
+                    Activity figures can&apos;t be loaded right now. The rest of the site
+                    works normally.
+                  </p>
+                ) : (
+                <>
                 <div className="mt-6 grid grid-cols-2 gap-6">
                   <Stat value={String(returned)} label="Items returned" />
                   <Stat value={String(posted)} label="Reports posted" />
@@ -162,6 +206,8 @@ export default async function Home() {
                     {returned === 0 ? "No returns yet" : medianReturnLabel}
                   </span>
                 </div>
+                </>
+                )}
               </div>
             </div>
           </div>
