@@ -162,7 +162,7 @@ export default function PossibleMatches({ itemId, className }: PossibleMatchesPr
         <button
           type="button"
           onClick={() => setHidden(true)}
-          className="rounded p-1 text-muted-foreground transition-colors hover:bg-info/90/10 hover:text-foreground/85"
+          className="rounded p-1 text-muted-foreground transition-colors hover:bg-info/10 hover:text-foreground/85"
           aria-label="Hide possible matches"
         >
           <X className="h-4 w-4" aria-hidden="true" />

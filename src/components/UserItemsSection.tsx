@@ -242,7 +242,7 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDeleteItem(item.id)}
-                      className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/90/10 border-destructive/30 hover:border-destructive/30"
+                      className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30 hover:border-destructive/30"
                     >
                       <Trash2 className="w-3 h-3 mr-1" />
                       Delete

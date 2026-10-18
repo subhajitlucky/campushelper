@@ -184,7 +184,7 @@ export default function DashboardPage() {
                   Post New Item
                 </Link>
               </Button>
-              <Button variant="outline" asChild className="flex-1 border-info/30 hover:bg-info/90/10">
+              <Button variant="outline" asChild className="flex-1 border-info/30 hover:bg-info/10">
                 <Link href="/search">
                   <Search className="mr-2 h-4 w-4" />
                   Search Items

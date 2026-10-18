@@ -320,10 +320,10 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                     {/* Status Badge */}
                     <Badge 
                       className={`px-3 py-0.5 text-xs font-semibold ${
-                        itemStatus === 'LOST' ? 'bg-destructive/10 text-destructive hover:bg-destructive/90/15' :
-                        itemStatus === 'FOUND' ? 'bg-success/10 text-success hover:bg-success/90/15' :
-                        itemStatus === 'CLAIMED' ? 'bg-info/10 text-primary hover:bg-info/90/15' :
-                        itemStatus === 'RESOLVED' ? 'bg-info/10 text-primary hover:bg-info/90/15' :
+                        itemStatus === 'LOST' ? 'bg-destructive/10 text-destructive hover:bg-destructive/15' :
+                        itemStatus === 'FOUND' ? 'bg-success/10 text-success hover:bg-success/15' :
+                        itemStatus === 'CLAIMED' ? 'bg-info/10 text-primary hover:bg-info/15' :
+                        itemStatus === 'RESOLVED' ? 'bg-info/10 text-primary hover:bg-info/15' :
                         'bg-muted text-foreground hover:bg-muted'
                       }`}
                     >
@@ -572,7 +572,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
               </div>
             ) : (
               /* NOT RESOLVED: Show normal Posted By */
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm p-5 border border-info/30/60">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm p-5 border border-info/60">
                 <div className="flex items-center gap-2 mb-4">
                   <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -687,7 +687,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                   <>
                     <Button
                       onClick={handleEdit}
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm hover:shadow-md transition-all duration-200 text-sm h-9"
+                      className="w-full"
                     >
                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -697,8 +697,8 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                     <Button
                       onClick={handleDelete}
                       disabled={isDeleting}
-                      variant="destructive"
-                      className="w-full font-semibold shadow-sm hover:shadow-md transition-all duration-200 text-sm h-9"
+                      variant="ghost"
+                      className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
                     >
                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -712,7 +712,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                 {isLoggedIn && !isOwner && itemStatus !== 'DELETED' && !isEditMode && !isResolved && (
                   <Button
                     onClick={() => setIsClaimsModalOpen(true)}
-                    className="w-full bg-success hover:bg-success/90 text-primary-foreground font-semibold shadow-sm hover:shadow-md transition-all duration-200 text-sm h-9"
+                    className="w-full"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />

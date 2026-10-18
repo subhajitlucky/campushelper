@@ -235,7 +235,7 @@ export default function HandoverPanel({ claimId, onVerified, className }: Handov
             type="button"
             onClick={() => void reissue()}
             disabled={isSubmitting}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-info/30 bg-card px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-info/90/10 disabled:opacity-50"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-info/30 bg-card px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-info/10 disabled:opacity-50"
           >
             {isSubmitting && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
             Issue a new code

@@ -8,8 +8,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90/90 btn-enhanced ripple",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90/90 btn-enhanced ripple",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 btn-enhanced ripple",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 btn-enhanced ripple",
         outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground input-enhanced",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 btn-enhanced ripple",
         ghost: "hover:bg-accent hover:text-accent-foreground interactive-element",

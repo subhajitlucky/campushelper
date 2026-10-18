@@ -225,7 +225,7 @@ export default function SavedSearches({
                 onClick={() => void remove(search.id)}
                 disabled={pendingId === search.id}
                 aria-label={`Delete saved search ${search.name}`}
-                className="rounded p-1.5 text-muted-foreground/70 transition-colors hover:bg-destructive/90/10 hover:text-destructive disabled:opacity-50"
+                className="rounded p-1.5 text-muted-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
               >
                 {pendingId === search.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

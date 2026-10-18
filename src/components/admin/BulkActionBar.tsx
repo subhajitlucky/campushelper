@@ -166,7 +166,7 @@ export default function BulkActionBar({
         onClick={onClear}
         disabled={isSubmitting}
         aria-label="Clear selection"
-        className="rounded p-1.5 text-primary transition-colors hover:bg-info/90/10 disabled:opacity-50"
+        className="rounded p-1.5 text-primary transition-colors hover:bg-info/10 disabled:opacity-50"
       >
         <X className="h-4 w-4" aria-hidden="true" />
       </button>

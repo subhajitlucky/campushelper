@@ -264,7 +264,7 @@ export default function AdminDashboard() {
           variant="outline"
           onClick={() => handleItemModeration(item.id, isSpam ? 'unflag_spam' : 'flag_spam')}
           disabled={isModerating || isDeleted}
-          className={isSpam ? 'bg-warning/10 text-warning hover:bg-warning/90/15' : ''}
+          className={isSpam ? 'bg-warning/10 text-warning hover:bg-warning/15' : ''}
         >
           <Flag className="w-4 h-4 mr-2" />
           {isModerating ? 'Processing...' : (isSpam ? 'Unflag' : 'Flag Spam')}

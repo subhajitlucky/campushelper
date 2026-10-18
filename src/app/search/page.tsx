@@ -450,7 +450,7 @@ export default function SearchPage() {
                             {item.status === 'LOST' && (
                               <button 
                                 onClick={() => window.location.href = `/item/${item.id}`}
-                                className="w-full bg-success hover:bg-success/90 text-primary-foreground text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
+                                className="w-full bg-success hover:bg-success/90 text-success-foreground text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
                                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                                 </svg>
@@ -463,7 +463,7 @@ export default function SearchPage() {
                           <div className="space-y-2">
                             <button 
                               onClick={() => window.location.href = '/auth/login'}
-                              className="w-full bg-muted hover:bg-muted text-primary-foreground text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center"
+                              className="w-full bg-muted text-muted-foreground text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center"
                             >
                               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
