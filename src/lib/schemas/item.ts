@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { isSafeUrl } from '@/lib/security';
+import { slugSchema, tagsSchema } from './taxonomy';
 
 /**
  * Item Zod Schemas
@@ -44,10 +45,34 @@ export const baseItemSchema = z.object({
       (images) => images.every(image => !image || z.string().url().safeParse(image).success),
       'All images must be valid URLs'
     ),
+
+  // Taxonomy (v2). All optional: existing clients keep working unchanged.
+  categorySlug: slugSchema.optional(),
+  zoneSlug: slugSchema.optional(),
+  tags: tagsSchema.optional(),
+
+  // Optional precise pin within a zone, in WGS84 degrees.
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
 });
 
 // Schema for creating a new item (all required fields)
 export const createItemSchema = baseItemSchema;
+
+/**
+ * The `POST /api/items` request body: the item payload plus transport-level
+ * flags.
+ *
+ * `acknowledgeDuplicates` lives here rather than on {@link createItemSchema} so
+ * that form value types are not polluted by an API-only concern.
+ */
+export const createItemApiSchema = createItemSchema.extend({
+  /**
+   * Set by the client to post despite the duplicate guard reporting a likely
+   * duplicate. Without it, `POST /api/items` responds 409.
+   */
+  acknowledgeDuplicates: z.boolean().optional().default(false),
+});
 
 // Schema for updating an item (all fields optional, includes status)
 export const updateItemSchema = baseItemSchema.partial().extend({
@@ -93,6 +118,21 @@ export const itemsQuerySchema = z.object({
     .optional()
     .transform((val) => val?.trim())
     .refine((val) => !val || val.length >= 3, 'Location filter must be at least 3 characters'),
+
+  // Taxonomy filters (v2)
+  category: slugSchema.optional(),
+  zone: slugSchema.optional(),
+  tags: z
+    .string()
+    .optional()
+    .transform((val) =>
+      val
+        ? val
+            .split(',')
+            .map((entry) => entry.trim().toLowerCase())
+            .filter((entry) => entry.length > 0)
+        : undefined
+    ),
   
   search: z
     .string()
@@ -118,6 +158,7 @@ export const itemsQuerySchema = z.object({
 
 // Type exports for TypeScript
 export type CreateItemInput = z.infer<typeof createItemSchema>;
+export type CreateItemApiInput = z.input<typeof createItemApiSchema>;
 export type UpdateItemInput = z.infer<typeof updateItemSchema>;
 export type ItemsQueryInput = z.infer<typeof itemsQuerySchema>;
 

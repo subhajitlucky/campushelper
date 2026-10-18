@@ -23,13 +23,15 @@ export const claimsQuerySchema = z.object({
 export const claimResponseSchema = z.object({
   id: z.string(),
   claimType: z.enum(['FOUND_IT', 'OWN_IT']),
-  status: z.enum(['PENDING', 'APPROVED', 'REJECTED']),
+  status: z.enum(['PENDING', 'APPROVED', 'COMPLETED', 'REJECTED']),
   message: z.string().nullable(),
   itemId: z.string(),
   userId: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
   resolvedAt: z.string().nullable(),
+  completedAt: z.string().nullable().optional(),
+  handoverVerifiedAt: z.string().nullable().optional(),
   user: z.object({
     id: z.string(),
     name: z.string().nullable(),

@@ -18,8 +18,19 @@ import { useFormValidation } from '@/hooks/useFormValidation';
 import { createItemSchema } from '@/lib/schemas/item';
 import { ButtonSpinner } from '@/components/ui/loading-spinner';
 
-// Form schema for validation (without images for better UX)
-const postItemSchema = createItemSchema.omit({ images: true });
+// Form schema for validation (without images for better UX).
+//
+// The taxonomy fields are omitted because `useFormValidation` is string-only:
+// tags are an array and the coordinates are numbers. Category, zone, and tags
+// are held in local state and merged into the submitted payload.
+const postItemSchema = createItemSchema.omit({
+  images: true,
+  categorySlug: true,
+  zoneSlug: true,
+  tags: true,
+  latitude: true,
+  longitude: true,
+});
 
 type ItemFormValues = z.infer<typeof postItemSchema>;
 
