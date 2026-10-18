@@ -4,6 +4,9 @@ import { prisma } from '@/lib/prisma';
 import { updateClaimStatusSchema } from '@/lib/schemas/claim-update';
 import { checkCSRF } from '@/lib/csrf-middleware';
 import { limitCustom } from '@/lib/rateLimit';
+import { issueHandoverCode } from '@/lib/handover-service';
+import { notify } from '@/lib/notifications';
+import { awardReputation } from '@/lib/reputation-service';
 
 // PUT /api/claims/[id]
 export async function PUT(
@@ -207,7 +210,28 @@ export async function PUT(
       };
 
       const statusMessage = status === 'APPROVED' ? 'approved' : 'rejected';
-      
+
+      // Side effects. The claim is already updated, so none of these may fail
+      // the request; each helper swallows and logs its own errors.
+      if (status === 'APPROVED') {
+        // Issue the proof-of-handover code that gates marking the item resolved.
+        await issueHandoverCode(id);
+
+        await awardReputation(updatedClaim.userId, 'CLAIM_APPROVED', {
+          itemId: claim.itemId,
+        });
+      }
+
+      await notify({
+        userId: updatedClaim.userId,
+        type: 'CLAIM_STATUS_CHANGED',
+        status,
+        actorId: session.user.id,
+        itemId: claim.itemId,
+        itemTitle: claim.item.title,
+        link: `/item/${claim.itemId}`,
+      });
+
       return NextResponse.json({
         claim: responseClaim,
         message: `Claim has been ${statusMessage} successfully`

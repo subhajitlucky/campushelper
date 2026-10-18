@@ -9,6 +9,7 @@ import { sanitizeInput } from '@/lib/security';
 import { limitClaims } from '@/lib/rateLimit';
 import { checkCSRF } from '@/lib/csrf-middleware';
 import { safeApiHandler } from '@/lib/errors';
+import { notify } from '@/lib/notifications';
 import type { Prisma } from '@/generated/prisma';
 
 // GET /api/claims?itemId=xxx
@@ -285,6 +286,18 @@ export async function POST(request: NextRequest) {
             },
           },
         },
+      });
+
+      // Tell the poster someone is claiming their item. Notifications never
+      // throw, so a failure here cannot fail an already-created claim.
+      await notify({
+        userId: item.postedById,
+        type: 'CLAIM_CREATED',
+        actorId: session.user.id,
+        actorName: newClaim.user.name,
+        itemId,
+        itemTitle: newClaim.item.title,
+        link: `/item/${itemId}`,
       });
 
       // Transform claim to match response schema

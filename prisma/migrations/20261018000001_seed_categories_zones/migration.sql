@@ -6,14 +6,14 @@
 INSERT INTO "Category" ("id", "slug", "name", "icon", "sortOrder") VALUES
   ('cat_electronics',  'electronics',  'Electronics',       'Smartphone',   10),
   ('cat_id-cards',     'id-cards',     'ID Cards',          'IdCard',       20),
-  ('cat-documents',    'documents',    'Documents',         'FileText',     30),
-  ('cat-books',        'books',        'Books & Notes',     'BookOpen',     40),
-  ('cat-keys',         'keys',         'Keys',              'KeyRound',     50),
-  ('cat-bags',         'bags',         'Bags & Backpacks',  'Backpack',     60),
-  ('cat-clothing',     'clothing',     'Clothing',          'Shirt',        70),
-  ('cat-accessories',  'accessories',  'Accessories',       'Watch',        80),
-  ('cat-sports',       'sports',       'Sports Equipment',  'Dumbbell',     90),
-  ('cat-other',        'other',        'Other',             'Package',     100)
+  ('cat_documents',    'documents',    'Documents',         'FileText',     30),
+  ('cat_books',        'books',        'Books & Notes',     'BookOpen',     40),
+  ('cat_keys',         'keys',         'Keys',              'KeyRound',     50),
+  ('cat_bags',         'bags',         'Bags & Backpacks',  'Backpack',     60),
+  ('cat_clothing',     'clothing',     'Clothing',          'Shirt',        70),
+  ('cat_accessories',  'accessories',  'Accessories',       'Watch',        80),
+  ('cat_sports',       'sports',       'Sports Equipment',  'Dumbbell',     90),
+  ('cat_other',        'other',        'Other',             'Package',     100)
 ON CONFLICT ("slug") DO NOTHING;
 
 -- Schematic campus geography. mapX/mapY are normalised percentages (0-100) on

@@ -18,6 +18,7 @@
     "db:validate": "if [ -n \"${DATABASE_URL:-}\" ] && [ -n \"${DIRECT_URL:-}\" ]; then prisma validate; elif [ -n \"${DATABASE_URL:-}\" ]; then DIRECT_URL=\"$DATABASE_URL\" prisma validate; elif [ -n \"${DIRECT_URL:-}\" ]; then DATABASE_URL=\"$DIRECT_URL\" prisma validate; else printf '%s\\n' 'DATABASE_URL and DIRECT_URL are not set; skipping db:validate'; fi",
     "db:generate": "prisma generate",
     "db:verify": "tsx scripts/verify-migrations.ts",
+    "db:backfill-matches": "tsx scripts/backfill-matches.ts",
     "verify": "npm run db:generate && if [ -n \"${DATABASE_URL:-}\" ] || [ -n \"${DIRECT_URL:-}\" ]; then npm run db:validate && npm run db:verify; else printf '%s\\n' 'DATABASE_URL and DIRECT_URL are not set; skipping database verification'; fi && npm run type-check && npm run lint && npm test"
   },
   "dependencies": {
