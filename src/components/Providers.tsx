@@ -2,6 +2,7 @@
 
 import { SessionProvider } from "next-auth/react";
 import { AuthProvider } from "@/contexts/AuthContext";
+import ThemeProvider from "@/components/ThemeProvider";
 
 /**
  * Providers Component
@@ -21,11 +22,13 @@ interface ProvidersProps {
 
 export default function Providers({ children }: ProvidersProps) {
   return (
-    <SessionProvider>
-      <AuthProvider>
-        {children}
-      </AuthProvider>
-    </SessionProvider>
+    <ThemeProvider>
+      <SessionProvider>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </SessionProvider>
+    </ThemeProvider>
   );
 }
 

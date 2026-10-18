@@ -6,6 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import { Menu, X, User, LogOut } from "lucide-react";
 
 import NotificationBell from "@/components/NotificationBell";
+import ThemeToggle from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
@@ -46,6 +47,8 @@ export default function Navbar() {
             </Button>
           ))}
           
+          <ThemeToggle />
+
           {status === 'loading' ? (
             <Button variant="outline" disabled>
               <User className="size-4 mr-2" />
@@ -98,7 +101,12 @@ export default function Navbar() {
                 </Link>
               </Button>
             ))}
-            
+
+            <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+              <span className="text-sm text-muted-foreground">Appearance</span>
+              <ThemeToggle />
+            </div>
+
             {status === 'loading' ? (
               <Button variant="outline" className="justify-start" disabled>
                 <User className="size-4 mr-2" />
