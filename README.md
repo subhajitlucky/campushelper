@@ -24,10 +24,39 @@ CampusHelper is a full-stack campus lost-and-found platform for authenticated re
 - 💬 **Comments** - Facilitate communication between users about items
 - 📊 **Admin Dashboard** - Comprehensive moderation and management tools
 
+### Reuniting items faster
+- 🔗 **Smart match engine** - Automatically pairs LOST and FOUND reports using explainable
+  signals (title/description similarity, category, campus zone, date proximity, shared tags).
+  Every suggestion shows *why* it was paired, not just a score.
+- 🗂️ **Categories and tags** - A seeded taxonomy plus free tags, with filter facets on every
+  listing surface.
+- 🔖 **Saved searches** - Save a filter set and get notified when a matching item is posted.
+- 🚫 **Duplicate guard** - Posting a near-identical report returns `409 DUPLICATE_SUSPECTED`
+  with the candidates, so accidental double-posts are caught before they happen.
+
+### Closing the loop
+- 🔔 **Notification centre** - In-app notifications for claims, comments, matches, saved-search
+  hits, moderation outcomes, and handovers, with an unread badge in the navbar.
+- 🔑 **Handover verification** - Approving a claim issues a six-digit code. The item is only
+  marked returned once the code is verified in person, so "approved" cannot be mistaken for
+  "returned". Codes expire in 72 hours and are burned after five wrong attempts.
+- 🗺️ **Campus zones and map** - Reports carry a structured campus zone, with a schematic
+  inline-SVG map showing report density per zone. No external map provider or API key.
+
+### Trust and operations
+- 🏅 **Reputation and badges** - An append-only points ledger (returns are worth 25, posting 2)
+  drives tier badges; student verification is granted by a moderator and labelled as such.
+- 📜 **Audit log and bulk moderation** - Every privileged action is recorded with actor,
+  reason, and IP. Items and users can be moderated in bulk (up to 50 at a time), each change
+  individually audited.
+- 📈 **Impact analytics and CSV export** - Resolution rate, median time-to-return, daily volume,
+  top zones and categories, and the claims funnel — plus CSV exports guarded against
+  spreadsheet formula injection and audited as data egress.
+
 ### Security & Quality
 - 🔐 **Google OAuth** - Secure authentication via NextAuth.js
 - 🛡️ **CSRF Protection** - Cross-site request forgery prevention
-- ⚡ **Rate Limiting** - API abuse prevention
+- ⚡ **Rate Limiting** - API abuse prevention, returning `429` with `Retry-After`
 - ✅ **Input Validation** - Server-side validation with Zod
 - 🔒 **Row Level Security** - Database-level access control (RLS)
 - 🎨 **Responsive Design** - Mobile-first, accessible UI with Tailwind CSS
@@ -188,15 +217,42 @@ src/
 ## 🔌 API Endpoints
 
 ### Items
-- `GET /api/items` - List items with pagination and filters
-- `POST /api/items` - Create a new item
+- `GET /api/items` - List items with pagination and filters (`status`, `itemType`, `location`,
+  `search`, `from`, `to`, `category`, `zone`, `tags`)
+- `POST /api/items` - Create a new item. Returns `409 DUPLICATE_SUSPECTED` with candidate
+  previews if the report looks like a duplicate; resend with `acknowledgeDuplicates: true`
+  to post anyway.
 - `GET /api/items/[id]` - Get item details
 - `PUT /api/items/[id]` - Update item (owner only)
 - `DELETE /api/items/[id]` - Delete item (owner/admin)
+- `GET /api/items/[id]/matches` - Possible LOST/FOUND counterparts (poster or moderator only)
+
+### Taxonomy
+- `GET /api/categories` - Categories with live item counts
+- `GET /api/zones` - Campus zones with item, lost, and found counts
+
+### Matches
+- `POST /api/matches/[id]` - Dismiss or confirm a suggestion (either item's owner)
+
+### Saved searches
+- `GET /api/saved-searches` - The signed-in user's saved searches
+- `POST /api/saved-searches` - Save a search (max 20 per user)
+- `DELETE /api/saved-searches/[id]` - Delete one (owner only)
+
+### Notifications
+- `GET /api/notifications` - Paginated inbox, `?unread=true` to filter
+- `GET /api/notifications/unread-count` - Unread badge count
+- `POST /api/notifications/read` - `{ all: true }` or `{ ids: [...] }`
 
 ### Claims
 - `GET /api/claims` - List claims
 - `POST /api/claims` - Create a claim on an item
+- `PUT /api/claims/[id]` - Approve or reject a claim (item poster or admin); approval issues a
+  handover code
+- `GET /api/claims/[id]/handover` - The handover code and its state (parties to the claim and
+  moderators only; never included in the shared item projection)
+- `POST /api/claims/[id]/handover` - `{ code }` to verify a handover, or `{ reissue: true }`
+  to issue a new code
 
 ### Comments
 - `GET /api/comments` - List comments
@@ -204,6 +260,17 @@ src/
 
 ### Upload
 - `POST /api/upload` - Upload an image (auth required)
+
+### Admin
+- `GET /api/admin/audit` - Audit log, filterable by `actorId`, `action`, `targetType`,
+  `targetId`, and date range
+- `POST /api/admin/items/bulk` - Bulk `FLAG` / `REMOVE` / `RESTORE` (max 50 ids; reason required
+  except to restore)
+- `POST /api/admin/users/bulk` - Bulk `DEACTIVATE` / `REACTIVATE` / `VERIFY_STUDENT` /
+  `UNVERIFY_STUDENT` (max 50 ids; reason required except to reactivate)
+- `GET /api/admin/analytics` - Impact metrics, `?range=7d|30d|90d|all`
+- `GET /api/admin/export/items` - CSV export (capped at 10,000 rows, audited)
+- `GET /api/admin/export/claims` - CSV export (capped at 10,000 rows, audited)
 
 ### Authentication
 - `GET /api/auth/session` - Get current session
@@ -296,6 +363,27 @@ npm run type-check        # Run TypeScript compiler
 ---
 
 ## 🧪 Testing
+
+```bash
+npm test                  # unit tests only (no database required)
+npm run verify            # prisma validate, migrations, typecheck, lint, tests
+```
+
+The suite has two layers:
+
+- **Unit tests** (`tests/unit`, `src/lib/__tests__`) cover the pure logic — match scoring,
+  reputation rules and tiers, CSV serialisation and formula-injection guards, analytics
+  derivations including the median, notification formatting, and every Zod schema. No database
+  is needed, so these run in CI.
+- **Integration tests** (`tests/integration`) exercise the admin routes against a **real
+  PostgreSQL database**, stubbing only the session and CSRF checks so the Prisma aggregates,
+  CSV serialisation, audit writes, and bulk updates are real code paths. These **skip
+  automatically when `DATABASE_URL` is unset**, because CI has no database. To run them, point
+  `DATABASE_URL` at a disposable database that has had `npx prisma migrate deploy` applied.
+
+**Known limitation:** CI has no database, so the non-admin API routes (items, claims,
+notifications, and the rest) are covered by typecheck and lint rather than by integration
+tests. The performance-sensitive admin paths are the ones with database-backed coverage.
 
 ### Manual Testing Checklist
 
