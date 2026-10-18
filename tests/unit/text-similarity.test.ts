@@ -10,8 +10,26 @@ describe("normalizeText", () => {
     expect(normalizeText("Café Résumé")).toBe("cafe resume");
   });
 
-  it("handles non-latin scripts without throwing", () => {
-    expect(() => normalizeText("मेरा बैग")).not.toThrow();
+  // Regression: the previous rule was `[^a-z0-9]`, which deleted every
+  // non-Latin character. The old test here asserted only that the call did not
+  // throw, so it passed while Devanagari normalised to the empty string and
+  // matching was inert for Hindi and Odia reports.
+  it("preserves Devanagari rather than deleting it", () => {
+    expect(normalizeText("मेरा काला बटुआ खो गया")).toBe("मेरा काला बटुआ खो गया");
+  });
+
+  it("keeps Devanagari vowel signs, which are combining marks and not letters", () => {
+    // `\p{L}` alone strips these, turning "मेरा" into "म र".
+    expect(normalizeText("मेरा")).toBe("मेरा");
+    expect(normalizeText("बटुआ")).toBe("बटुआ");
+  });
+
+  it("preserves Odia", () => {
+    expect(normalizeText("ମୋର କଳା ବ୍ୟାଗ")).toContain("ବ୍ୟାଗ");
+  });
+
+  it("still strips punctuation around non-Latin text", () => {
+    expect(normalizeText("मेरा बैग!!! (जल्दी)")).toBe("मेरा बैग जल्दी");
   });
 
   it("returns an empty string for punctuation-only input", () => {
@@ -46,6 +64,21 @@ describe("tokenize", () => {
 
   it("returns an empty array for empty input", () => {
     expect(tokenize("")).toEqual([]);
+  });
+
+  it("keeps Hindi content words and drops Hindi filler", () => {
+    // "मेरा ... खो गया" is filler; "काला बटुआ" identifies the item.
+    expect(tokenize("मेरा काला बटुआ खो गया")).toEqual(["काला", "बटुआ"]);
+  });
+
+  it("keeps a two-code-unit non-Latin word, which the ASCII floor would drop", () => {
+    // "घर" (house) is two UTF-16 units: consonant + vowel sign.
+    expect(tokenize("घर")).toEqual(["घर"]);
+  });
+
+  it("produces a non-empty token list for a Hindi report", () => {
+    // The regression in one line: this used to be [].
+    expect(tokenize("काला चमड़े का बटुआ").length).toBeGreaterThan(0);
   });
 
   it("keeps alphanumeric model numbers intact", () => {

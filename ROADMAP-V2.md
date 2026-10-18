@@ -119,11 +119,10 @@ for the full list. The Critical and Major findings have been fixed; these remain
 - **Comment notifications and comment reputation are unwired** (`COMMENT_ON_ITEM`,
   `COMMENT_POSTED`), and so is the daily comment cap that would go with them.
 - **`MODERATION_UPHELD` is not applied** — bulk moderation does not deduct reputation.
-- **The items list has no index leading with `createdAt`**, so the default listing does a sequential
-  scan plus a sort. Measured at 37 ms for a 20-row page at 20,000 items.
-- **Matching and duplicate detection are inert for non-Latin scripts.** `normalizeText` keeps only
-  `[a-z0-9]`, so a report written in Devanagari or Odia tokenises to nothing and receives no text
-  signal.
+- **Odia filler words are not stopworded.** Devanagari is covered, and matching now works for any
+  script; but NFKD recomposes Odia vowel signs into sequences that could not be verified, so Odia
+  filler is kept. This slightly inflates similarity between Odia reports and cannot cause a false
+  match on its own.
 - **Saved-search fan-out and match notification are sequential** (~5 ms per matching search, on the
   item-create path).
 - **"Deleted" has two representations.** The user delete path sets `status = 'DELETED'` but not

@@ -125,6 +125,13 @@ model Item {
   @@index([deletedAt])
   @@index([categoryId, createdAt])
   @@index([zoneId, createdAt])
+  // The default list filters `status <> DELETED` and orders by `createdAt desc`.
+  // Without an index leading with createdAt nothing could supply that ordering,
+  // so every page view was a sequential scan plus a top-N sort (measured at
+  // 37 ms for 20 rows over 20,000 items, versus 0.59 ms on the audit log, which
+  // has this index). A partial index on `status <> 'DELETED'` would be slightly
+  // tighter, but Prisma cannot model partial indexes and would report drift.
+  @@index([createdAt])
   @@index([tags(ops: ArrayOps)], type: Gin)
 }
 

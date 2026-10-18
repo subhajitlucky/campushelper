@@ -208,6 +208,57 @@ describe("scoreMatch", () => {
 
 const MATCH_WEIGHTS_TOTAL_WITHOUT_LOCATION = 34 + 18 + 8;
 
+describe("matching in non-Latin scripts", () => {
+  // Regression: Devanagari normalised to "" so both text signals contributed 0
+  // and a pair of identical Hindi reports scored at most 46 -- below the 55
+  // match threshold and the 70 duplicate threshold. The feature was inert for
+  // anyone reporting in Hindi or Odia.
+  const hindiBase = {
+    itemType: "LOST" as const,
+    title: "काला चमड़े का बटुआ",
+    description: "मेट्रो कार्ड और लाइब्रेरी कार्ड वाला बटुआ",
+    location: "सेंट्रल लाइब्रेरी",
+    categoryId: null,
+    zoneId: null,
+    tags: [],
+    createdAt: NOW,
+  };
+
+  it("matches an identical Hindi lost/found pair", () => {
+    const lost = { ...hindiBase, id: "hi-1" };
+    const found = { ...hindiBase, id: "hi-2", itemType: "FOUND" as const };
+
+    expect(scoreMatch(lost, found).score).toBeGreaterThanOrEqual(MATCH_THRESHOLD);
+  });
+
+  it("does not match unrelated Hindi reports", () => {
+    const wallet = { ...hindiBase, id: "hi-3" };
+    const bat = {
+      itemType: "FOUND" as const,
+      title: "लकड़ी का क्रिकेट बल्ला",
+      description: "टूटी हुई ग्रिप वाला बल्ला",
+      location: "स्पोर्ट्स कॉम्प्लेक्स",
+      categoryId: null,
+      zoneId: null,
+      tags: [],
+      createdAt: NOW,
+      id: "hi-4",
+    };
+
+    expect(scoreMatch(wallet, bat).score).toBeLessThan(MATCH_THRESHOLD);
+  });
+
+  it("flags a duplicate Hindi repost", () => {
+    const first = { ...hindiBase, id: "hi-5" };
+    const repost = { ...hindiBase, id: "hi-6" };
+
+    expect(duplicateSimilarity(repost, first)).toBeGreaterThanOrEqual(
+      DUPLICATE_SIMILARITY_THRESHOLD
+    );
+    expect(findLikelyDuplicates(repost, [first]).map((d) => d.item.id)).toEqual(["hi-5"]);
+  });
+});
+
 describe("rankMatches", () => {
   it("returns matches best-first", () => {
     const subject = item({ id: "lost-1" });
