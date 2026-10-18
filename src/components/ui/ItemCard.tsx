@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader } from './card';
 import StatusBadge from './StatusBadge';
 import UserDisplay from './UserDisplay';
 import ItemImage from './ItemImage';
+import TagPill from './TagPill';
+import ReputationBadge from './ReputationBadge';
 import { Button } from './button';
 
 interface Item {
@@ -14,10 +16,15 @@ interface Item {
   location: string;
   createdAt: string;
   images?: string[] | null;
+  tags?: string[] | null;
   postedBy: {
     name: string | null;
     avatar: string | null;
+    /** Optional: only present on endpoints that select it. */
+    reputation?: number | null;
   };
+  category?: { slug: string; name: string; icon: string } | null;
+  zone?: { slug: string; name: string } | null;
 }
 
 interface ItemCardProps {
@@ -104,11 +111,30 @@ export default function ItemCard({
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               <UserDisplay user={item.postedBy} size="sm" showLabel={false} />
               <span className="truncate">{item.postedBy.name || 'Anonymous'}</span>
+              {typeof item.postedBy.reputation === 'number' && (
+                <ReputationBadge total={item.postedBy.reputation} />
+              )}
             </div>
           ) : (
-            <UserDisplay user={item.postedBy} size="sm" />
+            <div className="flex flex-wrap items-center gap-2">
+              <UserDisplay user={item.postedBy} size="sm" />
+              {typeof item.postedBy.reputation === 'number' && (
+                <ReputationBadge total={item.postedBy.reputation} />
+              )}
+            </div>
           )}
         </div>
+
+        {/* Tags */}
+        {item.tags && item.tags.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5" aria-label="Item tags">
+            {item.tags.slice(0, isCompact ? 3 : 6).map((tag) => (
+              <li key={tag}>
+                <TagPill tag={tag} />
+              </li>
+            ))}
+          </ul>
+        )}
 
         {/* Actions */}
         {showActions && user && (

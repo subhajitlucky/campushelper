@@ -15,6 +15,10 @@ export interface ItemDetailUser {
   name: string | null;
   email?: string;
   avatar: string | null;
+  /** Reputation total, surfaced as a tier badge. */
+  reputation?: number;
+  /** Granted by a moderator; not an automated student-email check. */
+  verifiedStudent?: boolean;
 }
 
 export interface ItemDetailClaim {
@@ -114,6 +118,8 @@ export async function getItemDetailForViewer(
           name: true,
           email: true,
           avatar: true,
+          reputation: true,
+          verifiedStudent: true,
         },
       },
       claimedBy: {
@@ -122,6 +128,8 @@ export async function getItemDetailForViewer(
           name: true,
           email: true,
           avatar: true,
+          reputation: true,
+          verifiedStudent: true,
         },
       },
 

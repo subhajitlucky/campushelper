@@ -12,6 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import CommentsSection from './CommentsSection';
 import ClaimsModal from './ClaimsModal';
+import PossibleMatches from './PossibleMatches';
+import ReputationBadge from './ui/ReputationBadge';
+import VerifiedStudentBadge from './ui/VerifiedStudentBadge';
 import { useAuthFetch } from '@/lib/auth-fetch';
 
 interface ItemUser {
@@ -19,6 +22,10 @@ interface ItemUser {
   name: string | null;
   email?: string;
   avatar: string | null;
+  /** Reputation total, from the item-detail projection. */
+  reputation?: number;
+  /** Granted by a moderator, not an automated email check. */
+  verifiedStudent?: boolean;
 }
 
 interface ItemData {
@@ -427,6 +434,11 @@ export default function ItemDetail({ item }: ItemDetailProps) {
               </div>
             )}
 
+            {/* Possible matches - only the poster can act on these */}
+            {isOwner && itemStatus !== 'DELETED' && (
+              <PossibleMatches itemId={item.id} />
+            )}
+
             {/* Step 109: Comments Section - Hide if item is deleted or user is not logged in */}
             {itemStatus !== 'DELETED' && isLoggedIn && (
               <CommentsSection itemId={item.id} itemStatus={itemStatus} />
@@ -485,6 +497,14 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                           {item.postedBy?.name || 'Anonymous'}
                         </p>
                         <p className="text-gray-600 text-xs truncate">{item.postedBy?.email}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1">
+                          {typeof item.postedBy?.reputation === 'number' && (
+                            <ReputationBadge total={item.postedBy.reputation} />
+                          )}
+                          {item.postedBy?.verifiedStudent && (
+                            <VerifiedStudentBadge />
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -523,6 +543,12 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                           {item.claimedBy?.name || 'Anonymous'}
                         </p>
                         <p className="text-gray-600 text-xs truncate">{item.claimedBy?.email}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1">
+                          {typeof item.claimedBy?.reputation === 'number' && (
+                            <ReputationBadge total={item.claimedBy.reputation} />
+                          )}
+                          {item.claimedBy?.verifiedStudent && <VerifiedStudentBadge />}
+                        </div>
                       </div>
                     </div>
                     {item.resolvedAt && (

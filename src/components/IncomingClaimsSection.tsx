@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { CheckCircle, XCircle, User, Calendar, MessageSquare, Eye, AlertCircle } from "lucide-react";
 import { useAuthFetch } from '@/lib/auth-fetch';
+import HandoverPanel from '@/components/HandoverPanel';
 
 interface IncomingClaim {
   id: string;
   claimType: 'FOUND_IT' | 'OWN_IT';
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'REJECTED';
   message: string | null;
   itemId: string;
   userId: string;
@@ -354,6 +355,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
                         <Badge 
                           variant="outline"
                           className={`text-xs ${
+                            claim.status === 'COMPLETED' ? 'border-blue-300 text-blue-700' :
                             claim.status === 'APPROVED' ? 'border-green-300 text-green-700' :
                             'border-red-300 text-red-700'
                           }`}
@@ -367,6 +369,16 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
                         </Button>
                       </div>
                     </div>
+
+                    {/* Approved claims need a verified handover before the item
+                        counts as returned. */}
+                    {(claim.status === 'APPROVED' || claim.status === 'COMPLETED') && (
+                      <HandoverPanel
+                        claimId={claim.id}
+                        className="mt-3"
+                        onVerified={fetchIncomingClaims}
+                      />
+                    )}
                   </div>
                 ))}
                 {resolvedClaims.length > 5 && (

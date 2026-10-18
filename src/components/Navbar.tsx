@@ -5,10 +5,12 @@ import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { Menu, X, User, LogOut } from "lucide-react";
 
+import NotificationBell from "@/components/NotificationBell";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
   { href: "/post", label: "Post Item" },
+  { href: "/map", label: "Map" },
   { href: "/search", label: "Search" },
   { href: "/lost-items", label: "Lost Items" },
   { href: "/resolved", label: "Resolved" },
@@ -51,6 +53,7 @@ export default function Navbar() {
             </Button>
           ) : session?.user ? (
             <div className="flex items-center gap-2">
+              <NotificationBell />
               <Button variant="ghost" asChild className="p-2">
                 <Link href="/dashboard" title="Go to Dashboard">
                   <User className="size-5 text-gray-700 hover:text-gray-900" />
@@ -103,6 +106,9 @@ export default function Navbar() {
               </Button>
             ) : session?.user ? (
               <>
+                <div className="flex items-center">
+                  <NotificationBell />
+                </div>
                 <Button variant="ghost" className="justify-start" asChild>
                   <Link href="/dashboard" onClick={closeMenu}>
                     <User className="size-4 mr-2" />

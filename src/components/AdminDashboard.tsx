@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { showError, showSuccess } from '@/lib/toast-config';
 import { useAuthFetch } from '@/lib/auth-fetch';
+import AnalyticsPanel from '@/components/admin/AnalyticsPanel';
+import AuditLogTable from '@/components/admin/AuditLogTable';
+import BulkActionBar from '@/components/admin/BulkActionBar';
 import {
   Users,
   Package,
@@ -82,7 +85,26 @@ interface AdminClaim {
 export default function AdminDashboard() {
   const { data: session } = useSession();
   const { fetchWithAuth } = useAuthFetch(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'items' | 'users' | 'claims'>('overview');
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'items' | 'users' | 'claims' | 'analytics' | 'audit'
+  >('overview');
+
+  // Bulk moderation selection. Kept per-target so switching tabs cannot carry a
+  // stale selection into the wrong endpoint.
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+
+  const toggleItemSelection = (id: string) => {
+    setSelectedItemIds((current) =>
+      current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id]
+    );
+  };
+
+  const toggleUserSelection = (id: string) => {
+    setSelectedUserIds((current) =>
+      current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id]
+    );
+  };
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [items, setItems] = useState<AdminItem[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -450,6 +472,26 @@ export default function AdminDashboard() {
         >
           Claims
         </button>
+        <button
+          onClick={() => setActiveTab('analytics')}
+          className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
+            activeTab === 'analytics'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Analytics
+        </button>
+        <button
+          onClick={() => setActiveTab('audit')}
+          className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
+            activeTab === 'audit'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Audit Log
+        </button>
       </div>
 
       {/* Content */}
@@ -549,11 +591,27 @@ export default function AdminDashboard() {
               </div>
 
               <div className="grid gap-6">
+                <BulkActionBar
+                  target="items"
+                  selectedIds={selectedItemIds}
+                  onClear={() => setSelectedItemIds([])}
+                  onDone={fetchAdminData}
+                />
+
                 {items.map((item) => (
                   <Card key={item.id}>
                     <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
+                      <div className="flex justify-between items-start gap-3">
+                        <label className="mt-1 flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedItemIds.includes(item.id)}
+                            onChange={() => toggleItemSelection(item.id)}
+                            className="h-4 w-4 rounded border-gray-300"
+                            aria-label={`Select ${item.title} for a bulk action`}
+                          />
+                        </label>
+                        <div className="flex-1">
                           <CardTitle className="text-lg">{item.title}</CardTitle>
                           <CardDescription>
                             {item.itemType} • {item.location} • {item.status}
@@ -607,11 +665,27 @@ export default function AdminDashboard() {
               </div>
 
               <div className="grid gap-6">
+                <BulkActionBar
+                  target="users"
+                  selectedIds={selectedUserIds}
+                  onClear={() => setSelectedUserIds([])}
+                  onDone={fetchAdminData}
+                />
+
                 {users.map((user) => (
                   <Card key={user.id}>
                     <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
+                      <div className="flex justify-between items-start gap-3">
+                        <label className="mt-1 flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedUserIds.includes(user.id)}
+                            onChange={() => toggleUserSelection(user.id)}
+                            className="h-4 w-4 rounded border-gray-300"
+                            aria-label={`Select ${user.name || user.email} for a bulk action`}
+                          />
+                        </label>
+                        <div className="flex-1">
                           <CardTitle className="text-lg">
                             {user.name || 'Anonymous User'}
                           </CardTitle>
@@ -804,6 +878,12 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Analytics Tab */}
+      {activeTab === 'analytics' && <AnalyticsPanel />}
+
+      {/* Audit Tab */}
+      {activeTab === 'audit' && <AuditLogTable />}
     </div>
   );
 }

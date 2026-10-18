@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         // Email intentionally excluded from the items list (IDOR hardening).
         include: {
-          postedBy: { select: { id: true, name: true, avatar: true } },
+          postedBy: { select: { id: true, name: true, avatar: true, reputation: true } },
           category: { select: { id: true, slug: true, name: true, icon: true } },
           zone: { select: { id: true, slug: true, name: true } },
         },

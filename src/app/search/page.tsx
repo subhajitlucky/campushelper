@@ -6,6 +6,7 @@ import ItemImage from "@/components/ui/ItemImage";
 import StatusBadge from "@/components/ui/StatusBadge";
 import UserDisplay from "@/components/ui/UserDisplay";
 import Pagination from "@/components/ui/Pagination";
+import SavedSearches from "@/components/SavedSearches";
 
 interface Item {
   id: string;
@@ -122,9 +123,33 @@ export default function SearchPage() {
     setCurrentPage(1); // Reset to first page when filters change
   };
 
+  // Saved searches only store filters that GET /api/items understands, so
+  // `status` and `location` are deliberately not offered for saving.
+  const savedSearchFilters = {
+    ...(filters.search ? { search: filters.search } : {}),
+    ...(filters.itemType ? { itemType: filters.itemType as 'LOST' | 'FOUND' } : {}),
+    ...(filters.from ? { from: filters.from } : {}),
+    ...(filters.to ? { to: filters.to } : {}),
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
+        {user.isLoggedIn && (
+          <SavedSearches
+            className="mb-6"
+            currentFilters={savedSearchFilters}
+            onApply={(applied) =>
+              updateFilters({
+                search: applied.search ?? '',
+                itemType: applied.itemType ?? '',
+                from: applied.from ?? '',
+                to: applied.to ?? '',
+              })
+            }
+          />
+        )}
+
         {/* Search and filters */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="space-y-4">
