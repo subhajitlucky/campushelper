@@ -1,5 +1,24 @@
 import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
 
+/**
+ * Thrown when a caller exceeds a rate limit.
+ *
+ * Typed so that `safeApiHandler` can translate it into a 429 response with a
+ * `Retry-After` header instead of falling through to a generic 500.
+ */
+export class RateLimitError extends Error {
+  readonly endpoint: string;
+  readonly retryAfterSeconds: number;
+
+  constructor(endpoint: string, retryAfterSeconds: number) {
+    const retryAfter = Math.max(Math.round(retryAfterSeconds) || 1, 1);
+    super(`Too many requests to ${endpoint}. Try again in ${retryAfter} seconds.`);
+    this.name = 'RateLimitError';
+    this.endpoint = endpoint;
+    this.retryAfterSeconds = retryAfter;
+  }
+}
+
 // Different rate limiters for different use cases
 
 // Signup: 5 requests per hour per IP
@@ -60,11 +79,8 @@ async function rateLimit(
   } catch (rejection) {
     const rejRes = rejection instanceof RateLimiterRes ? rejection : null;
     const secs = rejRes ? Math.round(rejRes.msBeforeNext / 1000) || 1 : 1;
-    const retryAfter = Math.max(secs, 1);
 
-    throw new Error(
-      `Too many requests to ${endpointName}. Try again in ${retryAfter} seconds.`
-    );
+    throw new RateLimitError(endpointName, Math.max(secs, 1));
   }
 }
 
@@ -176,4 +192,31 @@ export async function limitCustom(
 export async function limitUploads(request: Request, userId: string): Promise<void> {
   const key = `uploads:${userId}`;
   await rateLimit(key, uploadsLimiter, 'uploads');
+}
+
+/**
+ * Rate limits for the v2 feature surfaces.
+ *
+ * All are keyed by user id and expressed as `points` per `durationSeconds`.
+ */
+const V2_LIMITS = {
+  matches: { points: 30, duration: 3600 },
+  savedSearches: { points: 20, duration: 3600 },
+  notificationsRead: { points: 120, duration: 3600 },
+  handover: { points: 10, duration: 3600 },
+  bulkAdmin: { points: 10, duration: 3600 },
+  export: { points: 5, duration: 3600 },
+  analytics: { points: 60, duration: 3600 },
+} as const;
+
+export type V2LimitName = keyof typeof V2_LIMITS;
+
+/**
+ * Rate limit a v2 endpoint by user id.
+ *
+ * Usage: `await limitV2('handover', session.user.id)`.
+ */
+export async function limitV2(name: V2LimitName, userId: string): Promise<void> {
+  const { points, duration } = V2_LIMITS[name];
+  await limitCustom(`${name}:${userId}`, points, duration, name);
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { DatabaseErrorHandler } from './database-errors';
+import { RateLimitError } from './rateLimit';
 
 /**
  * Standardized error codes for consistent API responses
@@ -174,6 +175,22 @@ export const UnsupportedAction = (action: string) =>
   createErrorResponse(`Action '${action}' is not supported`, ErrorCodes.UNSUPPORTED_ACTION, 400);
 
 /**
+ * Build a 429 response carrying a `Retry-After` header, so clients can back off
+ * correctly instead of treating a throttled request as a server failure.
+ */
+export function RateLimitExceeded(
+  message: string = 'Too many requests. Please slow down and try again shortly.',
+  retryAfterSeconds: number = 60
+): NextResponse {
+  const retryAfter = Math.max(Math.round(retryAfterSeconds) || 1, 1);
+  const response = createErrorResponse(message, ErrorCodes.RATE_LIMIT_EXCEEDED, 429, {
+    retryAfterSeconds: retryAfter,
+  });
+  response.headers.set('Retry-After', String(retryAfter));
+  return response;
+}
+
+/**
  * Parse Prisma errors and return appropriate standardized response
  */
 export function handlePrismaError(error: unknown): NextResponse {
@@ -221,6 +238,16 @@ export async function safeApiHandler<T>(
     if (looksLikePrismaError(error)) {
       const dbError = DatabaseErrorHandler.handlePrismaError(error);
       return DatabaseErrorHandler.toNextResponse(dbError);
+    }
+
+    // Handle rate limiting before anything else can swallow it: a throttled
+    // request is a 429, never a 500.
+    if (error instanceof RateLimitError || hasErrorName(error, 'RateLimitError')) {
+      const rateLimitError = error as RateLimitError;
+      return RateLimitExceeded(
+        rateLimitError.message,
+        rateLimitError.retryAfterSeconds ?? 60
+      );
     }
 
     // Handle validation errors
