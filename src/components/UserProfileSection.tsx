@@ -121,7 +121,7 @@ export default function UserProfileSection({ userStats }: UserProfileSectionProp
             
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {/* Items Posted */}
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-info/30">
+              <div className="bg-info/10 p-4 rounded-lg border border-info/30">
                 <div className="flex items-center justify-between mb-2">
                   <Package className="w-5 h-5 text-primary" />
                   <Badge variant="secondary" className="text-xs">
@@ -133,7 +133,7 @@ export default function UserProfileSection({ userStats }: UserProfileSectionProp
               </div>
 
               {/* Claims Made */}
-              <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-success/30">
+              <div className="bg-success/10 p-4 rounded-lg border border-success/30">
                 <div className="flex items-center justify-between mb-2">
                   <MessageSquare className="w-5 h-5 text-success" />
                   <Badge variant="secondary" className="text-xs">
@@ -145,7 +145,7 @@ export default function UserProfileSection({ userStats }: UserProfileSectionProp
               </div>
 
               {/* Resolved Items */}
-              <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-info/30">
+              <div className="bg-info/10 p-4 rounded-lg border border-info/30">
                 <div className="flex items-center justify-between mb-2">
                   <CheckCircle className="w-5 h-5 text-primary" />
                   <Badge variant="secondary" className="text-xs">
@@ -157,7 +157,7 @@ export default function UserProfileSection({ userStats }: UserProfileSectionProp
               </div>
 
               {/* This Week */}
-              <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg border border-warning/30">
+              <div className="bg-warning/10 p-4 rounded-lg border border-warning/30">
                 <div className="flex items-center justify-between mb-2">
                   <Calendar className="w-5 h-5 text-warning" />
                   <Badge variant="secondary" className="text-xs">

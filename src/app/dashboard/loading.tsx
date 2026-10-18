@@ -2,7 +2,7 @@ import { PageLoader } from "@/components/ui/loading-spinner";
 
 export default function DashboardLoading() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 py-8">
+    <div className="min-h-screen bg-background py-8">
       <div className="container mx-auto px-4">
         <div className="mb-6">
           <div className="h-8 bg-muted rounded w-64 mb-2 animate-pulse"></div>

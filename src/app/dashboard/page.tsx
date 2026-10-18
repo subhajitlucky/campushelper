@@ -114,7 +114,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-6">
+    <div className="min-h-screen bg-background py-6">
       <div className="container mx-auto px-4 max-w-7xl">
         {/* Step 118: User Profile Section */}
         <div className="mb-6">
@@ -169,7 +169,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-info/30">
+        <Card className="mb-6 bg-info/10 border-info/30">
           <CardHeader>
             <CardTitle className="text-lg">Quick Actions</CardTitle>
             <CardDescription>

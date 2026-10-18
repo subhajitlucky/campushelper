@@ -196,10 +196,8 @@ export default function LostItemsPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {/* Item Type */}
               <div>
-                <label className="block text-sm font-medium text-foreground/85 mb-1">
-                  Item Type
-                </label>
-                <select
+                <label htmlFor="filter-item-type" className="block text-sm font-medium text-foreground/85 mb-1">Item Type</label>
+                <select id="filter-item-type"
                   value={filters.itemType}
                   onChange={(e) => handleFilterChange('itemType', e.target.value)}
                   className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring"

@@ -2,7 +2,7 @@ import { PageLoader } from "@/components/ui/loading-spinner";
 
 export default function SearchLoading() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 py-8">
+    <div className="min-h-screen bg-background py-8">
       <div className="container mx-auto px-4">
         <div className="mb-6">
           <div className="h-10 bg-muted rounded w-full max-w-2xl mb-4 animate-pulse"></div>

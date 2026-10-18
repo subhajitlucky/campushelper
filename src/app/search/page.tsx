@@ -207,10 +207,8 @@ export default function SearchPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Item Type Filter */}
               <div>
-                <label className="block text-sm font-medium text-foreground/85 mb-2">
-                  Item Type
-                </label>
-                <select
+                <label htmlFor="filter-item-type" className="block text-sm font-medium text-foreground/85 mb-2">Item Type</label>
+                <select id="filter-item-type"
                   value={filters.itemType}
                   onChange={(e) => updateFilters({ itemType: e.target.value })}
                   className="w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
@@ -223,10 +221,8 @@ export default function SearchPage() {
 
               {/* Status Filter */}
               <div>
-                <label className="block text-sm font-medium text-foreground/85 mb-2">
-                  Status
-                </label>
-                <select
+                <label htmlFor="filter-status" className="block text-sm font-medium text-foreground/85 mb-2">Status</label>
+                <select id="filter-status"
                   value={filters.status}
                   onChange={(e) => updateFilters({ status: e.target.value })}
                   className="w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
@@ -241,10 +237,8 @@ export default function SearchPage() {
 
               {/* Location Filter */}
               <div>
-                <label className="block text-sm font-medium text-foreground/85 mb-2">
-                  Location
-                </label>
-                <select
+                <label htmlFor="filter-location" className="block text-sm font-medium text-foreground/85 mb-2">Location</label>
+                <select id="filter-location"
                   value={filters.location}
                   onChange={(e) => updateFilters({ location: e.target.value })}
                   className="w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
