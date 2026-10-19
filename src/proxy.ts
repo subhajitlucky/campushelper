@@ -1,6 +1,7 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from 'next/server';
 import {
+  MIDDLEWARE_MATCHER,
   isPublicPageRoute,
   isPublicApiRoute,
   matchesRouteBoundary,
@@ -74,18 +75,5 @@ export default withAuth(
 
 // Configure which routes to run middleware on
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths EXCEPT:
-     * - api/auth/* (authentication endpoints - must be public)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files (public folder)
-     * 
-     * SECURITY IMPROVEMENT: Now protects ALL other API routes with authentication
-     * instead of leaving them completely open to attacks.
-     */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico|public).*)',
-  ],
+  matcher: [MIDDLEWARE_MATCHER],
 };
