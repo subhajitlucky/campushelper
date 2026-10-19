@@ -133,6 +133,11 @@ export function fillDailySeries(
 /**
  * Human-readable duration for dashboards: minutes under an hour, hours under
  * two days, then days — with an em dash when the value is unknown.
+ *
+ * The decimal is dropped when it is zero, because this string is rendered next
+ * to headline figures that are all whole numbers and "30.0 hours" reads as
+ * false precision beside a bare "35". A value that genuinely has a fraction
+ * keeps one decimal ("5.3 hours"), and an exact single unit is singular.
  */
 export function formatDuration(hours: number | null): string {
   if (hours === null || !Number.isFinite(hours)) {
@@ -147,9 +152,17 @@ export function formatDuration(hours: number | null): string {
     return minutes === 1 ? '1 minute' : `${minutes} minutes`;
   }
 
+  const unit = (value: number, singular: string, plural: string) => {
+    const rounded = roundTo(value, 1);
+    const isWhole = Number.isInteger(rounded);
+    const text = isWhole ? String(rounded) : rounded.toFixed(1);
+
+    return `${text} ${rounded === 1 ? singular : plural}`;
+  };
+
   if (safeHours < HOURS_PER_DAY * 2) {
-    return `${roundTo(safeHours, 1).toFixed(1)} hours`;
+    return unit(safeHours, 'hour', 'hours');
   }
 
-  return `${roundTo(safeHours / HOURS_PER_DAY, 1).toFixed(1)} days`;
+  return unit(safeHours / HOURS_PER_DAY, 'day', 'days');
 }

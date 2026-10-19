@@ -162,7 +162,7 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
         showBrowse ? (
           <Button variant="quiet" size="sm" asChild>
             <Link href="/search">
-              <Search className="mr-1.5 size-4" aria-hidden="true" />
+              <Search className="size-4" aria-hidden="true" />
               Find something to claim
             </Link>
           </Button>

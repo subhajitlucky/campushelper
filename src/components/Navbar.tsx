@@ -41,9 +41,14 @@ export default function Navbar() {
 
   // Active is a colour change, not a weight change: weight is already carrying
   // too much meaning across the app, and 500 collapses to 700 on Linux anyway.
+  // Active is a colour change plus a brand underline, not a weight change:
+  // weight is already carrying too much meaning across the app, and 500
+  // collapses to 700 on Linux anyway. The links fill the bar's full height so
+  // the underline lands exactly on the navbar's bottom border instead of
+  // floating at a guessed offset.
   const linkClass = (href: string) =>
     cn(
-      "rounded-lg px-3 py-2 text-sm transition-colors",
+      "relative inline-flex h-16 items-center px-3 text-sm transition-colors",
       isActive(href)
         ? "text-foreground"
         : "text-muted-foreground hover:text-foreground"
@@ -69,6 +74,12 @@ export default function Navbar() {
               aria-current={isActive(item.href) ? "page" : undefined}
             >
               {item.label}
+              {isActive(item.href) && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-brand"
+                />
+              )}
             </Link>
           ))}
 
@@ -92,7 +103,7 @@ export default function Navbar() {
                   </Link>
                 </Button>
                 <Button variant="quiet" size="sm" onClick={handleLogout}>
-                  <LogOut className="size-4 mr-1.5" />
+                  <LogOut className="size-4" />
                   Log out
                 </Button>
               </>
@@ -149,7 +160,7 @@ export default function Navbar() {
 
             {status === "loading" ? (
               <Button variant="ghost" className="justify-start" disabled>
-                <User className="size-4 mr-2" />
+                <User className="size-4" />
                 Loading…
               </Button>
             ) : session?.user ? (
@@ -159,19 +170,19 @@ export default function Navbar() {
                 </div>
                 <Button variant="ghost" className="justify-start" asChild>
                   <Link href="/dashboard" onClick={closeMenu}>
-                    <User className="size-4 mr-2" />
+                    <User className="size-4" />
                     Dashboard
                   </Link>
                 </Button>
                 <Button variant="quiet" className="justify-start" onClick={handleLogout}>
-                  <LogOut className="size-4 mr-2" />
+                  <LogOut className="size-4" />
                   Log out
                 </Button>
               </>
             ) : (
               <Button variant="outline" className="justify-start" asChild>
                 <Link href="/auth/login" onClick={closeMenu}>
-                  <User className="size-4 mr-2" />
+                  <User className="size-4" />
                   Log in
                 </Link>
               </Button>

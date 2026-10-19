@@ -209,7 +209,7 @@ export default function SearchPage() {
   return (
     <ItemListShell
       title="Search"
-      description="Search every report by title, description, or location — then narrow it down by type, status, or place."
+      description="Search every report, then narrow by type, status, or place."
       noun={{ singular: 'result', plural: 'results' }}
       actions={
         <Button asChild variant="outline">
@@ -224,7 +224,11 @@ export default function SearchPage() {
       search={{
         id: 'search',
         label: 'Search items',
-        placeholder: 'Search by title, description, or location…',
+        // Measured: the input is 288px wide with 240px of usable text space,
+        // and the old placeholder needed 294px, so it clipped mid-word to
+        // "…description, or lo". The longer explanation already lives in the
+        // empty state below, so the placeholder only has to name the field.
+        placeholder: 'Search reports…',
         value: filters.search,
         onChange: (value) => updateFilters({ search: value }),
         onSubmit: () => fetchItems(),
@@ -313,14 +317,14 @@ function SearchIntro() {
         Looking for something specific?{' '}
         <Link
           href="/lost-items"
-          className="font-medium text-primary underline-offset-4 hover:underline"
+          className="font-medium text-brand underline-offset-4 hover:underline"
         >
           Browse lost items
         </Link>{' '}
         or read the{' '}
         <Link
           href="/resolved"
-          className="font-medium text-primary underline-offset-4 hover:underline"
+          className="font-medium text-brand underline-offset-4 hover:underline"
         >
           resolved stories
         </Link>

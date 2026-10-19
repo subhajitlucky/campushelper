@@ -245,7 +245,7 @@ export default function ItemListShell({
 
   return (
     <div className={cn('page-canvas rise-in', className)}>
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <PageHeader
           title={title}
           description={description}
@@ -264,12 +264,12 @@ export default function ItemListShell({
           }
         />
 
-        {beforeFilters && <div className="mt-6">{beforeFilters}</div>}
+        {beforeFilters && <div className="mt-5">{beforeFilters}</div>}
 
         {/* ---------------------------------------------------------------- */}
         {/* Filter bar                                                        */}
         {/* ---------------------------------------------------------------- */}
-        <section aria-label="Filters" className="mt-6">
+        <section aria-label="Filters" className="mt-5">
           {/* Mobile: one disclosure for every control */}
           <div className="sm:hidden">
             <Button
@@ -322,7 +322,7 @@ export default function ItemListShell({
                 }}
                 className="flex w-full items-center gap-2 sm:w-auto"
               >
-                <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none lg:w-72">
+                <div className="relative min-w-0 flex-1 sm:w-72 sm:flex-none lg:w-80">
                   <Search
                     className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
                     aria-hidden="true"
@@ -411,10 +411,12 @@ export default function ItemListShell({
             )}
 
             {facets && (
-              <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 pt-1 sm:pt-2">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {facetsLabel}
-                </span>
+              <div className="w-full pt-1 sm:pt-2">
+                {/* The chips are self-describing; the group is labelled for
+                    assistive tech by CategoryFilter itself. The visible label
+                    was a whole line of chrome above a row that already sits
+                    directly under the filter controls. */}
+                <span className="sr-only">{facetsLabel}</span>
                 {facets}
               </div>
             )}
@@ -424,7 +426,7 @@ export default function ItemListShell({
         {/* ---------------------------------------------------------------- */}
         {/* Results                                                           */}
         {/* ---------------------------------------------------------------- */}
-        <div className="mt-8">
+        <div className="mt-6">
           {error ? (
             <div
               role="alert"

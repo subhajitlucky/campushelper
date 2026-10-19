@@ -88,6 +88,22 @@
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
 
+  /* The one accent. `bg-brand`, `text-brand`, `border-brand`, `ring-brand`,
+     `bg-brand-subtle` all exist from these two declarations. */
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-subtle: var(--brand-subtle);
+  --color-brand-subtle-strong: var(--brand-subtle-strong);
+
+  /* Map surfaces. The schematic map is the one place that needs a land/road
+     relationship the rest of the design system has no token for: reusing
+     `muted` for the ground and `card` for the roads inverted the contrast in
+     dark mode (roads came out darker than the land), so the roads read as
+     trenches. Two dedicated tokens keep the relationship — road always lighter
+     than ground — correct in both themes. */
+  --color-map-ground: var(--map-ground);
+  --color-map-road: var(--map-road);
+
   /* Surface system. See the :root / .dark blocks below for the values. */
   --color-border-subtle: var(--border-subtle);
   --color-border-strong: var(--border-strong);
@@ -98,50 +114,95 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
+
+  /* --- the page is not white; a card is -----------------------------------
+     `--background` and `--card` were both `oklch(1 0 0)`, so a card could only
+     be told apart from the page by a hairline outline and a 10%-opacity shadow.
+     That is why "42 bordered containers -> 6" changed nothing visible: the
+     borders were still the only thing separating a card from the page, just
+     quieter. Dropping the page half a step and leaving the card at pure white
+     is what lets the outline become genuinely optional.
+
+     The neutrals are also warmed off the zinc hue (285, effectively colourless)
+     onto a very low-chroma warm hue, so large empty areas read as paper rather
+     than as a default UI grey. Chroma stays at 0.002-0.006 — this should be
+     felt, not seen. */
+  --background: oklch(0.986 0.003 85);
+  --foreground: oklch(0.17 0.008 65);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
+  --card-foreground: oklch(0.17 0.008 65);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
+  --popover-foreground: oklch(0.17 0.008 65);
+  /* Unchanged near-black: the primary action stays a confident ink fill. */
+  --primary: oklch(0.21 0.008 65);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.515 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
+  --secondary: oklch(0.962 0.004 85);
+  --secondary-foreground: oklch(0.21 0.008 65);
+  --muted: oklch(0.958 0.004 85);
+  --muted-foreground: oklch(0.50 0.012 70);
+  --accent: oklch(0.958 0.004 85);
+  --accent-foreground: oklch(0.21 0.008 65);
+  --destructive: oklch(0.55 0.215 27.5);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
+  --border: oklch(0.902 0.005 85);
+  --input: oklch(0.885 0.006 85);
+  /* Focus is the accent. It was a mid grey, which made every focus ring in the
+     app look like a rendering artefact rather than an affordance. */
+  --ring: oklch(0.51 0.185 272);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.21 0.006 285.885);
+  --sidebar: oklch(0.986 0.003 85);
+  --sidebar-foreground: oklch(0.17 0.008 65);
+  --sidebar-primary: oklch(0.21 0.008 65);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.705 0.015 286.067);
+  --sidebar-accent: oklch(0.958 0.004 85);
+  --sidebar-accent-foreground: oklch(0.21 0.008 65);
+  --sidebar-border: oklch(0.902 0.005 85);
+  --sidebar-ring: oklch(0.51 0.185 272);
 
   /* Domain semantics. shadcn's vocabulary has no success/warning/info, so pages
      hand-picked green-600/amber-600/red-600 and drifted apart — StatusBadge, the
      admin tables, and the claim panels disagreed about what "resolved" looks
-     like. Luminance is tuned for text on a near-white tint, since the dominant
-     usage is `bg-success/10 text-success` style badges. */
-  --success: oklch(0.52 0.14 155);
+     like.
+
+     Luminance is set for text on a 10% tint of itself, which is the dominant
+     usage (`bg-warning/10 text-warning`). The previous values were tuned for
+     that too but were too light to hold their own beside body text: "LOST"
+     rendered as a tan pill that read as disabled. These are 4-6 points darker,
+     which keeps the AA margin while making the pill read as a state rather
+     than as a smear. */
+  --success: oklch(0.47 0.125 155);
   --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.52 0.12 70);
+  --warning: oklch(0.47 0.115 62);
   --warning-foreground: oklch(0.985 0 0);
-  --info: oklch(0.52 0.15 250);
+  --info: oklch(0.47 0.14 250);
   --info-foreground: oklch(0.985 0 0);
+
+  /* --- brand ---------------------------------------------------------------
+     The interface had no chromatic identity at all: every surface, control and
+     icon sat on the shadcn zinc hue with chroma <= 0.02, so the only coloured
+     pixels on most pages were the three status pills. That is why tokenising
+     and de-bordering did not make it look designed — there was nothing to
+     design *with*.
+
+     One accent, used at meaningful moments only (focus rings, links, the
+     active nav item, the unread marker, the active filter, match scores). It is
+     deliberately NOT the button fill: near-black primary actions are a
+     confident, premium choice and repainting every button indigo is what makes
+     an app look like a template again. The accent marks *state* and
+     *interaction*; `--primary` marks *action*.
+
+     Deep indigo, chosen because it is the one signal hue not already spoken for
+     by a status (amber = lost, green = found/resolved, red = destructive) and
+     because it reads as trustworthy next to a warm neutral. */
+  --brand: oklch(0.51 0.185 272);
+  --brand-foreground: oklch(0.985 0 0);
+  /* Tint for backgrounds that sit behind brand-coloured text. */
+  --brand-subtle: oklch(0.51 0.185 272 / 0.1);
+  --brand-subtle-strong: oklch(0.51 0.185 272 / 0.18);
 
   /* --- surface system ------------------------------------------------------
      A card is only for a discrete object, so its outline should whisper rather
@@ -149,72 +210,90 @@
      what cards, skeletons and row dividers use; --border stays for structural
      rules (section headings, navbar, footer) and --border-strong is reserved
      for emphasis (hovered outlines, active tab rules). */
-  --border-subtle: oklch(0.945 0.003 286.32);
-  --border-strong: oklch(0.87 0.005 286.32);
+  --border-subtle: oklch(0.94 0.003 85);
+  --border-strong: oklch(0.86 0.005 85);
 
   /* One elevation level, one hover step, one overlay step. Two stops each, so
      the shadow reads as light falling on a surface rather than as a grey
-     smear. Dark mode gets deeper, tighter shadows instead of the same ones. */
-  --elevation-card: 0 1px 2px -1px oklch(0.21 0.006 285.885 / 0.1),
-    0 2px 6px -2px oklch(0.21 0.006 285.885 / 0.06);
-  --elevation-card-hover: 0 2px 4px -2px oklch(0.21 0.006 285.885 / 0.12),
-    0 8px 20px -6px oklch(0.21 0.006 285.885 / 0.12);
-  --elevation-overlay: 0 4px 10px -4px oklch(0.21 0.006 285.885 / 0.14),
-    0 12px 32px -8px oklch(0.21 0.006 285.885 / 0.22);
+     smear. Dark mode gets deeper, tighter shadows instead of the same ones.
+
+     The light-mode stops are warmed to match the page rather than being a
+     neutral grey, which is what stops a shadow on a warm canvas reading as
+     dirt. */
+  --elevation-card: 0 1px 2px -1px oklch(0.28 0.02 75 / 0.12),
+    0 2px 6px -2px oklch(0.28 0.02 75 / 0.07);
+  --elevation-card-hover: 0 2px 4px -2px oklch(0.28 0.02 75 / 0.14),
+    0 10px 24px -8px oklch(0.28 0.02 75 / 0.14);
+  --elevation-overlay: 0 4px 10px -4px oklch(0.28 0.02 75 / 0.16),
+    0 12px 32px -8px oklch(0.28 0.02 75 / 0.24);
 
   /* The sweep that crosses a skeleton. Light themes need a bright sheen, dark
      themes only a suggestion of one. */
+  --map-ground: oklch(0.955 0.005 85);
+  --map-road: oklch(1 0 0);
   --shimmer-highlight: oklch(1 0 0 / 0.85);
-  /* The single sanctioned page-level gradient (see .page-canvas). */
-  --wash: oklch(0.55 0.02 286 / 0.06);
+  /* The single sanctioned page-level gradient (see .page-canvas). Carries the
+     brand hue, so the top of every page has a faint chromatic halo instead of
+     the grey smudge a neutral wash produced. */
+  --wash: oklch(0.51 0.185 272 / 0.05);
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.92 0.004 286.32);
-  --primary-foreground: oklch(0.21 0.006 285.885);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Warm-neutral dark, stepped to match the light theme's relationships rather
+     than its literal values: the page is the darkest surface, a card is a clear
+     step up, and the outline is fainter than in light because the value step is
+     already doing the work. */
+  --background: oklch(0.155 0.006 75);
+  --foreground: oklch(0.975 0.003 85);
+  --card: oklch(0.213 0.007 78);
+  --card-foreground: oklch(0.975 0.003 85);
+  --popover: oklch(0.213 0.007 78);
+  --popover-foreground: oklch(0.975 0.003 85);
+  --primary: oklch(0.94 0.004 85);
+  --primary-foreground: oklch(0.213 0.007 78);
+  --secondary: oklch(0.272 0.008 78);
+  --secondary-foreground: oklch(0.975 0.003 85);
+  --muted: oklch(0.272 0.008 78);
+  --muted-foreground: oklch(0.715 0.012 80);
+  --accent: oklch(0.272 0.008 78);
+  --accent-foreground: oklch(0.975 0.003 85);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.16 0.03 27);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.552 0.016 285.938);
+  /* Lifted well clear of the dark surfaces so a focus ring is unmistakable. */
+  --ring: oklch(0.72 0.155 272);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar: oklch(0.213 0.007 78);
+  --sidebar-foreground: oklch(0.975 0.003 85);
+  --sidebar-primary: oklch(0.72 0.155 272);
+  --sidebar-primary-foreground: oklch(0.975 0.003 85);
+  --sidebar-accent: oklch(0.272 0.008 78);
+  --sidebar-accent-foreground: oklch(0.975 0.003 85);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
+  --sidebar-ring: oklch(0.72 0.155 272);
 
-  --success: oklch(0.75 0.15 155);
+  --brand: oklch(0.75 0.14 272);
+  --brand-foreground: oklch(0.17 0.03 272);
+  --brand-subtle: oklch(0.75 0.14 272 / 0.14);
+  --brand-subtle-strong: oklch(0.75 0.14 272 / 0.24);
+
+  --success: oklch(0.78 0.145 155);
   --success-foreground: oklch(0.16 0.03 155);
-  --warning: oklch(0.80 0.13 80);
+  --warning: oklch(0.82 0.135 78);
   --warning-foreground: oklch(0.18 0.04 80);
-  --info: oklch(0.75 0.13 250);
+  --info: oklch(0.78 0.125 250);
   --info-foreground: oklch(0.16 0.03 250);
 
   /* --- surface system, dark -----------------------------------------------
-     In dark mode the surface step (background 0.141 → card 0.21) already
+     In dark mode the surface step (background 0.155 -> card 0.213) already
      separates a card from the page, so the outline has to be fainter than the
      light-mode hairline or every card turns back into a box. */
-  --border-subtle: oklch(1 0 0 / 0.08);
+  --border-subtle: oklch(1 0 0 / 0.07);
   --border-strong: oklch(1 0 0 / 0.2);
 
   --elevation-card: 0 1px 2px -1px oklch(0 0 0 / 0.45),
@@ -224,8 +303,10 @@
   --elevation-overlay: 0 6px 14px -6px oklch(0 0 0 / 0.5),
     0 16px 40px -8px oklch(0 0 0 / 0.6);
 
+  --map-ground: oklch(0.235 0.008 78);
+  --map-road: oklch(0.345 0.009 78);
   --shimmer-highlight: oklch(1 0 0 / 0.07);
-  --wash: oklch(0.9 0.01 286 / 0.05);
+  --wash: oklch(0.75 0.14 272 / 0.07);
 }
 
 @layer base {
@@ -340,6 +421,41 @@
     );
     animation: shimmer 1.6s ease-in-out infinite;
     pointer-events: none;
+  }
+
+  /* --- facet chip row -------------------------------------------------------
+     Eleven category chips are wider than the content column, so they wrapped
+     onto a second line. That line existed for no reason other than width, and
+     it cost a full row of vertical space on every list page — the exact
+     currency the header work is trying to buy back.
+
+     One row that scrolls, with the overflow hinted by a right-edge fade rather
+     than by a chip sliced off at the container edge (which reads as a bug).
+     `padding-right` equals the fade width, so once scrolled to the end the last
+     chip sits entirely inside the opaque part. The fade only applies when the
+     row actually overflows; the component detects that and sets the attribute. */
+  .chip-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-right: 3rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .chip-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .chip-row[data-overflowing="true"] {
+    mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - 3rem),
+      transparent 100%
+    );
   }
 
   /* --- page canvas ---------------------------------------------------------

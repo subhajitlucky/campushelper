@@ -54,7 +54,7 @@ const CardTitle = React.forwardRef<
       // A card title sits at body size and lets weight do the work: 16px/500,
       // one step under a SectionHeader without shouting over the body copy.
       "text-base font-medium leading-snug tracking-tight",
-      animated && "transition-colors duration-200 ease-in-out hover:text-primary",
+      animated && "transition-colors duration-200 ease-in-out hover:text-brand",
       className
     )}
     {...props}

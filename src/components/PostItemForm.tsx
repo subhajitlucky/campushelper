@@ -995,12 +995,12 @@ export default function PostItemForm({ className }: PostItemFormProps) {
             >
               {isLoading ? (
                 <>
-                  <ButtonSpinner className="mr-2" />
+                  <ButtonSpinner />
                   {isEditMode ? 'Saving changes…' : 'Posting item…'}
                 </>
               ) : isAuthLoading ? (
                 <>
-                  <ButtonSpinner className="mr-2" />
+                  <ButtonSpinner />
                   Checking your session…
                 </>
               ) : isEditMode ? (

@@ -156,7 +156,7 @@ export default function MapPage() {
       >
         <PageHeader
           title="Campus Map"
-          description="Browse lost and found reports by campus zone. Select a zone to see what was reported there."
+          description="Reports by campus zone. Select a zone to see what was reported there."
         />
 
         {/* The map is the hero: full-width, tall, with its own legend inside it.
@@ -220,13 +220,13 @@ export default function MapPage() {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="text-xl font-semibold tracking-tight text-foreground">
-                  {selectedZone ? selectedZone.name : 'No zone selected'}
+                  {selectedZone ? selectedZone.name : 'Zones'}
                 </h2>
                 <p className="mt-1 text-base leading-relaxed text-muted-foreground">
                   {selectedZone
                     ? selectedZone.description || 'No description for this zone.'
                     : zones.length > 0
-                      ? 'Choose a zone on the map to see what was reported there.'
+                      ? 'Pick a zone here or on the map.'
                       : 'Campus zones appear here once they are configured.'}
                 </p>
               </div>
@@ -243,6 +243,46 @@ export default function MapPage() {
                 </Button>
               )}
             </div>
+
+            {/*
+              With nothing selected the rail used to hold a two-line empty state
+              and about 600px of nothing, in a bordered card — the single largest
+              piece of dead space in the product. It is now an index of every
+              zone with its counts, which also gives the map a keyboard- and
+              screen-reader-friendly route to the same selection the pins offer.
+            */}
+            {!selectedZone && zones.length > 0 && (
+              <ul className="mt-5 -mx-2 divide-y divide-border-subtle">
+                {zones.map((zone) => (
+                  <li key={zone.slug}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectZone(zone.slug)}
+                      className="flex w-full items-center gap-3 rounded-lg px-2 py-3 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <span className="min-w-0 flex-1 truncate text-base text-foreground">
+                        {zone.name}
+                      </span>
+                      {zone.lostCount > 0 && (
+                        <span className="shrink-0 text-xs tabular-nums text-warning">
+                          {zone.lostCount} lost
+                        </span>
+                      )}
+                      {zone.foundCount > 0 && (
+                        <span className="shrink-0 text-xs tabular-nums text-success">
+                          {zone.foundCount} found
+                        </span>
+                      )}
+                      {/* Fixed width so the totals form a column instead of
+                          running into the lost/found counts as one string. */}
+                      <span className="w-6 shrink-0 text-right text-xs font-medium tabular-nums text-muted-foreground">
+                        {zone.itemCount}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             {selectedZone ? (
               <>

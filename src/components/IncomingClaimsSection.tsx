@@ -375,7 +375,7 @@ export default function IncomingClaimsSection({ userId, onGoToItems }: IncomingC
                       onClick={() => handleRejectClaim(claim.id)}
                       disabled={processingClaimId === claim.id}
                     >
-                      <XCircle className="mr-1.5 size-4" aria-hidden="true" />
+                      <XCircle className="size-4" aria-hidden="true" />
                       Reject
                     </Button>
 
@@ -385,7 +385,7 @@ export default function IncomingClaimsSection({ userId, onGoToItems }: IncomingC
                       onClick={() => handleApproveClaim(claim.id)}
                       disabled={processingClaimId === claim.id}
                     >
-                      <CheckCircle className="mr-1.5 size-4" aria-hidden="true" />
+                      <CheckCircle className="size-4" aria-hidden="true" />
                       {processingClaimId === claim.id ? 'Working…' : 'Approve'}
                     </Button>
                   </div>

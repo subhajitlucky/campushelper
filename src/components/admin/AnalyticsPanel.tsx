@@ -270,9 +270,9 @@ export default function AnalyticsPanel({ className }: { className?: string }) {
             disabled={isExporting !== null}
           >
             {isExporting === 'items' ? (
-              <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
-              <Download className="mr-2 size-4" aria-hidden="true" />
+              <Download className="size-4" aria-hidden="true" />
             )}
             Export items
           </Button>
@@ -284,9 +284,9 @@ export default function AnalyticsPanel({ className }: { className?: string }) {
             disabled={isExporting !== null}
           >
             {isExporting === 'claims' ? (
-              <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
-              <Download className="mr-2 size-4" aria-hidden="true" />
+              <Download className="size-4" aria-hidden="true" />
             )}
             Export claims
           </Button>

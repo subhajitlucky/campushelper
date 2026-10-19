@@ -120,12 +120,12 @@ export default function UserProfileSection({ reputation }: UserProfileSectionPro
         actions={
           <>
             <Button variant="outline" onClick={() => setIsEditModalOpen(true)}>
-              <Pencil className="mr-2 size-4" aria-hidden="true" />
+              <Pencil className="size-4" aria-hidden="true" />
               Edit profile
             </Button>
             <Button asChild>
               <Link href="/post">
-                <Plus className="mr-2 size-4" aria-hidden="true" />
+                <Plus className="size-4" aria-hidden="true" />
                 Post an item
               </Link>
             </Button>

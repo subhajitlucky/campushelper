@@ -22,7 +22,11 @@ import { cn } from '@/lib/utils';
  * identifiers so an id can be compared at a glance.
  */
 
-interface AuditEntry {
+/**
+ * Exported because the Overview tab renders the six most recent of these; both
+ * tabs must agree on what an audit entry is and how an action is labelled.
+ */
+export interface AuditEntry {
   id: string;
   actorId: string | null;
   actorEmail: string;
@@ -36,7 +40,7 @@ interface AuditEntry {
   actor: { id: string; name: string | null; email: string; avatar: string | null } | null;
 }
 
-const ACTION_LABELS: Record<string, string> = {
+export const ACTION_LABELS: Record<string, string> = {
   ITEM_FLAG: 'Flagged item',
   ITEM_REMOVE: 'Removed item',
   ITEM_RESTORE: 'Restored item',

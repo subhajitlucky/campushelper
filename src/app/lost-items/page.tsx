@@ -196,8 +196,10 @@ export default function LostItemsPage() {
     <>
       <ItemListShell
         title="Lost items"
-        description="Everything reported missing on campus, newest first. If you have seen one of these, open it and tell the owner."
-        noun={{ singular: 'lost item', plural: 'lost items' }}
+        description="Everything reported missing on campus, newest first."
+        // The title already says "Lost items"; repeating it here read as
+        // "Lost items 11 lost items". The meta only has to give the number.
+        noun={{ singular: 'report', plural: 'reports' }}
         actions={
           <Button asChild>
             <Link href="/post">Report a lost item</Link>

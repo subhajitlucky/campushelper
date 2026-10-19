@@ -170,7 +170,7 @@ export default function BulkActionBar({
         onClick={() => void submit()}
         disabled={isSubmitting}
       >
-        {isSubmitting && <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />}
+        {isSubmitting && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
         Apply
       </Button>
 

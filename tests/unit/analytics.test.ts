@@ -210,16 +210,24 @@ describe("formatDuration", () => {
     expect(formatDuration(0.99)).toBe("59 minutes");
   });
 
-  it("renders hours below the two-day mark with one decimal", () => {
-    expect(formatDuration(1)).toBe("1.0 hours");
+  it("renders hours below the two-day mark, dropping a zero decimal", () => {
+    expect(formatDuration(1)).toBe("1 hour");
     expect(formatDuration(5.25)).toBe("5.3 hours");
-    expect(formatDuration(24)).toBe("24.0 hours");
+    expect(formatDuration(24)).toBe("24 hours");
     expect(formatDuration(47.9)).toBe("47.9 hours");
   });
 
-  it("renders two days and beyond in days with one decimal", () => {
-    expect(formatDuration(48)).toBe("2.0 days");
+  it("renders two days and beyond in days, dropping a zero decimal", () => {
+    expect(formatDuration(48)).toBe("2 days");
     expect(formatDuration(60)).toBe("2.5 days");
-    expect(formatDuration(24 * 30)).toBe("30.0 days");
+    expect(formatDuration(24 * 30)).toBe("30 days");
+  });
+
+  // The homepage renders this immediately beside whole-number stats
+  // ("35 reports"), where a trailing ".0" reads as false precision.
+  it("never emits a trailing zero decimal at any magnitude", () => {
+    for (const hours of [1, 2, 12, 24, 25, 47, 48, 72, 240, 2400]) {
+      expect(formatDuration(hours)).not.toMatch(/\.0\b/);
+    }
   });
 });

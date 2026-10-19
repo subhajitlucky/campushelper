@@ -123,7 +123,7 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
         showSearch ? (
           <Button variant="quiet" size="sm" asChild>
             <Link href="/search">
-              <Search className="mr-1.5 size-4" aria-hidden="true" />
+              <Search className="size-4" aria-hidden="true" />
               Search all items
             </Link>
           </Button>
@@ -196,7 +196,7 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
                 <div className="mt-3 flex items-center gap-1">
                   <Button variant="quiet" size="sm" asChild>
                     <Link href={`/item/${item.id}`}>
-                      <Eye className="mr-1.5 size-4" aria-hidden="true" />
+                      <Eye className="size-4" aria-hidden="true" />
                       View
                     </Link>
                   </Button>
@@ -208,7 +208,7 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
                         size="sm"
                         onClick={() => handleEditItem(item.id)}
                       >
-                        <Pencil className="mr-1.5 size-4" aria-hidden="true" />
+                        <Pencil className="size-4" aria-hidden="true" />
                         Edit
                       </Button>
 
@@ -218,7 +218,7 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
                         className="text-destructive hover:text-destructive"
                         onClick={() => handleDeleteItem(item.id)}
                       >
-                        <Trash2 className="mr-1.5 size-4" aria-hidden="true" />
+                        <Trash2 className="size-4" aria-hidden="true" />
                         Delete
                       </Button>
                     </>

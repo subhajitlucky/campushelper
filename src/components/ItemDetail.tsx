@@ -174,12 +174,22 @@ function humanType(itemType: 'LOST' | 'FOUND'): string {
   return itemType === 'LOST' ? 'Lost item' : 'Found item';
 }
 
-/** One label/value row of the spec list. */
+/**
+ * One label/value row of the spec list.
+ *
+ * The value was right-aligned, which is fine for a short token ("1", "6 hours
+ * ago") and wrong for anything that wraps: "Central Library, 2nd floor reading
+ * room" broke across two lines and both lines were flush right, so it read as
+ * two unrelated fragments. A two-column grid with left-aligned values keeps the
+ * labels in their own column and lets a long value wrap under itself.
+ */
 function SpecRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-2.5">
-      <dt className="shrink-0 text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 text-right font-medium text-foreground">{value}</dd>
+    <div className="grid grid-cols-[minmax(5.5rem,auto)_1fr] items-start gap-x-4 py-2.5">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 font-medium text-foreground [overflow-wrap:anywhere]">
+        {value}
+      </dd>
     </div>
   );
 }

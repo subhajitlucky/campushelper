@@ -37,7 +37,7 @@ export default function GlobalError({ error, reset }: ErrorProps) {
         </p>
 
         <Button size="lg" className="mt-8" onClick={reset}>
-          <RefreshCw className="mr-2 size-4" aria-hidden="true" />
+          <RefreshCw className="size-4" aria-hidden="true" />
           Try again
         </Button>
 

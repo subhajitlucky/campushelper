@@ -148,8 +148,8 @@ export default function ResolvedPage() {
   return (
     <ItemListShell
       title="Resolved"
-      description="Every report here made it back to its owner, and each card shows how long the reunion took."
-      noun={{ singular: 'resolved item', plural: 'resolved items' }}
+      description="Reports that made it back to their owner, with how long each reunion took."
+      noun={{ singular: 'return', plural: 'returns' }}
       actions={
         <>
           <Button asChild variant="outline">

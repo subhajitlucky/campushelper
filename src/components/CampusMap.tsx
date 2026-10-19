@@ -287,7 +287,7 @@ export default function CampusMap({
 
         {/* Campus ground: a faint dot grid, contoured, so the panel reads as a
             drawing rather than an empty box in either theme. */}
-        <rect x="0" y="0" width={width} height={height} className="fill-muted" />
+        <rect x="0" y="0" width={width} height={height} className="fill-map-ground" />
         <rect
           x="0"
           y="0"
@@ -308,15 +308,19 @@ export default function CampusMap({
           ))}
         </g>
 
-        {/* Roads cut into the ground: a hairline casing in `border` with the
-            ground colour laid back over it, which reads as two quiet edges in
-            both themes and never competes with the pins. */}
+        {/* Roads cut into the ground.
+            The surface stroke was `stroke-muted`, which is the *same token* as
+            the ground fill above it — so the road body was invisible and the
+            only thing that ever rendered was the 10px casing, leaving faint
+            white outlines on a grey field. That is why the panel read as an
+            unfinished wireframe. White roads on a tinted ground is the
+            convention everyone already reads as "map". */}
         <g aria-hidden="true" fill="none" strokeLinecap="round">
           {roads.map((d) => (
-            <path key={`casing-${d}`} d={d} className="stroke-border" strokeWidth="10" />
+            <path key={`casing-${d}`} d={d} className="stroke-border" strokeWidth="12" />
           ))}
           {roads.map((d) => (
-            <path key={`surface-${d}`} d={d} className="stroke-muted" strokeWidth="7.5" />
+            <path key={`surface-${d}`} d={d} className="stroke-map-road" strokeWidth="9" />
           ))}
         </g>
 
@@ -348,7 +352,7 @@ export default function CampusMap({
                   cy={cy}
                   r={radius + 13}
                   aria-hidden="true"
-                  className="fill-info/15"
+                  className="fill-brand/15"
                 />
               )}
 
@@ -359,7 +363,7 @@ export default function CampusMap({
                 r={radius + 8}
                 className={cn(
                   'fill-none',
-                  isSelected ? 'stroke-info' : 'stroke-transparent',
+                  isSelected ? 'stroke-brand' : 'stroke-transparent',
                   'group-focus-visible/zone:stroke-ring'
                 )}
                 strokeWidth="1.5"
@@ -396,8 +400,8 @@ export default function CampusMap({
                 className={cn(
                   'transition-colors',
                   isSelected
-                    ? 'fill-info stroke-info'
-                    : 'fill-muted-foreground stroke-muted-foreground/70 group-hover/zone:fill-foreground'
+                    ? 'fill-brand stroke-brand'
+                    : 'fill-brand/85 stroke-brand group-hover/zone:fill-brand'
                 )}
                 strokeWidth="1"
               />
@@ -413,7 +417,7 @@ export default function CampusMap({
                   fontSize={COUNT_SIZE}
                   className={cn(
                     'pointer-events-none font-medium tabular-nums',
-                    isSelected ? 'fill-info-foreground' : 'fill-background'
+                    'fill-brand-foreground'
                   )}
                 >
                   {zone.itemCount}
@@ -431,12 +435,12 @@ export default function CampusMap({
                   paintOrder="stroke"
                   strokeWidth="3.5"
                   className={cn(
-                    'pointer-events-none stroke-card font-medium',
+                    'pointer-events-none stroke-map-ground font-medium',
                     isSelected
-                      ? 'fill-info'
+                      ? 'fill-brand'
                       : isEmpty
-                        ? 'fill-muted-foreground/70'
-                        : 'fill-muted-foreground'
+                        ? 'fill-muted-foreground'
+                        : 'fill-foreground'
                   )}
                 >
                   {zone.name}

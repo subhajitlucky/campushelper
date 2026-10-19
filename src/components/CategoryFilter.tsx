@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { icons, Package, type LucideIcon } from 'lucide-react';
 import { useAuthFetch } from '@/lib/auth-fetch';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,9 +35,15 @@ function categoryIcon(name: string): LucideIcon {
 /**
  * CategoryFilter Component
  *
- * Horizontal, wrapping row of category chips: icon, name, and live item count.
- * Clicking the active chip clears the filter, so the row is a self-contained
- * single-select control. Each chip carries `aria-pressed` for its state.
+ * A single-row, horizontally scrollable strip of category chips: icon, name,
+ * and live item count. Clicking the active chip clears the filter, so the row
+ * is a self-contained single-select control. Each chip carries `aria-pressed`
+ * for its state.
+ *
+ * The row does not wrap. Eleven chips are wider than the content column, and
+ * wrapping them cost a second line of vertical space on every list page for no
+ * reason other than width. See `.chip-row` in globals.css for the fade that
+ * signals the overflow.
  */
 export default function CategoryFilter({
   value = null,
@@ -49,6 +55,8 @@ export default function CategoryFilter({
   const [fetchedCategories, setFetchedCategories] = useState<CategoryOption[]>([]);
   const [isLoading, setIsLoading] = useState(!categories);
   const [error, setError] = useState<string | null>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
 
   const loadCategories = useCallback(async () => {
     setIsLoading(true);
@@ -77,6 +85,24 @@ export default function CategoryFilter({
   }, [categories, isAuthLoading, loadCategories]);
 
   const visibleCategories = categories ?? fetchedCategories;
+  const categoryCount = visibleCategories.length;
+
+  // The fade is only correct while the row actually overflows, and the row's
+  // width depends on the fetched categories, the viewport and the font. A
+  // ResizeObserver keeps that honest without a resize listener.
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    const measure = () => {
+      setIsOverflowing(el.scrollWidth - el.clientWidth > 4);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [categoryCount]);
 
   if (isLoading && visibleCategories.length === 0) {
     return (
@@ -98,7 +124,7 @@ export default function CategoryFilter({
           onClick={() => {
             void loadCategories();
           }}
-          className="rounded font-medium text-primary underline-offset-4 hover:underline"
+          className="rounded font-medium text-brand underline-offset-4 hover:underline"
         >
           Try again
         </button>
@@ -123,7 +149,9 @@ export default function CategoryFilter({
 
   return (
     <div
-      className={cn('flex flex-wrap items-center gap-2', className)}
+      ref={scrollerRef}
+      data-overflowing={isOverflowing}
+      className={cn('chip-row', className)}
       role="group"
       aria-label="Filter by category"
     >

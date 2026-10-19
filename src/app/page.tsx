@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import StatusBadge from "@/components/ui/StatusBadge";
+import ItemCard from "@/components/ui/ItemCard";
 import { prisma } from "@/lib/prisma";
 import { formatDuration, medianTimeToReturnHours } from "@/lib/analytics";
 
@@ -60,11 +60,18 @@ function queryRecent() {
       id: true,
       title: true,
       description: true,
+      itemType: true,
       status: true,
       location: true,
       createdAt: true,
-      category: { select: { name: true } },
-      zone: { select: { name: true } },
+      // `images` was missing, so the three cards on the only page an anonymous
+      // visitor can see were structurally incapable of showing a photo even
+      // though most reports have one. The homepage never showed the product.
+      images: true,
+      tags: true,
+      category: { select: { slug: true, name: true, icon: true } },
+      zone: { select: { slug: true, name: true } },
+      postedBy: { select: { name: true, avatar: true } },
     },
   });
 }
@@ -133,10 +140,13 @@ async function getHomeData(): Promise<HomeData> {
 function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
-      <div className="text-2xl font-semibold tracking-tight tabular-nums text-foreground">
+      <dt className="sr-only">{label}</dt>
+      <dd className="text-2xl font-semibold tracking-tight tabular-nums text-foreground">
         {value}
-      </div>
-      <div className="mt-0.5 text-xs text-muted-foreground">{label}</div>
+      </dd>
+      <dd className="mt-0.5 text-xs text-muted-foreground" aria-hidden="true">
+        {label}
+      </dd>
     </div>
   );
 }
@@ -145,22 +155,32 @@ export default async function Home() {
   const { ok, posted, returned, members, recent, medianReturnLabel, resolutionRate } =
     await getHomeData();
 
+  // The most recent report is the hero's focal point. The homepage is the only
+  // page an anonymous visitor can see, and it used to show a headline, a
+  // paragraph and a box of four numbers — no photograph, no card, nothing that
+  // proved the product exists or works.
+  const latest = recent[0];
+
   return (
-    <main className="flex-1 bg-background">
+    <main className="page-canvas flex-1 bg-background">
       {/* Hero */}
       <section className="border-b border-border">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
+        <div className="mx-auto max-w-6xl px-4 pt-14 sm:px-6 lg:px-8 lg:pt-20">
+          <div className="grid items-start gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
             <div>
-              <p className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+              <p className="inline-flex items-center gap-2 rounded-full bg-brand-subtle px-3 py-1 text-xs font-medium text-brand">
+                <span
+                  className="size-1.5 rounded-full bg-brand"
+                  aria-hidden="true"
+                />
                 Campus lost &amp; found
               </p>
 
-              <h1 className="mt-5 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+              <h1 className="mt-5 text-balance text-4xl font-semibold leading-[1.08] tracking-[-0.03em] text-foreground sm:text-5xl">
                 Reunite people with their belongings
               </h1>
 
-              <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">
+              <p className="mt-5 max-w-lg text-base leading-relaxed text-muted-foreground">
                 Report what you&apos;ve lost, browse what others have found, and track
                 returns through a verified handover — not just a hopeful claim.
               </p>
@@ -175,47 +195,58 @@ export default async function Home() {
               </div>
             </div>
 
-            {/* Real platform figures. Nothing here is hardcoded. */}
-            <div className="lg:justify-self-end lg:w-full lg:max-w-sm">
-              <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-                <h2 className="text-base font-medium text-foreground">Platform activity</h2>
-                <p className="mt-0.5 text-sm text-muted-foreground">
-                  {ok ? "Live counts from the database" : "Currently unavailable"}
+            {/* The product itself, not a description of it. */}
+            {latest ? (
+              <div className="lg:justify-self-end lg:w-full lg:max-w-sm">
+                <p className="mb-3 text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                  Latest report
                 </p>
-
-                {!ok ? (
-                  <p className="mt-6 rounded-md border border-dashed border-border p-4 text-base leading-relaxed text-muted-foreground">
-                    Activity figures can&apos;t be loaded right now. The rest of the site
-                    works normally.
-                  </p>
-                ) : (
-                <>
-                <div className="mt-6 grid grid-cols-2 gap-6">
-                  <Stat value={String(returned)} label="Items returned" />
-                  <Stat value={String(posted)} label="Reports posted" />
-                  <Stat value={String(members)} label="Members" />
-                  <Stat
-                    value={resolutionRate === null ? "—" : `${resolutionRate}%`}
-                    label="Resolution rate"
-                  />
-                </div>
-
-                <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
-                  <span className="text-xs text-muted-foreground">Median time to return</span>
-                  <span className="text-xs font-medium tabular-nums text-foreground">
-                    {returned === 0 ? "No returns yet" : medianReturnLabel}
-                  </span>
-                </div>
-                </>
-                )}
+                <ItemCard
+                  item={{
+                    ...latest,
+                    createdAt: latest.createdAt.toISOString(),
+                  }}
+                  showActions={false}
+                />
               </div>
-            </div>
+            ) : null}
           </div>
+
+          {/* Real platform figures, as a strip rather than a bordered box.
+              The box used to be the heaviest object on the page, which meant it
+              out-competed the hero it was supposed to support. Nothing here is
+              hardcoded. */}
+          <dl className="mt-14 grid grid-cols-2 gap-x-6 gap-y-6 border-t border-border pt-8 sm:grid-cols-4 lg:mt-16">
+            {!ok ? (
+              <div className="col-span-full text-sm text-muted-foreground">
+                Activity figures can&apos;t be loaded right now. The rest of the site
+                works normally.
+              </div>
+            ) : (
+              <>
+                <Stat value={String(returned)} label="Items returned" />
+                <Stat value={String(posted)} label="Reports posted" />
+                <Stat value={String(members)} label="Members" />
+                <Stat
+                  value={resolutionRate === null ? "—" : `${resolutionRate}%`}
+                  label="Resolution rate"
+                />
+              </>
+            )}
+          </dl>
+
+          {ok && (
+            <p className="py-6 text-xs text-muted-foreground">
+              {returned === 0
+                ? "No returns yet — median time to return will appear here."
+                : `Median time to return: ${medianReturnLabel}`}
+            </p>
+          )}
         </div>
       </section>
 
       {/* Recent items */}
-      <section className="border-b border-border py-16">
+      <section className="border-b border-border py-14">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -228,7 +259,7 @@ export default async function Home() {
             </div>
             <Link
               href="/search"
-              className="rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="rounded-md text-sm font-medium text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               View all
             </Link>
@@ -241,32 +272,17 @@ export default async function Home() {
           ) : (
             <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {recent.map((item) => (
-                <li key={item.id}>
-                  <Link
-                    href={`/item/${item.id}`}
-                    className="flex h-full flex-col rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-medium text-foreground">{item.title}</h3>
-                      <StatusBadge status={item.status} size="sm" />
-                    </div>
-
-                    <p className="mt-2 line-clamp-2 flex-1 text-base leading-relaxed text-muted-foreground">
-                      {item.description}
-                    </p>
-
-                    <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-sm text-muted-foreground">
-                      <span className="truncate">
-                        {item.zone?.name ?? item.location}
-                      </span>
-                      <span className="shrink-0 tabular-nums">
-                        {item.createdAt.toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                        })}
-                      </span>
-                    </div>
-                  </Link>
+                <li key={item.id} className="flex">
+                  {/* The same photo-led card the rest of the app uses, so the
+                      homepage cannot drift from the product again. */}
+                  <ItemCard
+                    item={{
+                      ...item,
+                      createdAt: item.createdAt.toISOString(),
+                    }}
+                    className="w-full"
+                    showActions={false}
+                  />
                 </li>
               ))}
             </ul>

@@ -360,7 +360,7 @@ export default function NotificationsPage() {
               onClick={handleMarkAllRead}
               disabled={unreadCount === 0 || markingAll}
             >
-              <CheckCheck className="mr-1.5 size-4" aria-hidden="true" />
+              <CheckCheck className="size-4" aria-hidden="true" />
               {markingAll ? 'Marking…' : 'Mark all as read'}
             </Button>
           }
@@ -453,11 +453,16 @@ export default function NotificationsPage() {
                               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring'
                             )}
                           >
-                            {/* Unread marker: a 2px accent bar, never a fill */}
+                            {/* Unread marker: a 2px accent bar, never a fill.
+                                It was `bg-primary`, which in light mode is
+                                near-black — a solid black rule down the side of
+                                the row reads as a table artefact, not a state.
+                                The brand accent is what makes it read as
+                                "new". */}
                             {unread && (
                               <span
                                 aria-hidden="true"
-                                className="absolute inset-y-0 left-0 w-0.5 bg-primary"
+                                className="absolute inset-y-0 left-0 w-0.5 rounded-full bg-brand"
                               />
                             )}
 

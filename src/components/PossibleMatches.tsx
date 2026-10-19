@@ -54,7 +54,7 @@ interface PossibleMatchesProps {
 
 function scoreTone(score: number): string {
   if (score >= 80) return 'bg-success/10 text-success border-success/30';
-  if (score >= 65) return 'bg-info/10 text-primary border-info/30';
+  if (score >= 65) return 'bg-info/10 text-info border-info/30';
   return 'bg-warning/10 text-warning border-warning/30';
 }
 
@@ -191,7 +191,7 @@ export default function PossibleMatches({ itemId, className }: PossibleMatchesPr
 
               <Link
                 href={`/item/${match.counterpart.id}`}
-                className="mt-3 block rounded text-base font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="mt-3 block rounded text-base font-medium text-foreground transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {match.counterpart.title}
               </Link>

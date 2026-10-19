@@ -73,8 +73,17 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
 };
 
 /**
- * Relative dates, the way a person would say them. Absolute dates are kept on
- * the `title` attribute for anyone who needs the exact day.
+ * Relative dates, compactly.
+ *
+ * The long form ("3 hours ago", 88px at 14px) does not fit in a four-column
+ * card: the meta row is 226px and the place name and the date have to share it,
+ * so "Academic Block 1" was clipping to "Academic Blo…" and several of the
+ * seeded zone names are longer still. Measured, the row needed 232px against
+ * 226px available — a near miss that would keep recurring.
+ *
+ * Abbreviated units buy back ~45px and are what a scannable card grid uses
+ * anyway. The exact timestamp stays on the `title` attribute, and the full
+ * place name stays on the place span's `title`, so nothing is lost.
  */
 function relativeDate(iso: string) {
   const then = new Date(iso);
@@ -82,7 +91,27 @@ function relativeDate(iso: string) {
 
   if (!Number.isFinite(diffMinutes)) return "";
   if (diffMinutes < 1) return "just now";
-  if (diffMinutes < 60) return `${diffMinutes} min ago`;
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+  const hours = Math.round(diffMinutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+
+  const days = Math.round(hours / 24);
+  if (days < 30) return days === 1 ? "yesterday" : `${days}d ago`;
+
+  return then.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
+/** The long form, for tooltips — "3 hours ago" reads better than "3h ago". */
+function relativeDateLong(iso: string) {
+  const then = new Date(iso);
+  const diffMinutes = Math.round((Date.now() - then.getTime()) / 60000);
+
+  if (!Number.isFinite(diffMinutes)) return "";
+  if (diffMinutes < 1) return "just now";
+  if (diffMinutes < 60) {
+    return diffMinutes === 1 ? "1 minute ago" : `${diffMinutes} minutes ago`;
+  }
 
   const hours = Math.round(diffMinutes / 60);
   if (hours < 24) return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
@@ -90,7 +119,7 @@ function relativeDate(iso: string) {
   const days = Math.round(hours / 24);
   if (days < 30) return days === 1 ? "yesterday" : `${days} days ago`;
 
-  return then.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  return absoluteDate(iso);
 }
 
 function absoluteDate(iso: string) {
@@ -170,16 +199,20 @@ export default function ItemCard({
             <StatusBadge status={item.status} />
           </div>
 
-          {/* One meta row: place · relative date */}
+          {/* One meta row: place on the left, date pushed to the right. The
+              middle dot is gone — with the icon already separating them, a
+              third separator was doing the same job as the other two, and
+              dropping it plus its two gaps is what buys the place enough room. */}
           <div className="mt-auto flex items-center gap-1.5 text-sm text-muted-foreground">
             <MapPin className="size-4 shrink-0" aria-hidden="true" />
-            <span className="truncate">{place}</span>
-            <span aria-hidden="true">·</span>
+            <span className="truncate" title={place}>
+              {place}
+            </span>
             <time
               dateTime={item.createdAt}
-              title={absoluteDate(item.createdAt)}
+              title={relativeDateLong(item.createdAt)}
               suppressHydrationWarning
-              className="shrink-0 whitespace-nowrap tabular-nums"
+              className="ml-auto shrink-0 whitespace-nowrap tabular-nums"
             >
               {relativeDate(item.createdAt)}
             </time>
@@ -187,20 +220,32 @@ export default function ItemCard({
         </div>
       </Link>
 
-      {/* Secondary action — a sibling of the link, never inside it */}
+      {/* Secondary action — a sibling of the link, never inside it.
+          This was a full-width button under a full-width divider, which put a
+          band of identical chrome across the bottom of every card in the grid:
+          four bordered rows doing the same job, in a layout whose subject is
+          the photo and the title. It is now a quiet, right-aligned text action
+          on the card's last line, directly opposite the meta row — so the grid
+          reads as photographs and text with one small affordance, not as four
+          stacked toolbars. */}
       {showFoundAction && (
-        <div className="border-t border-border-subtle px-4 py-3">
+        <div className="flex justify-end px-5 pb-4">
           {user?.isLoggedIn ? (
             <Button
               variant="quiet"
               size="sm"
-              className="w-full"
+              className="-mr-2 h-8 px-2 text-brand hover:text-brand"
               onClick={() => onFound?.(item)}
             >
               I found this
             </Button>
           ) : (
-            <Button variant="quiet" size="sm" className="w-full" asChild>
+            <Button
+              variant="quiet"
+              size="sm"
+              className="-mr-2 h-8 px-2 text-brand hover:text-brand"
+              asChild
+            >
               <Link href="/auth/login">Log in to claim</Link>
             </Button>
           )}

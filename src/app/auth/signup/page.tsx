@@ -11,7 +11,7 @@ export default function SignupPage() {
         <div className="mb-8">
           <Link
             href="/"
-            className="text-xl font-semibold tracking-tight text-foreground transition-colors hover:text-primary"
+            className="text-xl font-semibold tracking-tight text-foreground transition-colors hover:text-brand"
           >
             Campus Helper
           </Link>

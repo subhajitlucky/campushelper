@@ -1,7 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { useSession } from 'next-auth/react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -25,7 +24,10 @@ import {
 } from 'lucide-react';
 
 import AnalyticsPanel, { StatsStrip } from '@/components/admin/AnalyticsPanel';
-import AuditLogTable from '@/components/admin/AuditLogTable';
+import AuditLogTable, {
+  ACTION_LABELS,
+  type AuditEntry,
+} from '@/components/admin/AuditLogTable';
 import BulkActionBar from '@/components/admin/BulkActionBar';
 import EmptyState from '@/components/ui/EmptyState';
 import PageHeader from '@/components/ui/PageHeader';
@@ -206,9 +208,95 @@ function SelectionCheckbox({
   );
 }
 
+/**
+ * The six most recent moderation actions, for the Overview tab.
+ *
+ * Loads its own data like AnalyticsPanel and AuditLogTable do, so the Overview
+ * tab is not gated on the audit endpoint. Deliberately read-only and short —
+ * the full table with filters lives on the Audit Log tab.
+ */
+function RecentActivity() {
+  const { fetchWithAuth, isLoading: isAuthLoading } = useAuthFetch(true);
+  const [entries, setEntries] = useState<AuditEntry[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const response = await fetchWithAuth('/api/admin/audit?limit=6');
+      if (!response.ok) throw new Error('Failed to load activity');
+      const data = await response.json();
+      setEntries(Array.isArray(data.entries) ? data.entries : []);
+      setFailed(false);
+    } catch {
+      setFailed(true);
+    }
+  }, [fetchWithAuth]);
+
+  useEffect(() => {
+    if (isAuthLoading) return;
+    void load();
+  }, [isAuthLoading, load]);
+
+  if (failed) {
+    return (
+      <p className="py-6 text-base text-muted-foreground">
+        Recent activity could not be read just now.
+      </p>
+    );
+  }
+
+  if (entries === null) {
+    return (
+      <div className="space-y-3 py-2" role="status" aria-busy="true">
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-12 w-full" />
+        ))}
+        <span className="sr-only">Loading recent activity…</span>
+      </div>
+    );
+  }
+
+  if (entries.length === 0) {
+    return (
+      <p className="py-6 text-base text-muted-foreground">
+        No moderation actions have been recorded yet.
+      </p>
+    );
+  }
+
+  return (
+    <ul className="divide-y divide-border-subtle">
+      {entries.map((entry) => (
+        <li key={entry.id} className="flex items-baseline gap-x-4 py-3">
+          <span className="min-w-0 flex-1">
+            <span className="text-base text-foreground">
+              {ACTION_LABELS[entry.action] ?? entry.action}
+            </span>
+            <span className="text-muted-foreground">
+              {' — '}
+              {entry.actor?.name ?? entry.actorEmail}
+            </span>
+            {entry.reason && (
+              <span className="block truncate text-sm text-muted-foreground" title={entry.reason}>
+                {entry.reason}
+              </span>
+            )}
+          </span>
+          <time
+            dateTime={entry.createdAt}
+            title={absoluteDate(entry.createdAt)}
+            className="shrink-0 text-xs tabular-nums text-muted-foreground"
+          >
+            {relativeDate(entry.createdAt)}
+          </time>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** Row-shaped skeleton: the table's geometry, so nothing jumps when data lands. */
-function TabPanelSkeleton({ tab }: { tab: AdminTab }) {
-  if (tab === 'overview') {
+function TabPanelSkeleton({ tab }: { tab: AdminTab }) {  if (tab === 'overview') {
     return (
       <div className="space-y-6" role="status" aria-label="Loading platform totals">
         <Skeleton className="h-5 w-32" />
@@ -692,7 +780,7 @@ export default function AdminDashboard() {
           <AlertTriangle className="size-4 shrink-0 text-destructive" aria-hidden="true" />
           <p className="min-w-0 flex-1 text-base text-destructive">{error}</p>
           <Button size="sm" variant="outline" onClick={() => void fetchAdminData()}>
-            <RefreshCw className="mr-2 size-4" aria-hidden="true" />
+            <RefreshCw className="size-4" aria-hidden="true" />
             Retry
           </Button>
         </div>
@@ -744,6 +832,29 @@ export default function AdminDashboard() {
               },
             ]}
           />
+
+          {/* Four numbers and then ~600px of nothing is what made this tab look
+              unfinished. Recent moderation actions are the thing an admin
+              actually opens this tab to see, and the audit log already holds
+              them — this is the six most recent, with a way through to the
+              full table. */}
+          <div className="pt-2">
+            <SectionHeader
+              title="Latest activity"
+              description="Recent moderation actions."
+              action={
+                <Button
+                  variant="quiet"
+                  size="sm"
+                  className="-mr-2 text-brand hover:text-brand"
+                  onClick={() => setActiveTab('audit')}
+                >
+                  View audit log
+                </Button>
+              }
+            />
+            <RecentActivity />
+          </div>
         </div>
       );
     }

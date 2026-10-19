@@ -309,7 +309,7 @@ export default function ImageUpload({
 
               <div className="flex items-center gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={handleClick} disabled={busy}>
-                  <Upload className="mr-2 size-4" aria-hidden="true" />
+                  <Upload className="size-4" aria-hidden="true" />
                   Replace
                 </Button>
                 <Button
@@ -320,7 +320,7 @@ export default function ImageUpload({
                   disabled={busy}
                   className="text-destructive hover:text-destructive"
                 >
-                  <Trash2 className="mr-2 size-4" aria-hidden="true" />
+                  <Trash2 className="size-4" aria-hidden="true" />
                   Remove
                 </Button>
               </div>

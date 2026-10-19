@@ -36,6 +36,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable}`}
+      // globals.css sets `scroll-behavior: smooth` on <html>. Without this
+      // attribute the App Router cannot tell the smoothing is intentional, so
+      // it logs a warning on every client navigation and does not suppress it
+      // during route transitions.
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <body className="bg-background text-foreground antialiased">

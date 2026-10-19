@@ -20,9 +20,20 @@ interface PageHeaderProps {
 /**
  * PageHeader
  *
- * Exactly one per page. Encodes the top of the type scale (30/36px, weight 600,
- * tracking-tight) so no page has to re-derive it, and separates itself from the
- * content with a single hairline rule rather than a box.
+ * Exactly one per page. Encodes the top of the type scale so no page has to
+ * re-derive it, and separates itself from the content with a single hairline
+ * rule rather than a box.
+ *
+ * Two details decide how much of the first screen the content gets:
+ *
+ * - **Actions are top-aligned, not bottom-aligned.** `sm:items-end` pinned the
+ *   primary action to the bottom of the description, so a two-line description
+ *   left the button floating at a y-offset aligned to nothing. Top-aligned it
+ *   sits against the title cap-height, which is where the eye already is.
+ * - **The description is capped at `max-w-xl` and expected to be one line.** It
+ *   was `max-w-2xl` and routinely wrapped to two, which is most of why list
+ *   pages started below the fold. The header says what the page is; the body
+ *   says everything else.
  *
  * The rule is on the bottom edge because every page reads top-down; the header
  * deliberately carries no outer margin, so the page owns its own rhythm.
@@ -36,36 +47,42 @@ export default function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <header className={cn("border-b border-border pb-8", className)}>
+    <header className={cn("border-b border-border pb-6", className)}>
       {back && (
         <Link
           href={back.href}
-          className="mb-4 inline-flex items-center gap-1.5 rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="mb-3 inline-flex items-center gap-1.5 rounded-md text-sm text-muted-foreground transition-colors hover:text-brand"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
           {back.label ?? "Back"}
         </Link>
       )}
 
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
         <div className="min-w-0">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            {title}
-          </h1>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h1 className="text-balance text-3xl font-semibold leading-[1.12] tracking-[-0.028em] text-foreground sm:text-4xl">
+              {title}
+            </h1>
+
+            {/* The count rides on the title's baseline rather than taking a
+                line of its own below the description. */}
+            {meta && (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                {meta}
+              </div>
+            )}
+          </div>
 
           {description && (
-            <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">{description}</p>
-          )}
-
-          {meta && (
-            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-              {meta}
-            </div>
+            <p className="mt-2.5 max-w-xl text-base leading-relaxed text-muted-foreground">
+              {description}
+            </p>
           )}
         </div>
 
         {actions && (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2 sm:pt-1">{actions}</div>
         )}
       </div>
     </header>

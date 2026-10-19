@@ -172,7 +172,7 @@ export default function SavedSearches({
         divider={false}
         title={
           <span className="inline-flex items-center gap-2">
-            <Bookmark className="size-5 text-primary" aria-hidden="true" />
+            <Bookmark className="size-5 text-brand" aria-hidden="true" />
             Saved searches
             {searches.length > 0 && (
               <span className="text-sm font-normal tabular-nums text-muted-foreground">
@@ -229,7 +229,7 @@ export default function SavedSearches({
                 disabled={!onApply}
                 className="group/row min-w-0 flex-1 rounded text-left transition-colors disabled:cursor-default"
               >
-                <span className="block truncate text-base font-medium text-foreground transition-colors group-hover/row:text-primary">
+                <span className="block truncate text-base font-medium text-foreground transition-colors group-hover/row:text-brand">
                   {search.name}
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
