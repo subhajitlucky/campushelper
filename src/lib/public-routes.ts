@@ -65,12 +65,3 @@ export function isStaticAssetPath(pathname: string): boolean {
   const lower = pathname.toLowerCase();
   return STATIC_ASSET_EXTENSIONS.some((extension) => lower.endsWith(`.${extension}`));
 }
-
-/**
- * The middleware matcher, built from the predicates above so the exclusion list
- * has exactly one definition.
- */
-export const MIDDLEWARE_MATCHER =
-  '/((?!api/auth|_next/static|_next/image|favicon\\.ico|.*\\.(?:' +
-  STATIC_ASSET_EXTENSIONS.join('|') +
-  ')$).*)';

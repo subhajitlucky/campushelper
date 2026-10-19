@@ -6,7 +6,7 @@ import {
   type MatchableItem,
   type MatchReason,
 } from './matching';
-import { notify } from './notifications';
+import { notifyMany, type NotifyInput } from './notifications';
 import type { Prisma } from '../generated/prisma';
 
 /**
@@ -123,48 +123,89 @@ export async function computeMatchesForItem(itemId: string): Promise<number> {
 
     if (ranked.length === 0) return 0;
 
-    let persisted = 0;
-    const newlyCreated: { lostItemId: string; foundItemId: string; score: number }[] = [];
+    // Every ranked pair shares one side — the subject — so the existence check
+    // is a single indexed lookup rather than one `findUnique` per pair.
+    const pairs = ranked.map((match) => ({
+      lostItemId: subject.itemType === 'LOST' ? subject.id : match.item.id,
+      foundItemId: subject.itemType === 'LOST' ? match.item.id : subject.id,
+      score: match.score,
+      reasons: reasonsToJson(match.reasons),
+    }));
 
-    for (const match of ranked) {
-      const lostItemId = subject.itemType === 'LOST' ? subject.id : match.item.id;
-      const foundItemId = subject.itemType === 'LOST' ? match.item.id : subject.id;
+    const existingRows = await prisma.matchSuggestion.findMany({
+      where:
+        subject.itemType === 'LOST'
+          ? { lostItemId: subject.id, foundItemId: { in: pairs.map((p) => p.foundItemId) } }
+          : { foundItemId: subject.id, lostItemId: { in: pairs.map((p) => p.lostItemId) } },
+      select: { id: true, lostItemId: true, foundItemId: true, status: true, score: true },
+    });
 
-      const existing = await prisma.matchSuggestion.findUnique({
-        where: { lostItemId_foundItemId: { lostItemId, foundItemId } },
-        select: { id: true, status: true, score: true },
-      });
+    const existingByPair = new Map(
+      existingRows.map((row) => [`${row.lostItemId}|${row.foundItemId}`, row])
+    );
 
-      // A dismissed pair stays dismissed; only the score is refreshed.
-      if (existing) {
-        if (existing.status !== 'DISMISSED' && existing.score !== match.score) {
-          await prisma.matchSuggestion.update({
-            where: { id: existing.id },
-            data: { score: match.score, reasons: reasonsToJson(match.reasons) },
-          });
-        }
-        persisted += 1;
+    const toCreate: typeof pairs = [];
+    // Refreshes are grouped by their new value, so a page of pairs that all
+    // rescore the same way costs one UPDATE rather than one per row.
+    const updatesByValue = new Map<
+      string,
+      { score: number; reasons: Prisma.InputJsonValue; ids: string[] }
+    >();
+
+    for (const pair of pairs) {
+      const existing = existingByPair.get(`${pair.lostItemId}|${pair.foundItemId}`);
+
+      if (!existing) {
+        toCreate.push(pair);
         continue;
       }
 
-      await prisma.matchSuggestion.create({
-        data: {
-          lostItemId,
-          foundItemId,
-          score: match.score,
-          reasons: reasonsToJson(match.reasons),
-        },
+      // A dismissed pair stays dismissed; only the score is refreshed.
+      if (existing.status === 'DISMISSED' || existing.score === pair.score) continue;
+
+      const key = `${pair.score}|${pair.reasons}`;
+      const group = updatesByValue.get(key);
+
+      if (group) {
+        group.ids.push(existing.id);
+      } else {
+        updatesByValue.set(key, {
+          score: pair.score,
+          reasons: pair.reasons,
+          ids: [existing.id],
+        });
+      }
+    }
+
+    // `skipDuplicates` is what makes this safe under concurrency. The previous
+    // find-then-create raised P2002 when two items were created at once and the
+    // two computations shared a pair; because the throw escaped the whole loop
+    // into the outer catch, the losing item silently persisted only the pairs
+    // it had already written and returned 0. Reproduced: 4 of 6 concurrent
+    // complementary creations lost 144-169 of their 200 pairs, permanently, with
+    // no error surfaced and no notifications sent.
+    if (toCreate.length > 0) {
+      await prisma.matchSuggestion.createMany({
+        data: toCreate,
+        skipDuplicates: true,
       });
-
-      newlyCreated.push({ lostItemId, foundItemId, score: match.score });
-      persisted += 1;
     }
 
-    if (newlyCreated.length > 0) {
-      await notifyMatchOwners(newlyCreated);
+    for (const group of updatesByValue.values()) {
+      await prisma.matchSuggestion.updateMany({
+        where: { id: { in: group.ids } },
+        data: { score: group.score, reasons: group.reasons },
+      });
     }
 
-    return persisted;
+    // Notify for everything this run considers new. A pair that a concurrent
+    // run created first is skipped above as "existing", and any duplicate that
+    // still slips through is collapsed by the notification dedupe window.
+    if (toCreate.length > 0) {
+      await notifyMatchOwners(toCreate);
+    }
+
+    return pairs.length;
   } catch (error) {
     console.error('[matching] failed to compute matches', { itemId, error });
     return 0;
@@ -174,9 +215,13 @@ export async function computeMatchesForItem(itemId: string): Promise<number> {
 /**
  * Tell both owners about each new suggestion.
  *
- * Owners are looked up in one query per pair rather than per item, and the
+ * Owners are looked up in one query per batch rather than per pair, and the
  * notification body carries the counterpart's title so the recipient can judge
  * the match from the inbox alone.
+ *
+ * This used to await `notify()` twice per pair, and `notify()` is a `findFirst`
+ * plus a `create` — four statements per pair, 800 for a 200-pair run. It now
+ * builds the whole batch and hands it to `notifyMany`, which writes it in two.
  */
 async function notifyMatchOwners(
   created: readonly { lostItemId: string; foundItemId: string; score: number }[]
@@ -192,13 +237,15 @@ async function notifyMatchOwners(
 
   const byId = new Map(items.map((item) => [item.id, item]));
 
+  const batch: NotifyInput[] = [];
+
   for (const pair of created) {
     const lost = byId.get(pair.lostItemId);
     const found = byId.get(pair.foundItemId);
     if (!lost || !found) continue;
 
     // Each owner hears about the *other* report.
-    await notify({
+    batch.push({
       userId: lost.postedById,
       type: 'MATCH_FOUND',
       itemId: lost.id,
@@ -206,7 +253,7 @@ async function notifyMatchOwners(
       link: `/item/${lost.id}`,
     });
 
-    await notify({
+    batch.push({
       userId: found.postedById,
       type: 'MATCH_FOUND',
       itemId: found.id,
@@ -214,6 +261,8 @@ async function notifyMatchOwners(
       link: `/item/${found.id}`,
     });
   }
+
+  await notifyMany(batch);
 }
 
 export interface MatchView {

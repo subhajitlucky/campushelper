@@ -1,6 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
-  MIDDLEWARE_MATCHER,
+  STATIC_ASSET_EXTENSIONS,
   isStaticAssetPath,
   matchesRouteBoundary,
   isPublicPageRoute,
@@ -85,22 +86,60 @@ describe("isStaticAssetPath", () => {
 });
 
 /**
- * The matcher is a Next.js config regex, so the only meaningful test is to run
- * the real regex against real paths. This is the regression guard for the bug
- * where every file in `public/` was behind the auth middleware and answered a
- * signed-out visitor with a 307 to sign-in.
+ * The middleware matcher is a Next.js config field, so the only meaningful test
+ * is to run the *real* regex against real paths.
+ *
+ * It is read out of `src/proxy.ts` as text rather than imported, because
+ * Next.js requires the value to be a static literal — an earlier attempt to
+ * share it as an exported constant produced
+ *
+ *   Error: Next.js can't recognize the exported `config` field in route.
+ *   Entry `matcher[0]` need to be static strings or static objects.
+ *
+ * and neither `typecheck`, `lint` nor `test` noticed. Reading the file means the
+ * tests exercise exactly what Next.js will analyse, and the drift check below
+ * keeps the literal and `STATIC_ASSET_EXTENSIONS` in step.
  */
-describe("MIDDLEWARE_MATCHER", () => {
+function readMatcherFromProxy(): string {
+  const source = readFileSync(new URL("../../src/proxy.ts", import.meta.url), "utf8");
+  // The trailing comma is part of the literal in the file; `\s*\]` alone does
+  // not match past it.
+  const match = source.match(/matcher:\s*\[\s*'([^']+)'\s*,?\s*\]/);
+
+  if (!match) {
+    throw new Error(
+      "Could not find a static `matcher: ['...']` literal in src/proxy.ts. " +
+        "Next.js requires the matcher to be a static string — do not replace it " +
+        "with a variable or a template literal."
+    );
+  }
+
+  // The capture is *source text*, so a `\\.` in the file means a literal `\.`
+  // in the string Next.js actually compiles. Unescape before building a RegExp
+  // from it, or `\\.` is read as "a backslash, then any character".
+  return match[1].replace(/\\\\/g, "\\");
+}
+
+const MATCHER = readMatcherFromProxy();
+
+describe("middleware matcher", () => {
   // Next.js compiles this string against the full pathname, starting at "/".
-  const matches = (pathname: string) =>
-    new RegExp(`^${MIDDLEWARE_MATCHER}$`).test(pathname);
+  const matches = (pathname: string) => new RegExp(`^${MATCHER}$`).test(pathname);
+
+  it("is a static literal, which is what Next.js can analyse", () => {
+    expect(typeof MATCHER).toBe("string");
+    expect(MATCHER.startsWith("/(")).toBe(true);
+  });
 
   it("skips public-folder assets so a signed-out visitor can load them", () => {
+    // The regression this whole file exists for: every one of these used to be
+    // 307-redirected to /api/auth/signin.
     expect(matches("/logo.png")).toBe(false);
     expect(matches("/favicon.ico")).toBe(false);
     expect(matches("/og-image.jpg")).toBe(false);
     expect(matches("/next.svg")).toBe(false);
     expect(matches("/fonts/geist.woff2")).toBe(false);
+    expect(matches("/site.webmanifest")).toBe(false);
   });
 
   it("still skips the Next.js internals and the auth endpoints", () => {
@@ -119,6 +158,18 @@ describe("MIDDLEWARE_MATCHER", () => {
 
   it("does not open a route just because it contains a dot", () => {
     expect(matches("/item/v1.2")).toBe(true);
-    expect(matches("/api/items")).toBe(true);
+    expect(matches("/reports/2026.10")).toBe(true);
+  });
+
+  it("excludes exactly the extensions STATIC_ASSET_EXTENSIONS declares", () => {
+    // Without this, the literal in proxy.ts and the predicate used by the rest
+    // of the app could disagree — the same class of bug as excluding "public".
+    for (const extension of STATIC_ASSET_EXTENSIONS) {
+      expect(
+        matches(`/asset.${extension}`),
+        `${extension} is in STATIC_ASSET_EXTENSIONS but the matcher still routes it through auth`
+      ).toBe(false);
+      expect(isStaticAssetPath(`/asset.${extension}`)).toBe(true);
+    }
   });
 });

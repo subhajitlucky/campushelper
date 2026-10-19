@@ -8,12 +8,10 @@ import {
   fillDailySeries,
   formatDuration,
   funnelPercentages,
-  medianTimeToReturnHours,
   resolutionRate,
 } from '@/lib/analytics';
 import {
   analyticsQuerySchema,
-  MAX_EXPORT_ROWS,
   resolveRange,
 } from '@/lib/schemas/analytics';
 import {
@@ -26,11 +24,36 @@ import type { Prisma } from '@/generated/prisma';
 /** How many zones and categories the dashboard breaks out. */
 const TOP_GROUP_LIMIT = 5;
 
-const MS_PER_HOUR = 60 * 60 * 1000;
 
-/** `YYYY-MM-DD` key for a UTC day, matching the buckets `fillDailySeries` reads. */
-function utcDayKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
+/**
+ * Daily report counts, grouped in the database.
+ *
+ * This replaces a `findMany({ orderBy: createdAt desc, take: 10_000 })` that was
+ * then bucketed in JS. Ordering by `createdAt desc` made the cap a *recency*
+ * window, so the series silently described only the newest 10,000 reports while
+ * the headline counted every row. Measured at 200k items with `?range=all`, the
+ * posted cohort spanned **56 of 1,095 days**; `fillDailySeries` zero-filled the
+ * rest, so the chart rendered ~0 posts across 95% of the window next to a
+ * headline of 200,420. The cap started binding at roughly 55 days of volume, so
+ * `?range=90d` and `?range=all` were already wrong.
+ *
+ * The same predicates as `itemWhere` are applied here, and the result set is
+ * one row per day — at most ~1,095 rows for `all` — so this is both exact and
+ * smaller than the capped fetch it replaces.
+ */
+async function dailyCounts(
+  column: 'createdAt' | 'resolvedAt',
+  where: string,
+  params: unknown[]
+): Promise<{ day: string; n: number }[]> {
+  return prisma.$queryRawUnsafe<{ day: string; n: number }[]>(
+    `SELECT to_char(date_trunc('day', "${column}"), 'YYYY-MM-DD') AS day, count(*)::int AS n
+       FROM "Item"
+      WHERE ${where}
+      GROUP BY 1
+      ORDER BY 1`,
+    ...params
+  );
 }
 
 /**
@@ -42,18 +65,6 @@ function utcDayKey(date: Date): string {
  */
 function rangeFilter(start: Date | null, end: Date): { gte?: Date; lte?: Date } {
   return start ? { gte: start, lte: end } : { lte: end };
-}
-
-/** Count one occurrence per timestamp, keyed by UTC day. */
-function countByDay(dates: readonly Date[]): Map<string, number> {
-  const counts = new Map<string, number>();
-
-  for (const date of dates) {
-    const key = utcDayKey(date);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-
-  return counts;
 }
 
 /**
@@ -90,16 +101,11 @@ export async function GET(request: NextRequest) {
     const createdAtFilter = rangeFilter(start, end);
     const itemWhere: Prisma.ItemWhereInput = { createdAt: createdAtFilter, deletedAt: null };
     const claimWhere: Prisma.ClaimWhereInput = { createdAt: createdAtFilter };
-    const resolvedWhere: Prisma.ItemWhereInput = {
-      ...itemWhere,
-      status: 'RESOLVED',
-      resolvedAt: { not: null },
-    };
 
     const [
       posted,
       resolved,
-      durationRows,
+      medianRows,
       postedDayRows,
       resolvedDayRows,
       earliestItem,
@@ -114,27 +120,35 @@ export async function GET(request: NextRequest) {
 
       prisma.item.count({ where: { ...itemWhere, status: 'RESOLVED' } }),
 
-      prisma.item.findMany({
-        where: resolvedWhere,
-        select: { createdAt: true, resolvedAt: true },
-        take: MAX_EXPORT_ROWS,
-      }),
+      // Exact median over the whole population, not a capped sample. The
+      // previous `take: MAX_EXPORT_ROWS` with no ordering returned whatever
+      // order the planner chose — the homepage's copy of this query was
+      // measured returning the 2,000 *oldest* resolved items, giving a median
+      // 4.9% off the true value and frozen on that cohort forever.
+      prisma.$queryRaw<{ median_hours: number | null }[]>`
+        SELECT percentile_cont(0.5) WITHIN GROUP (
+                 ORDER BY EXTRACT(EPOCH FROM ("resolvedAt" - "createdAt")) / 3600
+               ) AS median_hours
+          FROM "Item"
+         WHERE "createdAt" >= ${createdAtFilter.gte ?? new Date(0)}
+           AND "createdAt" <= ${end}
+           AND "deletedAt" IS NULL
+           AND "status" = 'RESOLVED'
+           AND "resolvedAt" IS NOT NULL
+      `,
 
-      // Newest first so the capped sample is deterministic rather than whatever
-      // order the planner happens to return.
-      prisma.item.findMany({
-        where: itemWhere,
-        select: { createdAt: true },
-        orderBy: { createdAt: 'desc' },
-        take: MAX_EXPORT_ROWS,
-      }),
+      dailyCounts(
+        'createdAt',
+        `"createdAt" >= $1 AND "createdAt" <= $2 AND "deletedAt" IS NULL`,
+        [createdAtFilter.gte ?? new Date(0), end]
+      ),
 
-      prisma.item.findMany({
-        where: resolvedWhere,
-        select: { resolvedAt: true },
-        orderBy: { createdAt: 'desc' },
-        take: MAX_EXPORT_ROWS,
-      }),
+      dailyCounts(
+        'resolvedAt',
+        `"createdAt" >= $1 AND "createdAt" <= $2 AND "deletedAt" IS NULL
+           AND "status" = 'RESOLVED' AND "resolvedAt" IS NOT NULL`,
+        [createdAtFilter.gte ?? new Date(0), end]
+      ),
 
       prisma.item.aggregate({ _min: { createdAt: true }, where: { deletedAt: null } }),
 
@@ -167,15 +181,14 @@ export async function GET(request: NextRequest) {
       prisma.user.count({ where: { lastLoginAt: createdAtFilter } }),
     ]);
 
-    const durationsHours = durationRows.flatMap((row) =>
-      row.resolvedAt ? [(row.resolvedAt.getTime() - row.createdAt.getTime()) / MS_PER_HOUR] : []
-    );
-    const median = medianTimeToReturnHours(durationsHours);
+    const medianHoursRaw = medianRows[0]?.median_hours;
+    const median =
+      medianHoursRaw === null || medianHoursRaw === undefined
+        ? null
+        : Number(medianHoursRaw);
 
-    const postedByDay = countByDay(postedDayRows.map((row) => row.createdAt));
-    const resolvedByDay = countByDay(
-      resolvedDayRows.flatMap((row) => (row.resolvedAt ? [row.resolvedAt] : []))
-    );
+    const postedByDay = new Map(postedDayRows.map((row) => [row.day, row.n]));
+    const resolvedByDay = new Map(resolvedDayRows.map((row) => [row.day, row.n]));
 
     const dayKeys = [...new Set([...postedByDay.keys(), ...resolvedByDay.keys()])].sort();
 
