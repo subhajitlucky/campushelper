@@ -27,13 +27,8 @@ export default function PostPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // The wash is opt-in on this element: a page that painted its own opaque
-  // background would hide it. The form inside owns the column width and rhythm.
-  return (
-    <main className="page-canvas min-h-[70vh]">
-      <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:py-14">
-        <PostItemForm />
-      </div>
-    </main>
-  );
+  // The composer owns its own `<main>`, width and rhythm: it needs a full-width
+  // two-column layout, and a `max-w-2xl` wrapper here silently capped the grid
+  // at 576px (measured), which collapsed both columns.
+  return <PostItemForm />;
 }
