@@ -54,7 +54,7 @@ export default function PageHeader({
           </h1>
 
           {description && (
-            <p className="mt-3 max-w-2xl text-base text-muted-foreground">{description}</p>
+            <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">{description}</p>
           )}
 
           {meta && (

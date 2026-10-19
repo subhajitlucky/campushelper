@@ -21,7 +21,6 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
         "file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
-        "md:text-sm",
         className
       )}
       {...restProps}

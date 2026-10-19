@@ -502,12 +502,12 @@ export default function ItemDetail({ item }: ItemDetailProps) {
           >
             <TriangleAlert className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden="true" />
             <div>
-              <p className="text-sm font-medium text-destructive">This item was deleted</p>
-              <p className="mt-0.5 text-sm text-muted-foreground">
+              <p className="text-base font-medium text-destructive">This item was deleted</p>
+              <p className="mt-0.5 text-base leading-relaxed text-muted-foreground">
                 It is no longer visible in search or on the map.
               </p>
               {canEdit && (
-                <p className="mt-0.5 text-sm text-muted-foreground">
+                <p className="mt-0.5 text-base leading-relaxed text-muted-foreground">
                   Only you and moderators can still see it.
                 </p>
               )}
@@ -759,7 +759,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                   role="alert"
                   className="rounded-r-lg border-l-2 border-destructive bg-destructive/5 px-3 py-2"
                 >
-                  <p className="text-sm text-destructive">{error}</p>
+                  <p className="text-base text-destructive">{error}</p>
                 </div>
               )}
 
@@ -768,7 +768,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
                   role="status"
                   className="rounded-r-lg border-l-2 border-success bg-success/5 px-3 py-2"
                 >
-                  <p className="text-sm text-success">{success}</p>
+                  <p className="text-base text-success">{success}</p>
                 </div>
               )}
 
@@ -810,7 +810,7 @@ export default function ItemDetail({ item }: ItemDetailProps) {
               )}
 
               {isLoggedIn && isOwner && itemStatus !== 'DELETED' && !canEdit && (
-                <p className="flex items-center gap-2 pt-2 text-sm text-muted-foreground">
+                <p className="flex items-center gap-2 pt-2 text-base text-muted-foreground">
                   <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden="true" />
                   This is your posted item.
                 </p>

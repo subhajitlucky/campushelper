@@ -207,7 +207,7 @@ export default function EditProfileModal({
             <h2 id={titleId} className="text-xl font-semibold tracking-tight text-foreground">
               Edit profile
             </h2>
-            <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
+            <p id={descriptionId} className="mt-1 text-base leading-relaxed text-muted-foreground">
               This is the name other students see on your reports and claims.
             </p>
           </div>
@@ -228,7 +228,7 @@ export default function EditProfileModal({
         <form onSubmit={handleSubmit} noValidate>
           <div className="space-y-5 px-6 py-6">
             {error && (
-              <p id={errorId} role="alert" className="text-sm text-destructive">
+              <p id={errorId} role="alert" className="text-base text-destructive">
                 {error}
               </p>
             )}
@@ -243,7 +243,7 @@ export default function EditProfileModal({
                 disabled
                 readOnly
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Email is tied to your sign-in and cannot be changed here.
               </p>
             </div>

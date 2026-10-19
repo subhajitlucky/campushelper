@@ -690,7 +690,7 @@ export default function AdminDashboard() {
           className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3"
         >
           <AlertTriangle className="size-4 shrink-0 text-destructive" aria-hidden="true" />
-          <p className="min-w-0 flex-1 text-sm text-destructive">{error}</p>
+          <p className="min-w-0 flex-1 text-base text-destructive">{error}</p>
           <Button size="sm" variant="outline" onClick={() => void fetchAdminData()}>
             <RefreshCw className="mr-2 size-4" aria-hidden="true" />
             Retry

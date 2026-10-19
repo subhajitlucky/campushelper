@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 interface SectionHeaderProps {
   /** Section title — the second step of the type scale (20px, weight 600). */
   title: React.ReactNode;
-  /** One line of context, 14px. */
+  /** One line of context, 16px. */
   description?: React.ReactNode;
   /** Right-side action: a quiet text button or link, not a filled button. */
   action?: React.ReactNode;
@@ -58,7 +58,7 @@ export default function SectionHeader({
         )}
 
         {description && (
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p>
+          <p className="mt-1 max-w-2xl text-base leading-relaxed text-muted-foreground">{description}</p>
         )}
       </div>
 

@@ -154,7 +154,7 @@ export default function CampusMap({
       >
         <MapPin className="size-8 text-muted-foreground/70" aria-hidden="true" />
         <p className="text-base font-medium text-foreground">No campus zones yet</p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           Zones appear here once they have been configured.
         </p>
       </div>

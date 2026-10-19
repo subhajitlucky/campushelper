@@ -380,14 +380,14 @@ export default function AnalyticsPanel({ className }: { className?: string }) {
 
               <h4 className="mt-4 text-xs font-medium text-muted-foreground">Top locations</h4>
               {data.topZones.length === 0 ? (
-                <p className="mt-3 text-sm text-muted-foreground">No zone data in this range.</p>
+                <p className="mt-3 text-base text-muted-foreground">No zone data in this range.</p>
               ) : (
                 <RankList entries={data.topZones} />
               )}
 
               <h4 className="mt-6 text-xs font-medium text-muted-foreground">Top categories</h4>
               {data.topCategories.length === 0 ? (
-                <p className="mt-3 text-sm text-muted-foreground">
+                <p className="mt-3 text-base text-muted-foreground">
                   No category data in this range.
                 </p>
               ) : (
@@ -396,7 +396,7 @@ export default function AnalyticsPanel({ className }: { className?: string }) {
             </section>
           </div>
 
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {data.activeUsers} active user{data.activeUsers === 1 ? '' : 's'} signed in during
             this range.
           </p>

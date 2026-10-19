@@ -160,7 +160,7 @@ export default async function Home() {
                 Reunite people with their belongings
               </h1>
 
-              <p className="mt-4 max-w-xl text-base text-muted-foreground">
+              <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">
                 Report what you&apos;ve lost, browse what others have found, and track
                 returns through a verified handover — not just a hopeful claim.
               </p>
@@ -178,13 +178,13 @@ export default async function Home() {
             {/* Real platform figures. Nothing here is hardcoded. */}
             <div className="lg:justify-self-end lg:w-full lg:max-w-sm">
               <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-                <h2 className="text-sm font-medium text-foreground">Platform activity</h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
+                <h2 className="text-base font-medium text-foreground">Platform activity</h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">
                   {ok ? "Live counts from the database" : "Currently unavailable"}
                 </p>
 
                 {!ok ? (
-                  <p className="mt-6 rounded-md border border-dashed border-border p-4 text-xs text-muted-foreground">
+                  <p className="mt-6 rounded-md border border-dashed border-border p-4 text-base leading-relaxed text-muted-foreground">
                     Activity figures can&apos;t be loaded right now. The rest of the site
                     works normally.
                   </p>
@@ -219,10 +219,10 @@ export default async function Home() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+              <h2 className="text-xl font-semibold tracking-tight text-foreground">
                 Recent reports
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-base text-muted-foreground">
                 The latest across campus
               </p>
             </div>
@@ -235,7 +235,7 @@ export default async function Home() {
           </div>
 
           {recent.length === 0 ? (
-            <p className="mt-8 rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+            <p className="mt-8 rounded-xl border border-dashed border-border p-10 text-center text-base text-muted-foreground">
               No reports yet. Be the first to post one.
             </p>
           ) : (
@@ -251,11 +251,11 @@ export default async function Home() {
                       <StatusBadge status={item.status} size="sm" />
                     </div>
 
-                    <p className="mt-2 line-clamp-2 flex-1 text-sm text-muted-foreground">
+                    <p className="mt-2 line-clamp-2 flex-1 text-base leading-relaxed text-muted-foreground">
                       {item.description}
                     </p>
 
-                    <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
+                    <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-sm text-muted-foreground">
                       <span className="truncate">
                         {item.zone?.name ?? item.location}
                       </span>
@@ -277,10 +277,10 @@ export default async function Home() {
       {/* How it works */}
       <section className="py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">
             How it works
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-base text-muted-foreground">
             Three steps, and a verified handover at the end of them.
           </p>
 
@@ -290,8 +290,8 @@ export default async function Home() {
                 <span className="text-xs font-medium tabular-nums text-muted-foreground">
                   {step.number}
                 </span>
-                <h3 className="mt-2 text-base font-semibold text-foreground">{step.title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
+                <h3 className="mt-2 text-base font-medium text-foreground">{step.title}</h3>
+                <p className="mt-1 text-base leading-relaxed text-muted-foreground">{step.description}</p>
               </li>
             ))}
           </ol>

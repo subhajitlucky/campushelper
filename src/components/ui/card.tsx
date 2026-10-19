@@ -51,9 +51,9 @@ const CardTitle = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      // A card title is a card title, not a page title: 18px/600, one step
-      // under a SectionHeader, instead of the 24px it used to shout at.
-      "text-lg font-semibold leading-snug tracking-tight",
+      // A card title sits at body size and lets weight do the work: 16px/500,
+      // one step under a SectionHeader without shouting over the body copy.
+      "text-base font-medium leading-snug tracking-tight",
       animated && "transition-colors duration-200 ease-in-out hover:text-primary",
       className
     )}

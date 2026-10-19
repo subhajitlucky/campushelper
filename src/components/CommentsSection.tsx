@@ -305,7 +305,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
 
       {/* Show info message for resolved items */}
       {itemStatus === 'RESOLVED' && (
-        <p className="mt-4 flex items-start gap-2 text-sm text-success">
+        <p className="mt-4 flex items-start gap-2 text-base text-success">
           <MessageSquare className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           This item is resolved, so the thread is read-only now.
         </p>
@@ -333,7 +333,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               {formError ? (
-                <p role="alert" className="text-sm text-destructive">{formError}</p>
+                <p role="alert" className="text-base text-destructive">{formError}</p>
               ) : (
                 <p className="text-xs font-medium text-muted-foreground">
                   {formData.message.length}/1000
@@ -377,7 +377,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
               className="mt-6 flex items-start gap-3 rounded-r-lg border-l-2 border-destructive bg-destructive/5 px-4 py-3"
             >
               <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden="true" />
-              <p className="text-sm text-destructive">{deleteError}</p>
+              <p className="text-base text-destructive">{deleteError}</p>
               <button
                 type="button"
                 onClick={() => setDeleteError(null)}
@@ -439,7 +439,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
                           className="resize-none text-base"
                         />
                         {editError && (
-                          <p role="alert" className="mt-2 text-sm text-destructive">{editError}</p>
+                          <p role="alert" className="mt-2 text-base text-destructive">{editError}</p>
                         )}
                         <div className="mt-3 flex gap-2">
                           <Button
@@ -501,7 +501,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
 
                     {/* Show resolved message if item is resolved */}
                     {itemStatus === 'RESOLVED' && session?.user?.id === comment.userId && (
-                      <p className="mt-2 text-xs font-medium text-muted-foreground">
+                      <p className="mt-2 text-sm font-medium text-muted-foreground">
                         Comments are locked after resolution
                       </p>
                     )}

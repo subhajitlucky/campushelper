@@ -130,7 +130,7 @@ export default function LoginForm() {
                     <p
                         role="alert"
                         aria-live="polite"
-                        className="flex items-start gap-1.5 text-sm text-destructive"
+                        className="flex items-start gap-1.5 text-base text-destructive"
                     >
                         <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                         <span>{errorMessage}</span>

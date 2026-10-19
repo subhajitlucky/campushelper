@@ -159,7 +159,7 @@ export default function BulkActionBar({
         />
       </label>
 
-      <p className="hidden text-xs text-muted-foreground lg:block">
+      <p className="hidden text-sm text-muted-foreground lg:block">
         Recorded in the audit log
       </p>
 

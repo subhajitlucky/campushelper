@@ -293,15 +293,15 @@ function SearchIntro() {
         className="mx-auto size-12 text-muted-foreground/70"
         aria-hidden="true"
       />
-      <h2 className="mt-5 text-base font-medium text-foreground">
+      <h2 className="mt-5 text-xl font-semibold tracking-tight text-foreground">
         Start your search
       </h2>
-      <p className="mt-2 text-sm text-muted-foreground">
+      <p className="mt-2 text-base leading-relaxed text-muted-foreground">
         Search by title, description, or location, or narrow the board by type,
         status, and place.
       </p>
 
-      <ul className="mt-6 space-y-2 text-left text-sm text-foreground/85">
+      <ul className="mt-6 space-y-2 text-left text-base leading-relaxed text-foreground/85">
         <li>Try the thing itself: “laptop”, “phone”, “keys”, “wallet”.</li>
         <li>Separate lost reports from found ones with the type filter.</li>
         <li>
@@ -309,7 +309,7 @@ function SearchIntro() {
         </li>
       </ul>
 
-      <p className="mt-8 text-sm text-muted-foreground">
+      <p className="mt-8 text-base text-muted-foreground">
         Looking for something specific?{' '}
         <Link
           href="/lost-items"

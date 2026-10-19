@@ -106,7 +106,7 @@ const FIELD_LABELS: Partial<Record<keyof ItemFormValues, string>> = {
  * so a focused select looks like a focused input (brief §4.3, §4.8).
  */
 const SELECT_CLASSES = [
-  'h-10 w-full appearance-none rounded-lg border border-input bg-transparent pl-3 pr-10 text-base text-foreground shadow-xs transition-colors md:text-sm',
+  'h-10 w-full appearance-none rounded-lg border border-input bg-transparent pl-3 pr-10 text-base text-foreground shadow-xs transition-colors',
   'placeholder:text-muted-foreground',
   'focus:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
   'disabled:cursor-not-allowed disabled:opacity-50',
@@ -644,7 +644,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
       />
 
       {isEditMode && (
-        <p className="mt-6 flex items-start gap-2 text-sm text-muted-foreground">
+        <p className="mt-6 flex items-start gap-2 text-base leading-relaxed text-muted-foreground">
           <PencilLine className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           You are editing an existing item. Cancel at the bottom to leave it unchanged.
         </p>
@@ -653,7 +653,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
       {/* Transport / API failures sit at the top, above the fields they belong to. */}
       {error && (
         <div role="alert" className="mt-8 border-l-2 border-destructive bg-destructive/5 px-4 py-3">
-          <p className="text-sm text-destructive">{error}</p>
+          <p className="text-base text-destructive">{error}</p>
         </div>
       )}
 
@@ -763,7 +763,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
             maxLength={2000}
             aria-invalid={!!errors.description}
             aria-describedby="item-description-message"
-            className={cn('text-base md:text-sm', invalidBorder(!!errors.description))}
+            className={cn('text-base', invalidBorder(!!errors.description))}
           />
         </Field>
 
@@ -879,7 +879,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
               placeholder={tags.length > 0 ? 'Add another tag…' : 'leather, blue, water-bottle'}
               aria-describedby="item-tags-message"
               aria-invalid={!!tagError}
-              className="min-w-[8rem] flex-1 border-0 bg-transparent px-1 py-1 text-base text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50 md:text-sm"
+              className="min-w-[8rem] flex-1 border-0 bg-transparent px-1 py-1 text-base text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
             />
           </div>
         </Field>
@@ -889,7 +889,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
             caused them. */}
         {blockedSubmitMessage && (
           <div role="alert" className="border-l-2 border-destructive bg-destructive/5 px-4 py-3">
-            <p className="text-sm text-destructive">{blockedSubmitMessage}</p>
+            <p className="text-base text-destructive">{blockedSubmitMessage}</p>
           </div>
         )}
 
@@ -899,7 +899,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
               <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden="true" />
               <div className="min-w-0">
                 <p className="text-base font-medium text-foreground">Possible duplicate</p>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 text-base leading-relaxed text-muted-foreground">
                   {duplicateWarning.candidates.length === 1
                     ? 'This looks like an item you already posted:'
                     : 'This looks like items you already posted:'}{' '}
@@ -961,7 +961,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
         )}
 
         {success && (
-          <p role="status" className="flex items-center gap-2 text-sm text-success">
+          <p role="status" className="flex items-center gap-2 text-base text-success">
             <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
             {success}
           </p>

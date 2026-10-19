@@ -216,7 +216,7 @@ export default function SavedSearches({
           <span className="sr-only">Loading saved searches…</span>
         </div>
       ) : searches.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">
+        <p className="mt-3 text-base text-muted-foreground">
           Save a filter set and you will be notified when a matching item is posted.
         </p>
       ) : (
@@ -229,7 +229,7 @@ export default function SavedSearches({
                 disabled={!onApply}
                 className="group/row min-w-0 flex-1 rounded text-left transition-colors disabled:cursor-default"
               >
-                <span className="block truncate text-sm font-medium text-foreground transition-colors group-hover/row:text-primary">
+                <span className="block truncate text-base font-medium text-foreground transition-colors group-hover/row:text-primary">
                   {search.name}
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
@@ -258,7 +258,7 @@ export default function SavedSearches({
       )}
 
       {atLimit && (
-        <p className="mt-3 text-xs text-muted-foreground">
+        <p className="mt-3 text-sm text-muted-foreground">
           You have reached the limit of {MAX_SAVED_SEARCHES_PER_USER} saved searches. Delete one to
           save another.
         </p>

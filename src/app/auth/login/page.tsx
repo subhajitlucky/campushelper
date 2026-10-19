@@ -15,14 +15,14 @@ export default function LoginPage() {
           >
             Campus Helper
           </Link>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-base leading-relaxed text-muted-foreground">
             The campus lost-and-found. Report what went missing, and get it back.
           </p>
         </div>
 
         <div className="card-surface p-6 sm:p-8">
           <h1 className="text-xl font-semibold tracking-tight text-foreground">Sign in</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-base leading-relaxed text-muted-foreground">
             Use the account you signed up with.
           </p>
 
@@ -31,7 +31,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="mt-6 text-sm text-muted-foreground">
+        <p className="mt-6 text-base text-muted-foreground">
           New here?{" "}
           <Link
             href="/auth/signup"

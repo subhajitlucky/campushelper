@@ -150,7 +150,7 @@ const SignupForm = () => {
           <p
             role="alert"
             aria-live="polite"
-            className="flex items-start gap-1.5 text-sm text-destructive"
+            className="flex items-start gap-1.5 text-base text-destructive"
           >
             <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <span>{serverError}</span>
@@ -161,7 +161,7 @@ const SignupForm = () => {
           <p
             role="status"
             aria-live="polite"
-            className="flex items-center gap-1.5 text-sm text-success"
+            className="flex items-center gap-1.5 text-base text-success"
           >
             <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
             Account created. Taking you to sign in…

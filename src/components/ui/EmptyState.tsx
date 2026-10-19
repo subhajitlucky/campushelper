@@ -47,7 +47,7 @@ export default function EmptyState({
       <h3 className="text-base font-medium text-foreground">{title}</h3>
 
       {description && (
-        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+        <p className="mt-2 text-base leading-relaxed text-muted-foreground">{description}</p>
       )}
 
       {action && (

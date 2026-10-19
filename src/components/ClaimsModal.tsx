@@ -168,7 +168,7 @@ export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwne
   };
 
   const controlClasses =
-    'w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground shadow-xs transition-colors placeholder:text-muted-foreground focus:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50';
+    'w-full rounded-lg border border-input bg-transparent px-3 py-2 text-base text-foreground shadow-xs transition-colors placeholder:text-muted-foreground focus:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50';
 
   return (
     <div
@@ -192,7 +192,7 @@ export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwne
             <h2 id="claims-modal-title" className="text-xl font-semibold tracking-tight text-foreground">
               Claim this item
             </h2>
-            <p id="claims-modal-description" className="mt-1 text-sm text-muted-foreground">
+            <p id="claims-modal-description" className="mt-1 text-base leading-relaxed text-muted-foreground">
               You are claiming{' '}
               <span className="font-medium text-foreground">{itemTitle}</span>. The poster
               reviews every claim before anything is handed over.
@@ -249,14 +249,14 @@ export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwne
           {/* Error Message */}
           {error && (
             <div role="alert" className="rounded-r-lg border-l-2 border-destructive bg-destructive/5 px-3 py-2">
-              <p className="text-sm text-destructive">{error}</p>
+              <p className="text-base text-destructive">{error}</p>
             </div>
           )}
 
           {/* Success Message */}
           {success && (
             <div role="status" className="rounded-r-lg border-l-2 border-success bg-success/5 px-3 py-2">
-              <p className="text-sm text-success">{success}</p>
+              <p className="text-base text-success">{success}</p>
             </div>
           )}
 

@@ -459,7 +459,7 @@ export default function IncomingClaimsSection({ userId, onGoToItems }: IncomingC
           </ul>
 
           {resolvedClaims.length > 5 && (
-            <p className="mt-4 text-sm text-muted-foreground">
+            <p className="mt-4 text-base text-muted-foreground">
               And {resolvedClaims.length - 5} more decided claims.
             </p>
           )}

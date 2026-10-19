@@ -95,7 +95,7 @@ export default function BarChart({
 
   if (pointCount === 0 || series.length === 0) {
     return (
-      <p className="py-10 text-center text-sm text-muted-foreground">No data for this range.</p>
+      <p className="py-10 text-center text-base text-muted-foreground">No data for this range.</p>
     );
   }
 

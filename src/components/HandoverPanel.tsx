@@ -161,7 +161,7 @@ export default function HandoverPanel({ claimId, onVerified, className }: Handov
           <ShieldCheck className="size-5 shrink-0 text-success" aria-hidden="true" />
           <p className="text-base font-medium text-success">Handover verified</p>
         </div>
-        <p className="mt-1 text-sm text-foreground/85">
+        <p className="mt-1 text-base leading-relaxed text-foreground/85">
           The item has been marked as returned to its owner.
         </p>
       </div>
@@ -195,7 +195,7 @@ export default function HandoverPanel({ claimId, onVerified, className }: Handov
           </p>
         </div>
 
-        <p className="mt-1 text-sm text-foreground/85">
+        <p className="mt-1 text-base leading-relaxed text-foreground/85">
           {handover.exhausted
             ? 'Too many incorrect attempts were made, so the code is no longer valid.'
             : handover.expired
@@ -227,7 +227,7 @@ export default function HandoverPanel({ claimId, onVerified, className }: Handov
         <h3 className="text-base font-medium text-foreground">Handover verification</h3>
       </div>
 
-      <p className="mt-1.5 text-sm text-foreground/85">
+      <p className="mt-1.5 text-base leading-relaxed text-foreground/85">
         {handover.isClaimer
           ? 'Read this code to the other party when you receive the item. Do not share it before then.'
           : 'Enter this code when the item is physically handed over.'}
@@ -288,7 +288,7 @@ export default function HandoverPanel({ claimId, onVerified, className }: Handov
         <p
           id={errorId}
           role="alert"
-          className="mt-3 rounded-r-lg border-l-2 border-destructive bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          className="mt-3 rounded-r-lg border-l-2 border-destructive bg-destructive/10 px-3 py-2 text-base text-destructive"
         >
           {error}
         </p>

@@ -171,7 +171,7 @@ export default function MapPage() {
               <Skeleton className="h-full w-full rounded-none" />
             ) : zonesError ? (
               <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
-                <p className="max-w-sm text-sm text-muted-foreground">{zonesError}</p>
+                <p className="max-w-sm text-base text-muted-foreground">{zonesError}</p>
                 {isAuthError ? (
                   <Button asChild>
                     <Link href="/auth/login">Sign in</Link>
@@ -222,7 +222,7 @@ export default function MapPage() {
                 <h2 className="text-xl font-semibold tracking-tight text-foreground">
                   {selectedZone ? selectedZone.name : 'No zone selected'}
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 text-base leading-relaxed text-muted-foreground">
                   {selectedZone
                     ? selectedZone.description || 'No description for this zone.'
                     : zones.length > 0
@@ -299,7 +299,7 @@ export default function MapPage() {
                 <SkeletonCardGrid count={6} className="lg:grid-cols-3 xl:grid-cols-4" />
               ) : itemsError ? (
                 <div className="flex flex-col items-center gap-4 py-12 text-center">
-                  <p className="text-sm text-destructive">{itemsError}</p>
+                  <p className="text-base text-destructive">{itemsError}</p>
                   <Button
                     variant="outline"
                     onClick={() => setItemsReloadToken((token) => token + 1)}

@@ -75,7 +75,7 @@ function PageErrorFallback({ error }: { error?: Error }) {
         </div>
         <div className="mt-4 text-center">
           <h3 className="text-lg font-medium text-foreground">Page Error</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-base leading-relaxed text-muted-foreground">
             We&apos;re sorry, but something went wrong loading this page.
               </p>
           <div className="mt-4 flex space-x-3">
@@ -121,8 +121,8 @@ function FeatureErrorFallback({ error }: { error?: Error }) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
         </svg>
         <div>
-          <h4 className="text-sm font-medium text-destructive">Feature Unavailable</h4>
-          <p className="text-sm text-destructive mt-1">
+          <h4 className="text-base font-medium text-destructive">Feature Unavailable</h4>
+          <p className="text-base text-destructive mt-1">
             This feature is temporarily unavailable. Please try again later.
           </p>
           <button

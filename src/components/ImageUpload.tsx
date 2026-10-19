@@ -303,7 +303,7 @@ export default function ImageUpload({
             </div>
 
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 This photo will be attached to your item.
               </p>
 
@@ -358,7 +358,7 @@ export default function ImageUpload({
 
       {/* Error Message */}
       {error && (
-        <p role="alert" className="mt-3 flex items-start gap-1.5 text-sm text-destructive">
+        <p role="alert" className="mt-3 flex items-start gap-1.5 text-base text-destructive">
           <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <span>{error}</span>
         </p>
