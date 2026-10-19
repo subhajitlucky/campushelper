@@ -1,8 +1,89 @@
 # CampusHelper — Handoff Brief
 
 **Repo:** `/home/subhajit/project/campushelper`
-**Branch:** `ui-premium` (in sync with `origin/main` at `6ca8a7f`; production deployed)
+**Branch:** `ui-premium` (local commits only — **nothing pushed**, `origin/main` is still `6ca8a7f`)
 **Written:** 2026-10-18, end of a long session
+
+---
+
+## READ THIS FIRST — 2026-10-19 session
+
+The sections below describe the state *before* 2026-10-19. Three commits were
+added on top of `2d56652`; read them in order. Nothing has been pushed, so
+production is still the old build.
+
+| Commit | What |
+|---|---|
+| `3ad9a2b` | Every file in `public/` was behind the auth middleware (verified: production `GET /next.svg` → 307). Fixed. |
+| `bb882a1` | Art direction + layout pass. Closed most of §2's "why it does not look good" list. |
+| `e2f7adc` | Scale work: silent match-pair loss fixed, item creation 16× cheaper, indexes, cohort bugs, pooling. |
+
+Two documents hold the evidence, and both are worth reading before changing
+anything in their area:
+
+- **`docs/plans/2026-10-19-visual-audit.md`** — what the rendered product
+  actually looked like, from 52 screenshots, *before* any change. §2 below is
+  superseded by it.
+- **`docs/plans/2026-10-19-scale-audit.md`** — measurements on a 100k-user /
+  200k-item database, every before/after number, and what was deliberately left
+  undone. §3 below is superseded by it.
+
+### Corrections to the sections below
+
+- §2's premise is right but its hypotheses are now measured. The real problem was
+  not "no art direction" in the abstract: `--background` and `--card` were both
+  pure white, so a card could only be distinguished by a hairline border — which
+  is why cutting 42 bordered containers to 6 changed nothing visible.
+- §3 is no longer "never audited". Items 1, 2, 4, 5, 7, 8, 9, 12, 13 and 14 are
+  CONFIRMED with numbers; 10 is PARTIAL (the cost claim is **refuted** — the
+  Prisma route is faster than a single-SQL rewrite; the cohort bug is real); 11
+  is a non-issue with ISR verified (`○ / 5m 1y`); 3 and 6 confirmed as described.
+- §3-9 was worse than described: **4 of 6 concurrent item creations lost
+  144–169 of their 200 match pairs**, silently, with no error surfaced.
+
+### Traps this session added to the list
+
+1. **`next build` is the only check that catches middleware/route-config
+   errors.** Moving the matcher into a shared constant broke the proxy with
+   `Entry \`matcher[0]\` need to be static strings` — `typecheck`, `lint` and
+   `test` all passed. `src/proxy.ts` now carries a comment saying so, and
+   `tests/unit/public-routes.test.ts` reads the literal out of the file as text.
+   **Run the production build after touching proxy/middleware/route config.**
+2. **`rm -rf .next` while `next dev` is running** deletes the dev server's own
+   `.next/dev` and every page 500s afterwards. Stop the server first.
+3. **`pkill -f "next dev"` in the same command that starts the server** kills its
+   own shell (this one bit again, from §2.2). Kill and start in separate commands.
+4. **Extracting a JS regex from source text needs unescaping.** `[^']+` on
+   `favicon\\.ico` yields two backslashes; `new RegExp` then reads `\\.` as
+   "backslash, then any char". And `\s*\]` does not match past a trailing comma.
+5. **Sweep scripts need a self-test.** A `\bmr-(?:1|1\.5)\b` pattern matched `mr-1`
+   inside `mr-1.5` and left a stray `.5` in 26 `className`s — an invalid utility
+   Tailwind drops silently, i.e. exactly §2.4's trap again. The fix asserts the
+   pattern against the strings that broke it before it runs.
+
+### What is verified, and how
+
+- `npm run typecheck && npm run lint && npm test` → 0 errors, 305 passing.
+- `npm run build` with `DATABASE_URL` pointing at a closed port → **exit 0**, 13
+  static routes prerendered, homepage logs its degraded state. Run it that way;
+  a build against a reachable database proves nothing about the regression that
+  shipped once.
+- Production-mode behaviour of the built artifact (`next start`): `/seed/x.jpg`
+  200, `/dashboard` 307 → signin, `/api/items` 307, `/logo.png` 404 (bypasses
+  auth, which is the fix).
+
+### Still open
+
+- The list API still uses offset pagination; `page` is now bounded at 200 as a
+  stopgap. Keyset needs a contract change across every client.
+- Everything is still synchronous in the request path (16× cheaper, not queued).
+- Rate limiting is still per-instance, with no shared store.
+- No retention policy: 809 MB at 200k items against a 500 MB recommended cap for
+  the free plan, and ~501 notifications + ~200 match rows per item creation.
+- RLS is guarded, not enabled — see `tests/unit/rls-guard.test.ts`. Enabling it
+  as written returns 0 `User` rows and breaks `INSERT INTO "Item"`.
+- `public/` still contains five unused Next.js starter SVGs. Nothing references
+  them; they were useful once as a proof that the asset fix works.
 
 ---
 
