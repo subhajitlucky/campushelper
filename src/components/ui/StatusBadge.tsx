@@ -13,23 +13,6 @@ interface StatusBadgeProps {
  * Automatically applies the correct colors for different statuses.
  */
 export default function StatusBadge({ status, className = '', size = 'sm' }: StatusBadgeProps) {
-  const getVariant = (status: string) => {
-    switch (status) {
-      case 'LOST':
-        return 'destructive';
-      case 'FOUND':
-        return 'default';
-      case 'CLAIMED':
-        return 'secondary';
-      case 'RESOLVED':
-        return 'outline';
-      case 'DELETED':
-        return 'outline';
-      default:
-        return 'outline';
-    }
-  };
-
   /**
    * The single source of truth for item-status colour.
    *
@@ -69,15 +52,15 @@ export default function StatusBadge({ status, className = '', size = 'sm' }: Sta
     lg: 'text-base px-4 py-2'
   };
 
-  const badgeVariant = getVariant(status);
+
 
   // Use outline variant with custom colors for better control
   return (
     <Badge
-      variant={badgeVariant === 'outline' ? 'outline' : badgeVariant}
+      variant="outline"
       className={`
         ${sizeClasses[size]}
-        ${badgeVariant === 'outline' ? getColorClasses(status) : ''}
+        ${getColorClasses(status)}
         ${className}
       `}
     >

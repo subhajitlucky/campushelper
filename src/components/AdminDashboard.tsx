@@ -59,6 +59,7 @@ interface AdminStats {
   totalClaims: number;
   pendingClaims: number;
   activeItems: number;
+  inactiveUsers: number;
   resolvedItems: number;
   deletedItems: number;
 }
@@ -724,7 +725,7 @@ export default function AdminDashboard() {
               {
                 label: 'Total users',
                 value: String(stats.totalUsers),
-                hint: `${stats.totalUsers - stats.activeItems} inactive`,
+                hint: `${stats.inactiveUsers} inactive`,
               },
               {
                 label: 'Total items',
@@ -1339,10 +1340,11 @@ export default function AdminDashboard() {
               {selectedUser.name || selectedUser.email}
             </p>
 
-            <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+            {/* A div, not a p: Badge renders a div and a p cannot contain one. */}
+            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
               Current role
               <Badge variant="outline">{selectedUser.role}</Badge>
-            </p>
+            </div>
 
             <div className="mt-5">
               <label
