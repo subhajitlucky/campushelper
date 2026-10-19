@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
-import { CheckCircle, XCircle, User, Calendar, MessageSquare, Eye, AlertCircle } from "lucide-react";
+import Link from 'next/link';
+import { CheckCircle, MessageSquare, XCircle } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import EmptyState from '@/components/ui/EmptyState';
+import SectionHeader from '@/components/ui/SectionHeader';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthFetch } from '@/lib/auth-fetch';
 import HandoverPanel from '@/components/HandoverPanel';
 
@@ -33,9 +35,89 @@ interface IncomingClaim {
 
 interface IncomingClaimsSectionProps {
   userId: string;
+  /** Switch the dashboard to the "My items" tab — used by the empty state. */
+  onGoToItems?: () => void;
 }
 
-export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionProps) {
+/**
+ * The pill geometry is written out rather than delegated to `<Badge>`: that
+ * component spreads `props` after its `className`, so a caller that passes a
+ * className loses the variant's `rounded-full border px-2.5` base.
+ */
+const PILL = 'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold';
+
+const CLAIM_TYPE_LABEL: Record<IncomingClaim['claimType'], string> = {
+  FOUND_IT: 'Found the item',
+  OWN_IT: 'Says it is theirs',
+};
+
+const RESOLVED_STATUS_CLASSES: Record<IncomingClaim['status'], string> = {
+  PENDING: `${PILL} border-warning/30 bg-warning/10 text-warning`,
+  APPROVED: `${PILL} border-success/30 bg-success/10 text-success`,
+  COMPLETED: `${PILL} border-info/30 bg-info/10 text-info`,
+  REJECTED: `${PILL} border-destructive/30 bg-destructive/10 text-destructive`,
+};
+
+const RESOLVED_STATUS_LABEL: Record<IncomingClaim['status'], string> = {
+  PENDING: 'Pending',
+  APPROVED: 'Approved',
+  /** An approved claim whose handover code has been exchanged. */
+  COMPLETED: 'Returned',
+  REJECTED: 'Rejected',
+};
+
+function formatDate(iso: string | null): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+
+  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function claimerName(claim: IncomingClaim): string {
+  return claim.user.name || claim.user.email;
+}
+
+function IncomingRowsSkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <ul
+      className="mt-6 divide-y divide-border-subtle"
+      role="status"
+      aria-label="Loading incoming claims"
+    >
+      {Array.from({ length: count }, (_, index) => (
+        <li key={index} className="flex flex-wrap items-start justify-between gap-6 py-5">
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-5 w-44" />
+              <Skeleton className="h-6 w-24 rounded-full" />
+            </div>
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-3 w-48" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-20" />
+            <Skeleton className="h-9 w-24" />
+          </div>
+        </li>
+      ))}
+      <span className="sr-only">Loading…</span>
+    </ul>
+  );
+}
+
+/**
+ * The "Incoming claims" tab panel — claims other students have made on the
+ * signed-in user's reports.
+ *
+ * The approve/reject contract is unchanged (`PUT /api/claims/[id]` with the
+ * claim's new status, one in-flight claim at a time), as is `HandoverPanel`: an
+ * approved claim still renders it so the handover code can be exchanged before
+ * the item counts as returned. What changed is the surface — pending claims are
+ * rows separated by a hairline, with one filled primary action (Approve) and
+ * quiet text actions beside it, instead of amber bordered boxes inside a Card.
+ */
+export default function IncomingClaimsSection({ userId, onGoToItems }: IncomingClaimsSectionProps) {
   const { fetchWithAuth } = useAuthFetch(true);
   const [claims, setClaims] = useState<IncomingClaim[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,10 +128,10 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
     try {
       setLoading(true);
       setError(null);
-      
+
       // First fetch user's items
       const itemsResponse = await fetch(`/api/items?postedById=${userId}&limit=100`, {
-        credentials: 'include'
+        credentials: 'include',
       });
       if (!itemsResponse.ok) {
         throw new Error('Failed to fetch your items');
@@ -70,7 +152,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
       const claimsPromises = itemIds.map(async (itemId: string) => {
         try {
           const response = await fetch(`/api/claims?itemId=${itemId}`, {
-            credentials: 'include'
+            credentials: 'include',
           });
           if (response.ok) {
             const data = await response.json();
@@ -81,14 +163,14 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
           return [];
         }
       });
-      
+
       // Wait for all claims requests to complete
       const claimsResults = await Promise.all(claimsPromises);
-      
+
       // Flatten and sort claims by creation date
       const allClaims = claimsResults.flat();
       allClaims.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      
+
       setClaims(allClaims);
     } catch {
       setError('Failed to load incoming claims. Please try again.');
@@ -109,7 +191,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
       const response = await fetchWithAuth(`/api/claims/${claimId}`, {
         method: 'PUT',
         body: JSON.stringify({
-          status: 'APPROVED'
+          status: 'APPROVED',
         }),
       });
 
@@ -118,11 +200,13 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
       }
 
       // Update local state
-      setClaims(prev => prev.map(claim => 
-        claim.id === claimId 
-          ? { ...claim, status: 'APPROVED', resolvedAt: new Date().toISOString() }
-          : claim
-      ));
+      setClaims((prev) =>
+        prev.map((claim) =>
+          claim.id === claimId
+            ? { ...claim, status: 'APPROVED', resolvedAt: new Date().toISOString() }
+            : claim
+        )
+      );
     } catch {
       setError('Failed to approve claim. Please try again.');
     } finally {
@@ -142,7 +226,7 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
       const response = await fetchWithAuth(`/api/claims/${claimId}`, {
         method: 'PUT',
         body: JSON.stringify({
-          status: 'REJECTED'
+          status: 'REJECTED',
         }),
       });
 
@@ -151,11 +235,13 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
       }
 
       // Update local state
-      setClaims(prev => prev.map(claim =>
-        claim.id === claimId
-          ? { ...claim, status: 'REJECTED', resolvedAt: new Date().toISOString() }
-          : claim
-      ));
+      setClaims((prev) =>
+        prev.map((claim) =>
+          claim.id === claimId
+            ? { ...claim, status: 'REJECTED', resolvedAt: new Date().toISOString() }
+            : claim
+        )
+      );
     } catch {
       setError('Failed to reject claim. Please try again.');
     } finally {
@@ -170,227 +256,215 @@ export default function IncomingClaimsSection({ userId }: IncomingClaimsSectionP
   }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filter to show only pending claims by default
-  const pendingClaims = claims.filter(claim => claim.status === 'PENDING');
-  const resolvedClaims = claims.filter(claim => claim.status !== 'PENDING');
+  const pendingClaims = claims.filter((claim) => claim.status === 'PENDING');
+  const resolvedClaims = claims.filter((claim) => claim.status !== 'PENDING');
+
+  const header = (description: string) => (
+    <SectionHeader title="Claims on your items" description={description} divider={false} />
+  );
 
   // Loading state
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Claims on Your Items</CardTitle>
-          <CardDescription>Manage claims made on your posted items</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse">
-                <div className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="h-4 bg-muted rounded w-1/3"></div>
-                    <div className="h-4 bg-muted rounded w-16"></div>
-                  </div>
-                  <div className="h-3 bg-muted rounded w-2/3 mb-2"></div>
-                  <div className="flex gap-2 mt-3">
-                    <div className="h-8 bg-muted rounded w-20"></div>
-                    <div className="h-8 bg-muted rounded w-20"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <section aria-label="Claims on your items">
+        {header('Students asking to collect your reports.')}
+        <IncomingRowsSkeleton />
+      </section>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Claims on Your Items</CardTitle>
-          <CardDescription>Manage claims made on your posted items</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <div className="text-destructive mb-4">
-              <AlertCircle className="w-12 h-12 mx-auto" />
-            </div>
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={fetchIncomingClaims} variant="outline">
-              Try Again
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <section aria-label="Claims on your items">
+        {header('Students asking to collect your reports.')}
+        <EmptyState
+          icon={<MessageSquare />}
+          title="Incoming claims could not be loaded"
+          description={error}
+          action={{ label: 'Try again', onClick: fetchIncomingClaims }}
+        />
+      </section>
     );
   }
 
   // Empty state
   if (claims.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Claims on Your Items</CardTitle>
-          <CardDescription>Manage claims made on your posted items</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <div className="text-muted-foreground/70 mb-4">
-              <MessageSquare className="w-12 h-12 mx-auto" />
-            </div>
-            <p className="text-muted-foreground mb-4">No claims received yet</p>
-            <Button asChild>
-              <Link href="/dashboard">View Your Items</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <section aria-label="Claims on your items">
+        {header('Students asking to collect your reports.')}
+        <EmptyState
+          icon={<MessageSquare />}
+          title="No claims received yet"
+          description="When someone claims one of your reports, it will appear here for you to approve."
+          action={{
+            label: 'See your items',
+            variant: 'default',
+            onClick: () => {
+              if (onGoToItems) {
+                onGoToItems();
+              } else {
+                window.location.href = '/dashboard';
+              }
+            },
+          }}
+        />
+      </section>
     );
   }
 
-  // Claims list
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Claims on Your Items ({pendingClaims.length} pending)</CardTitle>
-        <CardDescription>Manage claims made on your posted items</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          {/* Pending Claims Section */}
-          {pendingClaims.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold mb-4 text-warning">
-                Pending Claims ({pendingClaims.length})
-              </h3>
-              <div className="space-y-4">
-                {pendingClaims.map((claim) => (
-                  <div key={claim.id} className="border border-warning/30 rounded-lg p-4 bg-warning/10">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-lg text-foreground mb-1">
-                          {claim.item.title}
-                        </h4>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-                          <div className="flex items-center gap-1">
-                            <User className="w-3 h-3" />
-                            {claim.user.name || claim.user.email}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(claim.createdAt).toLocaleDateString()}
-                          </div>
-                        </div>
-                        {claim.message && (
-                          <p className="text-foreground/85 text-sm mb-2 p-2 bg-card rounded border">
-                            &ldquo;{claim.message}&rdquo;
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <Badge 
-                          variant={claim.claimType === 'FOUND_IT' ? 'default' : 'secondary'}
-                          className="text-xs"
-                        >
-                          {claim.claimType === 'FOUND_IT' ? 'Found Item' : 'Owns Item'}
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 pt-3 border-t border-warning/30">
-                      <Button size="sm" variant="outline" asChild>
-                        <Link href={`/item/${claim.itemId}`}>
-                          <Eye className="w-3 h-3 mr-1" />
-                          View Item
-                        </Link>
-                      </Button>
-                      
-                      <Button 
-                        size="sm" 
-                        variant="destructive"
-                        onClick={() => handleRejectClaim(claim.id)}
-                        disabled={processingClaimId === claim.id}
-                      >
-                        <XCircle className="w-3 h-3 mr-1" />
-                        {processingClaimId === claim.id ? 'Processing...' : 'Reject'}
-                      </Button>
-                      
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleApproveClaim(claim.id)}
-                        disabled={processingClaimId === claim.id}
-                        className="bg-success hover:bg-success/90"
-                      >
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        {processingClaimId === claim.id ? 'Processing...' : 'Approve'}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+    <section aria-label="Claims on your items">
+      {header(
+        `${pendingClaims.length} waiting on you${
+          resolvedClaims.length > 0 ? ` · ${resolvedClaims.length} already decided` : ''
+        }.`
+      )}
 
-          {/* Resolved Claims Section */}
-          {resolvedClaims.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold mb-4 text-foreground/85">
-                Resolved Claims ({resolvedClaims.length})
-              </h3>
-              <div className="space-y-3">
-                {resolvedClaims.slice(0, 5).map((claim) => (
-                  <div key={claim.id} className="border rounded-lg p-3 bg-muted/40">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm text-foreground">
-                          {claim.item.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {claim.user.name || claim.user.email} • {new Date(claim.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge 
-                          variant="outline"
-                          className={`text-xs ${
-                            claim.status === 'COMPLETED' ? 'border-info/30 text-primary' :
-                            claim.status === 'APPROVED' ? 'border-success/30 text-success' :
-                            'border-destructive/30 text-destructive'
-                          }`}
-                        >
-                          {claim.status}
-                        </Badge>
-                        <Button size="sm" variant="ghost" asChild>
-                          <Link href={`/item/${claim.itemId}`}>
-                            <Eye className="w-3 h-3" />
-                          </Link>
-                        </Button>
-                      </div>
+      {/* Pending Claims Section */}
+      {pendingClaims.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-base font-medium text-foreground">
+            Waiting on you
+            <span className="ml-2 text-sm font-normal text-muted-foreground tabular-nums">
+              {pendingClaims.length}
+            </span>
+          </h3>
+
+          <ul className="mt-2 divide-y divide-border-subtle">
+            {pendingClaims.map((claim) => (
+              <li key={claim.id} className="py-5">
+                <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                      <Link
+                        href={`/item/${claim.itemId}`}
+                        className="text-base font-medium text-foreground underline-offset-4 hover:underline"
+                      >
+                        {claim.item.title}
+                      </Link>
+                      <span className={`${PILL} border-border text-muted-foreground`}>
+                        {CLAIM_TYPE_LABEL[claim.claimType]}
+                      </span>
                     </div>
 
-                    {/* Approved claims need a verified handover before the item
-                        counts as returned. */}
-                    {(claim.status === 'APPROVED' || claim.status === 'COMPLETED') && (
-                      <HandoverPanel
-                        claimId={claim.id}
-                        className="mt-3"
-                        onVerified={fetchIncomingClaims}
-                      />
+                    {claim.message && (
+                      <p className="mt-2 max-w-2xl text-base text-foreground/85">
+                        &ldquo;{claim.message}&rdquo;
+                      </p>
                     )}
+
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {claimerName(claim)}
+                      <span className="mx-1.5" aria-hidden="true">
+                        ·
+                      </span>
+                      Claimed <time dateTime={claim.createdAt}>{formatDate(claim.createdAt)}</time>
+                    </p>
                   </div>
-                ))}
-                {resolvedClaims.length > 5 && (
-                  <p className="text-sm text-muted-foreground text-center">
-                    And {resolvedClaims.length - 5} more resolved claims...
-                  </p>
+
+                  <div className="flex shrink-0 flex-wrap items-center gap-1">
+                    <Button variant="quiet" size="sm" asChild>
+                      <Link href={`/item/${claim.itemId}`}>View item</Link>
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="quiet"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => handleRejectClaim(claim.id)}
+                      disabled={processingClaimId === claim.id}
+                    >
+                      <XCircle className="mr-1.5 size-4" aria-hidden="true" />
+                      Reject
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="success"
+                      onClick={() => handleApproveClaim(claim.id)}
+                      disabled={processingClaimId === claim.id}
+                    >
+                      <CheckCircle className="mr-1.5 size-4" aria-hidden="true" />
+                      {processingClaimId === claim.id ? 'Working…' : 'Approve'}
+                    </Button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Resolved Claims Section */}
+      {resolvedClaims.length > 0 && (
+        <div className="mt-10">
+          <h3 className="text-base font-medium text-foreground">
+            Already decided
+            <span className="ml-2 text-sm font-normal text-muted-foreground tabular-nums">
+              {resolvedClaims.length}
+            </span>
+          </h3>
+
+          <ul className="mt-2 divide-y divide-border-subtle">
+            {resolvedClaims.slice(0, 5).map((claim) => (
+              <li key={claim.id} className="py-4">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/item/${claim.itemId}`}
+                      className="text-base font-medium text-foreground underline-offset-4 hover:underline"
+                    >
+                      {claim.item.title}
+                    </Link>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {claimerName(claim)}
+                      <span className="mx-1.5" aria-hidden="true">
+                        ·
+                      </span>
+                      Claimed{' '}
+                      <time dateTime={claim.createdAt}>{formatDate(claim.createdAt)}</time>
+                      {claim.resolvedAt && (
+                        <>
+                          <span className="mx-1.5" aria-hidden="true">
+                            ·
+                          </span>
+                          Decided <time dateTime={claim.resolvedAt}>{formatDate(claim.resolvedAt)}</time>
+                        </>
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className={RESOLVED_STATUS_CLASSES[claim.status]}>
+                      {RESOLVED_STATUS_LABEL[claim.status]}
+                    </span>
+                    <Button variant="quiet" size="sm" asChild>
+                      <Link href={`/item/${claim.itemId}`}>View item</Link>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Approved claims need a verified handover before the item
+                    counts as returned. */}
+                {(claim.status === 'APPROVED' || claim.status === 'COMPLETED') && (
+                  <HandoverPanel
+                    claimId={claim.id}
+                    className="mt-3"
+                    onVerified={fetchIncomingClaims}
+                  />
                 )}
-              </div>
-            </div>
+              </li>
+            ))}
+          </ul>
+
+          {resolvedClaims.length > 5 && (
+            <p className="mt-4 text-sm text-muted-foreground">
+              And {resolvedClaims.length - 5} more decided claims.
+            </p>
           )}
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </section>
   );
 }

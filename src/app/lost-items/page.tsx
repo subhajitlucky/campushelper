@@ -1,33 +1,25 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import EmptyState, { EmptyStateIcons } from "@/components/ui/EmptyState";
-import { ItemListSkeleton } from "@/components/ui/LoadingSkeleton";
-import ItemCard from "@/components/ui/ItemCard";
-import CategoryFilter from "@/components/CategoryFilter";
-import Pagination from "@/components/ui/Pagination";
-import ClaimsModal from "@/components/ClaimsModal";
-import { useAuthFetch } from "@/lib/auth-fetch";
-import { toast } from "react-hot-toast";
+import Link from 'next/link';
 
-interface LostItem {
-  id: string;
-  title: string;
-  description: string;
-  itemType: 'LOST' | 'FOUND';
-  status: string;
-  location: string;
-  createdAt: string;
-  images?: string[] | null;
-  postedBy: {
-    id: string;
-    name: string | null;
-    avatar: string | null;
-    // Note: email intentionally excluded for public access (privacy)
-  };
-}
+import CategoryFilter from '@/components/CategoryFilter';
+import ClaimsModal from '@/components/ClaimsModal';
+import ItemListShell, {
+  type ListItem,
+  type ListSelectConfig,
+  type ListTextConfig,
+} from '@/components/ItemListShell';
+import { Button } from '@/components/ui/button';
+import { useAuthFetch } from '@/lib/auth-fetch';
+import { toast } from 'react-hot-toast';
+
+/**
+ * A lost report, as `GET /api/items?status=LOST` returns it — including the
+ * `category` and `zone` relations, which the card needs for its icon and its
+ * place name.
+ */
+type LostItem = ListItem;
 
 interface LostFilters {
   itemType: string;
@@ -35,6 +27,20 @@ interface LostFilters {
   category: string;
 }
 
+const ITEM_TYPE_OPTIONS = [
+  { value: '', label: 'All types' },
+  { value: 'LOST', label: 'Lost items' },
+  { value: 'FOUND', label: 'Found items' },
+] as const;
+
+/**
+ * Lost items — every open report, filtered by type, location and category.
+ *
+ * The frame (header, filter bar, grid, empty and loading states, pagination)
+ * lives in ItemListShell; this file owns the query. Filters are part of the
+ * request, live rather than deferred, and the page count comes from the
+ * `pagination` envelope the API actually returns.
+ */
 export default function LostItemsPage() {
   const { fetchWithAuth } = useAuthFetch(false);
   const [items, setItems] = useState<LostItem[]>([]);
@@ -43,9 +49,11 @@ export default function LostItemsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [user, setUser] = useState<{isLoggedIn: boolean; userId?: string}>({ isLoggedIn: false });
+  const [user, setUser] = useState<{ isLoggedIn: boolean; userId?: string }>({
+    isLoggedIn: false,
+  });
 
-  // Claims Modal State
+  // Claims modal state
   const [claimsModalOpen, setClaimsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<LostItem | null>(null);
 
@@ -57,65 +65,57 @@ export default function LostItemsPage() {
 
   const limit = 12;
 
-  const fetchLostItems = useCallback(async (page = 1) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const fetchLostItems = useCallback(
+    async (page = 1) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const queryParams = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        status: 'LOST',
-        ...(filters.itemType && { itemType: filters.itemType }),
-        ...(filters.location && { location: filters.location }),
-        ...(filters.category && { category: filters.category }),
-      });
+        // Every filter the user can see in the bar is sent to the API. They
+        // were once bound to inputs and then dropped from the query, which made
+        // the whole filter row decorative.
+        const queryParams = new URLSearchParams({
+          page: page.toString(),
+          limit: limit.toString(),
+          status: 'LOST',
+          ...(filters.itemType && { itemType: filters.itemType }),
+          ...(filters.location && { location: filters.location }),
+          ...(filters.category && { category: filters.category }),
+        });
 
-      const response = await fetch(`/api/items?${queryParams.toString()}`);
-      if (!response.ok) {
-        throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        const response = await fetch(`/api/items?${queryParams.toString()}`);
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        setItems(data.items || []);
+        // The envelope is `pagination`, and it is the only source of truth for
+        // the count. A previous version read a top-level `data.total`, got
+        // undefined -> NaN, and left the page controls dead.
+        setTotalPages(data.pagination?.totalPages ?? 1);
+        setTotal(data.pagination?.total ?? 0);
+
+        setUser(data.user || { isLoggedIn: false });
+      } catch {
+        setError('Failed to load lost items. Please try again.');
+      } finally {
+        setLoading(false);
       }
+    },
+    [filters, limit]
+  );
 
-      const data = await response.json();
-      setItems(data.items || []);
-      // The API returns a `pagination` envelope; reading a top-level `total`
-      // yielded undefined -> NaN, so page controls never rendered and items
-      // beyond the first page were unreachable.
-      setTotalPages(data.pagination?.totalPages ?? 1);
-      setTotal(data.pagination?.total ?? 0);
-      
-      // Store user authentication status
-      setUser(data.user || { isLoggedIn: false });
-    } catch {
-      setError('Failed to load lost items. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, limit]);
-
-  // Handle filter changes
   const handleFilterChange = (key: keyof LostFilters, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-    setCurrentPage(1); // Reset to first page when filters change
-  };
-
-  // Apply filters
-  const applyFilters = () => {
-    fetchLostItems(1);
+    setFilters((prev) => ({ ...prev, [key]: value }));
     setCurrentPage(1);
   };
 
-  // Clear all filters
   const clearFilters = () => {
-    setFilters({
-      itemType: '',
-      location: '',
-      category: '',
-    });
+    setFilters({ itemType: '', location: '', category: '' });
     setCurrentPage(1);
   };
 
-  // Handle "I Found This" button click
   const handleFoundClick = async (item: LostItem) => {
     if (!user.isLoggedIn) {
       toast.error('Please login to claim items');
@@ -126,7 +126,6 @@ export default function LostItemsPage() {
     const isOwner = user.userId === item.postedBy.id;
 
     if (isOwner) {
-      // Owner found their own item - show confirmation dialog
       const confirmed = window.confirm(
         `Did you find your "${item.title}"?\n\nThis will mark the item as RESOLVED.`
       );
@@ -135,12 +134,8 @@ export default function LostItemsPage() {
         try {
           const response = await fetchWithAuth(`/api/items/${item.id}`, {
             method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              status: 'RESOLVED',
-            }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'RESOLVED' }),
           });
 
           if (!response.ok) {
@@ -148,14 +143,12 @@ export default function LostItemsPage() {
           }
 
           toast.success('Item marked as resolved!');
-          // Refresh the items list
           fetchLostItems(currentPage);
         } catch {
           toast.error('Failed to update item status. Please try again.');
         }
       }
     } else {
-      // Non-owner wants to claim - open claims modal
       setSelectedItem(item);
       setClaimsModalOpen(true);
     }
@@ -165,175 +158,91 @@ export default function LostItemsPage() {
     setClaimsModalOpen(false);
     setSelectedItem(null);
     toast.success('Claim submitted successfully! The owner will review it.');
-    // Optionally refresh items
     fetchLostItems(currentPage);
   };
 
-  // Fetch items when page or filters change
   useEffect(() => {
     fetchLostItems(currentPage);
   }, [currentPage, fetchLostItems]);
 
-  return (
-    <div className="min-h-screen bg-muted/40 py-8">
-      <div className="container mx-auto px-4">
+  const selects: ListSelectConfig[] = [
+    {
+      id: 'filter-item-type',
+      label: 'Item type',
+      value: filters.itemType,
+      options: ITEM_TYPE_OPTIONS,
+      onChange: (value) => handleFilterChange('itemType', value),
+      className: 'sm:w-40',
+    },
+  ];
 
-        {/* Category facets */}
-        <div className="bg-card rounded-lg shadow p-4 mb-6">
-          <h2 className="mb-3 text-sm font-medium text-foreground">Browse by category</h2>
+  const texts: ListTextConfig[] = [
+    {
+      id: 'filter-location',
+      label: 'Location',
+      value: filters.location,
+      placeholder: 'Filter by location…',
+      onChange: (value) => handleFilterChange('location', value),
+      className: 'sm:w-56',
+    },
+  ];
+
+  const activeFilterCount =
+    (filters.itemType ? 1 : 0) +
+    (filters.location ? 1 : 0) +
+    (filters.category ? 1 : 0);
+
+  return (
+    <>
+      <ItemListShell
+        title="Lost items"
+        description="Everything reported missing on campus, newest first. If you have seen one of these, open it and tell the owner."
+        noun={{ singular: 'lost item', plural: 'lost items' }}
+        actions={
+          <Button asChild>
+            <Link href="/post">Report a lost item</Link>
+          </Button>
+        }
+        items={items}
+        total={total}
+        loading={loading}
+        error={error}
+        onRetry={() => fetchLostItems(currentPage)}
+        texts={texts}
+        selects={selects}
+        facets={
           <CategoryFilter
             value={filters.category || null}
             onChange={(slug) => handleFilterChange('category', slug ?? '')}
           />
-        </div>
-        {/* Filter Stories */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Filter Lost Items</CardTitle>
-            <CardDescription>Find specific lost items</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {/* Item Type */}
-              <div>
-                <label htmlFor="filter-item-type" className="block text-sm font-medium text-foreground/85 mb-1">Item Type</label>
-                <select id="filter-item-type"
-                  value={filters.itemType}
-                  onChange={(e) => handleFilterChange('itemType', e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring"
-                >
-                  <option value="">All Types</option>
-                  <option value="LOST">Lost Items</option>
-                  <option value="FOUND">Found Items</option>
-                </select>
-              </div>
+        }
+        activeFilterCount={activeFilterCount}
+        onClearFilters={clearFilters}
+        cardProps={{
+          user,
+          showActions: true,
+          onFound: (item) => {
+            void handleFoundClick(item);
+          },
+        }}
+        emptyCopy={{
+          nothing: {
+            title: 'No lost items reported yet',
+            description:
+              'Nothing has been reported missing yet. If you have lost something, post it and the people who find things can match it.',
+            action: { label: 'Report a lost item', href: '/post' },
+          },
+          noResults: {
+            title: 'No lost items match these filters',
+            description:
+              'Try a broader location, or clear the filters to see every open report.',
+          },
+        }}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
 
-              {/* Location */}
-              <div>
-                <label className="block text-sm font-medium text-foreground/85 mb-1">
-                  Location
-                </label>
-                <input
-                  type="text"
-                  value={filters.location}
-                  onChange={(e) => handleFilterChange('location', e.target.value)}
-                  placeholder="Filter by location..."
-                  className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring"
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2 items-end">
-                <Button onClick={applyFilters} className="flex-1">
-                  Apply Filters
-                </Button>
-                <Button variant="outline" onClick={clearFilters}>
-                  Clear
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Loading State */}
-        {loading && <ItemListSkeleton count={6} />}
-
-        {/* Error State */}
-        {error && !loading && (
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-destructive mb-4">{error}</p>
-                <Button onClick={() => fetchLostItems(currentPage)}>
-                  Try Again
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Results */}
-        {!loading && !error && (
-          <>
-            {/* Results Header */}
-            <div className="flex justify-between items-center mb-6">
-              <p className="text-muted-foreground">
-                {items.length > 0 ? (
-                  <>
-                    Found <span className="font-semibold">{items.length}</span> lost items
-                    {currentPage > 1 && (
-                      <span> (page {currentPage} of {totalPages})</span>
-                    )}
-                  </>
-                ) : (
-                  'No lost items found'
-                )}
-              </p>
-              {items.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Total: {total} items
-                </p>
-              )}
-            </div>
-
-            {/* Items Grid */}
-            {items.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <EmptyState
-                    icon={EmptyStateIcons.items}
-                    title="No Lost Items Found"
-                    description="No items match your current filters. Try adjusting your search criteria."
-                    action={{
-                      label: "Clear Filters",
-                      onClick: clearFilters
-                    }}
-                  />
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                {items.map((item) => (
-                  <ItemCard
-                    key={item.id}
-                    item={{
-                      id: item.id,
-                      title: item.title,
-                      description: item.description,
-                      itemType: item.itemType,
-                      status: item.status,
-                      location: item.location,
-                      createdAt: item.createdAt,
-                      images: item.images,
-                      postedBy: {
-                        name: item.postedBy.name,
-                        avatar: item.postedBy.avatar
-                      }
-                    }}
-                    user={user}
-                    showActions={true}
-                    variant="compact"
-                    onFound={() => handleFoundClick(item)}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                total={total}
-                className="mt-8"
-              />
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Claims Modal */}
       {selectedItem && (
         <ClaimsModal
           isOpen={claimsModalOpen}
@@ -347,6 +256,6 @@ export default function LostItemsPage() {
           onSuccess={handleClaimSuccess}
         />
       )}
-    </div>
+    </>
   );
 }

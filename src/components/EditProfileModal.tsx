@@ -1,36 +1,141 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { X } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface EditProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onProfileUpdate: (updatedData: { name: string }) => void;
+  /** Resolves once the profile PUT has been accepted; a rejection is shown inline. */
+  onProfileUpdate: (updatedData: { name: string }) => void | Promise<void>;
 }
 
-export default function EditProfileModal({ isOpen, onClose, onProfileUpdate }: EditProfileModalProps) {
+/** Everything focusable inside the dialog, for the Tab wrap. */
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+/**
+ * EditProfileModal
+ *
+ * A real dialog rather than a `<div>` that happens to sit on top of the page:
+ * `role="dialog"` + `aria-modal`, an accessible name through `aria-labelledby`,
+ * a described body through `aria-describedby`, focus moved into the dialog on
+ * open and returned to the trigger on close, Tab wrapped inside it, Escape and a
+ * backdrop click to dismiss, and page scroll locked while it is open.
+ *
+ * The surface is the one overlay elevation (`shadow-overlay`) at `rounded-xl`,
+ * with a title / body / actions hierarchy separated by hairlines instead of
+ * three competing borders. Error copy is plain `text-destructive` above the
+ * fields — no tinted error box.
+ *
+ * The scrim uses semantic tokens only: a dark wash in light mode, the page
+ * colour in dark mode (a single scrim token cannot darken *both* a white and a
+ * near-black page, and a light scrim in dark mode is the exact "light surface in
+ * dark mode" failure the brief warns about). `backdrop-blur-sm` carries the
+ * separation in the light theme.
+ */
+export default function EditProfileModal({
+  isOpen,
+  onClose,
+  onProfileUpdate,
+}: EditProfileModalProps) {
   const { data: session } = useSession();
-  const [formData, setFormData] = useState({
-    name: session?.user?.name || ''
-  });
+  const sessionName = session?.user?.name ?? '';
+
+  const [formData, setFormData] = useState({ name: sessionName });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Don't render if modal is not open
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+  const descriptionId = useId();
+  const errorId = `${titleId}-error`;
+
+  const handleClose = useCallback(() => {
+    // Dismissing mid-save would strand the request; the dialog stays put until
+    // it settles, and the close controls are disabled meanwhile.
+    if (loading) return;
+
+    setFormData({ name: sessionName });
+    setError(null);
+    onClose();
+  }, [loading, onClose, sessionName]);
+
+  /**
+   * The document-level Escape listener must always call the *current* close
+   * handler — including its `loading` guard — without re-attaching itself every
+   * time the handler's identity changes (it changes on submit). Routing through
+   * a ref keeps the listener attached once per open.
+   */
+  const closeRef = useRef(handleClose);
+  useEffect(() => {
+    closeRef.current = handleClose;
+  }, [handleClose]);
+
+  // Reset the form whenever the dialog opens, so a cancelled edit never leaks
+  // back in as a stale draft.
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({ name: sessionName });
+      setError(null);
+    }
+  }, [isOpen, sessionName]);
+
+  // Focus management, scroll lock, and Escape.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    restoreFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const focusTimer = window.setTimeout(() => nameInputRef.current?.focus(), 0);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeRef.current();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      restoreFocusRef.current?.focus();
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name.trim()) {
-      setError('Name is required');
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const trimmedName = formData.name.trim();
+
+    if (!trimmedName) {
+      setError('Enter your name to continue.');
+      nameInputRef.current?.focus();
       return;
     }
 
-    if (formData.name.trim().length < 2) {
-      setError('Name must be at least 2 characters');
+    if (trimmedName.length < 2) {
+      setError('Your name needs at least 2 characters.');
+      nameInputRef.current?.focus();
       return;
     }
 
@@ -38,118 +143,142 @@ export default function EditProfileModal({ isOpen, onClose, onProfileUpdate }: E
     setError(null);
 
     try {
-      // TODO: Implement actual API call to update user profile
-      // For now, simulate API call and update locally
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Update local session data (this would normally come from the API response)
-      onProfileUpdate({ name: formData.name.trim() });
-      
-      // Close modal after successful update
+      await onProfileUpdate({ name: trimmedName });
       onClose();
-      
     } catch {
-      setError('Failed to update profile. Please try again.');
+      setError('We could not save your profile. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   // Handle input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ name: event.target.value });
+
     // Clear error when user starts typing
     if (error) {
       setError(null);
     }
   };
 
-  // Close modal and reset state
-  const handleClose = () => {
-    setFormData({ name: session?.user?.name || '' });
-    setError(null);
-    onClose();
+  // Keep Tab inside the dialog while it is modal.
+  const handleDialogKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Tab') return;
+
+    const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+    if (!focusable || focusable.length === 0) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b">
-          <h2 className="text-xl font-semibold text-foreground">
-            Edit Profile
-          </h2>
-          <button
-            onClick={handleClose}
-            className="text-muted-foreground/70 hover:text-muted-foreground transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Email (read-only) */}
-          <div>
-            <label className="block text-sm font-medium text-foreground/85 mb-2">
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={session?.user?.email || ''}
-              disabled
-              className="w-full px-3 py-2 border border-border rounded-lg bg-muted text-muted-foreground cursor-not-allowed"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Email cannot be changed
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-foreground/25 p-4 backdrop-blur-sm dark:bg-background/85"
+      // A click that starts and ends on the scrim closes; a drag that starts
+      // inside the dialog never does.
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          handleClose();
+        }
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        onKeyDown={handleDialogKeyDown}
+        className="rise-in max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-xl border border-border-subtle bg-card shadow-overlay"
+      >
+        {/* Header — title and a quiet dismiss, closed by a hairline */}
+        <div className="flex items-start justify-between gap-6 border-b border-border-subtle px-6 py-5">
+          <div className="min-w-0">
+            <h2 id={titleId} className="text-xl font-semibold tracking-tight text-foreground">
+              Edit profile
+            </h2>
+            <p id={descriptionId} className="mt-1 text-sm text-muted-foreground">
+              This is the name other students see on your reports and claims.
             </p>
           </div>
 
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium text-foreground/85 mb-2">
-              Full Name *
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              placeholder="Enter your full name"
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
-              required
-              disabled={loading}
-            />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={handleClose}
+            disabled={loading}
+            aria-label="Close dialog"
+            className="-mr-2 -mt-1"
+          >
+            <X className="size-4" aria-hidden="true" />
+          </Button>
+        </div>
+
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="space-y-5 px-6 py-6">
+            {error && (
+              <p id={errorId} role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
+
+            {/* Email (read-only) */}
+            <div className="space-y-2">
+              <Label htmlFor="profile-email">Email address</Label>
+              <Input
+                id="profile-email"
+                type="email"
+                value={session?.user?.email ?? ''}
+                disabled
+                readOnly
+              />
+              <p className="text-xs text-muted-foreground">
+                Email is tied to your sign-in and cannot be changed here.
+              </p>
+            </div>
+
+            {/* Name */}
+            <div className="space-y-2">
+              <Label htmlFor="profile-name">
+                Full name <span aria-hidden="true">*</span>
+                <span className="sr-only">(required)</span>
+              </Label>
+              <Input
+                id="profile-name"
+                ref={nameInputRef}
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                placeholder="e.g. Aarav Sharma"
+                autoComplete="name"
+                required
+                disabled={loading}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? errorId : undefined}
+              />
+            </div>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
-
-          {/* Buttons */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="flex-1 px-4 py-2 border border-border text-foreground/85 rounded-lg hover:bg-muted/40 transition-colors"
-              disabled={loading}
-            >
+          {/* Actions — one primary, one quiet cancel */}
+          <div className="flex items-center justify-end gap-2 border-t border-border-subtle px-6 py-4">
+            <Button type="button" variant="ghost" onClick={handleClose} disabled={loading}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !formData.name.trim()}
-              className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? 'Updating...' : 'Update Profile'}
-            </button>
+            </Button>
+            <Button type="submit" loading={loading} disabled={!formData.name.trim()}>
+              {loading ? 'Saving…' : 'Save changes'}
+            </Button>
           </div>
         </form>
       </div>

@@ -2,10 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Download, Loader2, TrendingUp } from 'lucide-react';
+import BarChart from '@/components/ui/BarChart';
+import EmptyState from '@/components/ui/EmptyState';
+import SectionHeader from '@/components/ui/SectionHeader';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthFetch } from '@/lib/auth-fetch';
 import { showError } from '@/lib/toast-config';
 import { cn } from '@/lib/utils';
-import BarChart from '@/components/ui/BarChart';
 import { ANALYTICS_RANGES, type AnalyticsRange } from '@/lib/schemas/analytics';
 
 /**
@@ -14,6 +18,11 @@ import { ANALYTICS_RANGES, type AnalyticsRange } from '@/lib/schemas/analytics';
  *
  * Medians rather than means are reported for time-to-return, because one stale
  * item left unresolved for months would drag a mean into nonsense.
+ *
+ * Structure follows the redesign brief §4.7: the four headline figures are a
+ * plain numbers strip (no boxes around each number), and each chart is a
+ * section separated by a rule and whitespace rather than nested in its own
+ * bordered container.
  */
 
 interface AnalyticsResponse {
@@ -40,33 +49,52 @@ const RANGE_LABELS: Record<AnalyticsRange, string> = {
   all: 'All time',
 };
 
-function Stat({
-  label,
-  value,
-  hint,
-}: {
+export interface StatStripItem {
   label: string;
   value: string;
   hint?: string;
+}
+
+/**
+ * The shared headline numbers strip: label, figure, optional one-line hint.
+ * Deliberately boxless — a number does not need a container to be legible, and
+ * four bordered tiles out-shout the figures they hold.
+ */
+export function StatsStrip({
+  items,
+  className,
+}: {
+  items: readonly StatStripItem[];
+  className?: string;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{value}</p>
-      {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
-    </div>
+    <dl className={cn('grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4', className)}>
+      {items.map((item) => (
+        <div key={item.label} className="min-w-0">
+          <dt className="text-xs font-medium text-muted-foreground">{item.label}</dt>
+          <dd className="mt-1.5 text-2xl font-semibold tabular-nums text-foreground">
+            {item.value}
+            {item.hint && (
+              <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                {item.hint}
+              </span>
+            )}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
 function FunnelBar({ label, percent }: { label: string; percent: number }) {
   return (
     <div>
-      <div className="flex items-baseline justify-between">
+      <div className="flex items-baseline justify-between gap-4">
         <span className="text-sm text-foreground/85">{label}</span>
         <span className="text-sm font-medium tabular-nums text-foreground">{percent}%</span>
       </div>
       <div
-        className="mt-1 h-2 overflow-hidden rounded-full bg-muted"
+        className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted"
         role="progressbar"
         aria-valuenow={percent}
         aria-valuemin={0}
@@ -75,6 +103,70 @@ function FunnelBar({ label, percent }: { label: string; percent: number }) {
       >
         <div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} />
       </div>
+    </div>
+  );
+}
+
+/**
+ * A ranked list with a proportion bar per row. The bar carries the comparison —
+ * which is the only reason the list is here — so the numbers can stay quiet.
+ */
+function RankList({ entries }: { entries: readonly { id: string; name: string; count: number }[] }) {
+  const max = Math.max(1, ...entries.map((entry) => entry.count));
+
+  return (
+    <ul className="mt-3 divide-y divide-border-subtle">
+      {entries.map((entry) => (
+        <li key={entry.id} className="py-2.5">
+          <div className="flex items-baseline justify-between gap-4">
+            <span className="truncate text-sm text-foreground/85">{entry.name}</span>
+            <span className="text-sm tabular-nums text-muted-foreground">{entry.count}</span>
+          </div>
+          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+            <div
+              className="h-full rounded-full bg-primary/60"
+              style={{ width: `${(entry.count / max) * 100}%` }}
+            />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function AnalyticsSkeleton() {
+  return (
+    <div className="space-y-10" role="status" aria-label="Loading analytics">
+      <div className="grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-7 w-16" />
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-3">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-2">
+        <div className="space-y-3">
+          <Skeleton className="h-5 w-28" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-4/5" />
+        </div>
+        <div className="space-y-3">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-4/5" />
+        </div>
+      </div>
+
+      <span className="sr-only">Loading…</span>
     </div>
   );
 }
@@ -143,9 +235,13 @@ export default function AnalyticsPanel({ className }: { className?: string }) {
   );
 
   return (
-    <div className={cn('space-y-6', className)}>
+    <div className={cn('space-y-10', className)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1" role="group" aria-label="Reporting range">
+        <div
+          className="inline-flex flex-wrap gap-1 rounded-lg bg-muted p-1"
+          role="group"
+          aria-label="Reporting range"
+        >
           {ANALYTICS_RANGES.map((option) => (
             <button
               key={option}
@@ -154,6 +250,7 @@ export default function AnalyticsPanel({ className }: { className?: string }) {
               aria-pressed={range === option}
               className={cn(
                 'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                 range === option
                   ? 'bg-card text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground/85'
@@ -165,71 +262,79 @@ export default function AnalyticsPanel({ className }: { className?: string }) {
         </div>
 
         <div className="flex gap-2">
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => void exportCsv('items')}
             disabled={isExporting !== null}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground/85 transition-colors hover:bg-muted/40 disabled:opacity-50"
           >
             {isExporting === 'items' ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
             ) : (
-              <Download className="h-3.5 w-3.5" aria-hidden="true" />
+              <Download className="mr-2 size-4" aria-hidden="true" />
             )}
             Export items
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={() => void exportCsv('claims')}
             disabled={isExporting !== null}
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground/85 transition-colors hover:bg-muted/40 disabled:opacity-50"
           >
             {isExporting === 'claims' ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
             ) : (
-              <Download className="h-3.5 w-3.5" aria-hidden="true" />
+              <Download className="mr-2 size-4" aria-hidden="true" />
             )}
             Export claims
-          </button>
+          </Button>
         </div>
       </div>
 
       {isLoading ? (
-        <p className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          Loading analytics…
-        </p>
+        <AnalyticsSkeleton />
       ) : !data ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">No analytics available.</p>
+        <EmptyState
+          icon={<TrendingUp className="text-muted-foreground" aria-hidden="true" />}
+          title="No analytics for this range"
+          description="Nothing could be measured for the selected window. Try a wider range."
+          action={{ label: 'Try again', onClick: () => void load(), variant: 'outline' }}
+        />
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="Items posted" value={String(data.totals.posted)} />
-            <Stat label="Items returned" value={String(data.totals.resolved)} />
-            <Stat
-              label="Resolution rate"
-              value={`${(data.totals.resolutionRate * 100).toFixed(1)}%`}
-            />
-            <Stat
-              label="Median time to return"
-              value={data.medianTimeToReturnLabel}
-              hint="Median, so one stale item cannot skew it"
-            />
-          </div>
+          <StatsStrip
+            items={[
+              { label: 'Items posted', value: String(data.totals.posted) },
+              { label: 'Items returned', value: String(data.totals.resolved) },
+              {
+                label: 'Resolution rate',
+                value: `${(data.totals.resolutionRate * 100).toFixed(1)}%`,
+              },
+              {
+                label: 'Median time to return',
+                value: data.medianTimeToReturnLabel,
+                hint: 'Median, so one stale item cannot skew it',
+              },
+            ]}
+          />
 
-          <section className="rounded-lg border border-border bg-card p-4">
-            <h3 className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-              <TrendingUp className="h-4 w-4 text-primary" aria-hidden="true" />
-              Daily volume
-            </h3>
-            <div className="mt-3">
+          <section aria-labelledby="analytics-daily-volume">
+            <SectionHeader
+              as="h3"
+              id="analytics-daily-volume"
+              title="Daily volume"
+              description={`Reports posted and returns confirmed, ${RANGE_LABELS[range].toLowerCase()}.`}
+            />
+            <div className="mt-4">
               <BarChart
                 labels={data.dailySeries.map((point) => point.date)}
                 series={[
                   {
                     key: 'posted',
                     label: 'Posted',
-                    className: 'fill-info',
+                    className: 'fill-primary',
                     values: data.dailySeries.map((point) => point.posted),
                   },
                   {
@@ -244,10 +349,15 @@ export default function AnalyticsPanel({ className }: { className?: string }) {
             </div>
           </section>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <section className="rounded-lg border border-border bg-card p-4">
-              <h3 className="text-sm font-medium text-foreground">Claims funnel</h3>
-              <div className="mt-3 space-y-3">
+          <div className="grid gap-10 lg:grid-cols-2">
+            <section aria-labelledby="analytics-funnel">
+              <SectionHeader
+                as="h3"
+                id="analytics-funnel"
+                title="Claims funnel"
+                description="A claim only completes once a handover code is verified in person."
+              />
+              <div className="mt-4 space-y-4">
                 <FunnelBar label="Claims approved" percent={data.claimsFunnel.createdToApproved} />
                 <FunnelBar
                   label="Approved claims completed"
@@ -258,38 +368,30 @@ export default function AnalyticsPanel({ className }: { className?: string }) {
                   percent={data.claimsFunnel.createdToCompleted}
                 />
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">
-                A claim only completes once a handover code is verified in person.
-              </p>
             </section>
 
-            <section className="rounded-lg border border-border bg-card p-4">
-              <h3 className="text-sm font-medium text-foreground">Top locations</h3>
+            <section aria-labelledby="analytics-places">
+              <SectionHeader
+                as="h3"
+                id="analytics-places"
+                title="Where things turn up"
+                description="Reports by campus zone and by category."
+              />
+
+              <h4 className="mt-4 text-xs font-medium text-muted-foreground">Top locations</h4>
               {data.topZones.length === 0 ? (
                 <p className="mt-3 text-sm text-muted-foreground">No zone data in this range.</p>
               ) : (
-                <ul className="mt-3 space-y-2">
-                  {data.topZones.map((zone) => (
-                    <li key={zone.id} className="flex items-center justify-between text-sm">
-                      <span className="text-foreground/85">{zone.name}</span>
-                      <span className="tabular-nums text-foreground">{zone.count}</span>
-                    </li>
-                  ))}
-                </ul>
+                <RankList entries={data.topZones} />
               )}
 
-              <h3 className="mt-5 text-sm font-medium text-foreground">Top categories</h3>
+              <h4 className="mt-6 text-xs font-medium text-muted-foreground">Top categories</h4>
               {data.topCategories.length === 0 ? (
-                <p className="mt-3 text-sm text-muted-foreground">No category data in this range.</p>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No category data in this range.
+                </p>
               ) : (
-                <ul className="mt-3 space-y-2">
-                  {data.topCategories.map((category) => (
-                    <li key={category.id} className="flex items-center justify-between text-sm">
-                      <span className="text-foreground/85">{category.name}</span>
-                      <span className="tabular-nums text-foreground">{category.count}</span>
-                    </li>
-                  ))}
-                </ul>
+                <RankList entries={data.topCategories} />
               )}
             </section>
           </div>

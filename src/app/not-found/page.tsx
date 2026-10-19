@@ -1,21 +1,32 @@
 import Link from 'next/link';
+
 import { Button } from '@/components/ui/button';
 
-export default function NotFound() {
+/**
+ * The `/not-found` route.
+ *
+ * Same shape as the app-level 404 (brief §4.9): centred, `max-w-md`, one
+ * sentence, one action, no box. Kept deliberately identical so a mistyped URL
+ * and an unmatched route are indistinguishable to the user.
+ */
+export default function NotFoundPage() {
   return (
-    <div className="min-h-screen bg-muted/40 flex items-center justify-center px-4">
-      <div className="text-center">
-        <h1 className="text-9xl font-bold text-muted-foreground/50">404</h1>
-        <h2 className="text-2xl font-semibold text-foreground mb-4">Page Not Found</h2>
-        <p className="text-muted-foreground mb-8">
-          The page you&apos;re looking for doesn&apos;t exist or has been moved.
+    <main className="flex min-h-[70vh] items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md text-center">
+        <p className="text-sm font-medium text-muted-foreground">404</p>
+
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+          Page not found
+        </h1>
+
+        <p className="mt-3 text-base text-foreground/85">
+          That link does not lead anywhere — the page may have been moved or removed.
         </p>
-        <Link href="/">
-          <Button className="btn-enhanced">
-            Go Home
-          </Button>
-        </Link>
+
+        <Button asChild size="lg" className="mt-8">
+          <Link href="/">Go to the homepage</Link>
+        </Button>
       </div>
-    </div>
+    </main>
   );
 }

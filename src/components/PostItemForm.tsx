@@ -4,7 +4,17 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { z } from 'zod';
-import { AlertTriangle } from 'lucide-react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  PackageCheck,
+  PackageSearch,
+  PencilLine,
+} from 'lucide-react';
+
+import { cn } from '@/lib/utils';
 import { sanitizeInput } from '@/lib/security';
 import { showSuccess, showError } from '@/lib/toast-config';
 import { useAuthFetch } from '@/lib/auth-fetch';
@@ -17,12 +27,10 @@ import {
 import ImageUpload from '@/components/ImageUpload';
 
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import PageHeader from '@/components/ui/PageHeader';
 import TagPill from '@/components/ui/TagPill';
-import ValidationInput from '@/components/forms/ValidationInput';
-import FieldError from '@/components/forms/FieldError';
-import FormError from '@/components/forms/FormError';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import { createItemSchema } from '@/lib/schemas/item';
 import { ButtonSpinner } from '@/components/ui/loading-spinner';
@@ -84,6 +92,26 @@ interface DuplicateWarning {
 /** The tag shape the API accepts once normalised. */
 const TAG_PATTERN = /^[a-z0-9-]+$/;
 
+/** Human names for the fields an invalid submit can point at. */
+const FIELD_LABELS: Partial<Record<keyof ItemFormValues, string>> = {
+  itemType: 'item status',
+  title: 'title',
+  description: 'description',
+  location: 'location',
+};
+
+/**
+ * Every control in the form shares one shape: `Input`/`Textarea` own their focus
+ * ring, and the selects below mirror those classes rather than re-deriving them,
+ * so a focused select looks like a focused input (brief §4.3, §4.8).
+ */
+const SELECT_CLASSES = [
+  'h-10 w-full appearance-none rounded-lg border border-input bg-transparent pl-3 pr-10 text-base text-foreground shadow-xs transition-colors md:text-sm',
+  'placeholder:text-muted-foreground',
+  'focus:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+  'disabled:cursor-not-allowed disabled:opacity-50',
+].join(' ');
+
 /**
  * Normalise and validate a tag list in one pass.
  *
@@ -131,6 +159,56 @@ function normalizeTags(rawTags: string[]): { tags: string[]; error: string | nul
   return { tags, error };
 }
 
+interface FieldProps {
+  /** Control id; also the base for the message element's id. */
+  id: string;
+  label: string;
+  optional?: boolean;
+  error?: string;
+  hint?: React.ReactNode;
+  /** Extra content under the control — a character count, a live help line. */
+  footer?: React.ReactNode;
+  children: React.ReactNode;
+}
+
+/**
+ * One field, one row: label above the control, message below it, and the three
+ * tied together by `htmlFor` / `aria-describedby`. The message element is always
+ * rendered so the described-by target exists whether or not there is an error.
+ */
+function Field({ id, label, optional = false, error, hint, footer, children }: FieldProps) {
+  const messageId = `${id}-message`;
+
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium text-foreground">
+        {label}
+        {optional && <span className="ml-2 font-normal text-muted-foreground">Optional</span>}
+      </label>
+
+      <div className="mt-2">{children}</div>
+
+      <div id={messageId} className="mt-2 space-y-1">
+        {error ? (
+          <p role="alert" className="flex items-start gap-1.5 text-sm text-destructive">
+            <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <span>{error}</span>
+          </p>
+        ) : hint ? (
+          <p className="text-sm text-muted-foreground">{hint}</p>
+        ) : null}
+
+        {footer}
+      </div>
+    </div>
+  );
+}
+
+/** Border colour for a control that failed validation. Focus styling is untouched. */
+function invalidBorder(hasError: boolean): string | undefined {
+  return hasError ? 'border-destructive' : undefined;
+}
+
 interface PostItemFormProps {
   className?: string;
 }
@@ -163,6 +241,7 @@ export default function PostItemForm({ className }: PostItemFormProps) {
     errors,
     isValid,
     isSubmitting,
+    submitError,
     setFieldValue,
     setFieldTouched,
     validateForm,
@@ -273,13 +352,13 @@ export default function PostItemForm({ className }: PostItemFormProps) {
             : []
         );
 
-        setTimeout(() => {
-          setFieldTouched('title', true);
-          setFieldTouched('description', true);
-          setFieldTouched('itemType', true);
-          setFieldTouched('location', true);
-          validateForm();
-        }, 0);
+        // The hook validates from the value it was just handed, so this no
+        // longer needs to be deferred to a timeout to see the prefilled values.
+        setFieldTouched('title', true);
+        setFieldTouched('description', true);
+        setFieldTouched('itemType', true);
+        setFieldTouched('location', true);
+        validateForm();
       } else {
         localStorage.removeItem('editItem');
       }
@@ -525,194 +604,199 @@ export default function PostItemForm({ className }: PostItemFormProps) {
     }
   };
 
+  const isBusy = isSubmitting || isLoading;
+
+  /**
+   * Value/change/blur only.
+   *
+   * `getFieldProps` also carries validation metadata (`error`, `touched`,
+   * `isValid`), which belongs in aria attributes rather than on the DOM node —
+   * spreading it straight into an `<input>` would emit invalid attributes.
+   */
+  const bind = (field: keyof ItemFormValues) => {
+    const { value, onChange, onBlur } = getFieldProps(field);
+    return { value, onChange, onBlur };
+  };
+
+  /**
+   * What a blocked submit says.
+   *
+   * `submitError` comes from the hook and is authoritative; naming the fields
+   * that failed turns "the button did nothing" into an instruction. The message
+   * sits next to the submit bar because that is where the user just clicked.
+   */
+  const blockedFields = Object.keys(errors) as (keyof ItemFormValues)[];
+  const blockedSubmitMessage = !submitError
+    ? null
+    : blockedFields.length > 0
+      ? `Please check the ${blockedFields.map((field) => FIELD_LABELS[field] ?? field).join(', ')} before posting.`
+      : submitError;
+
   return (
-    <Card className={`max-w-2xl mx-auto p-6 ${isEditMode ? 'border-2 border-info/30 shadow-lg' : ''} ${className}`}>
+    <div className={cn('rise-in', className)}>
+      <PageHeader
+        title={isEditMode ? 'Edit item' : 'Post an item'}
+        description={
+          isEditMode
+            ? 'Update the details below. Saving replaces the current listing.'
+            : 'Describe what you lost or found, and where. A photo and a precise location are what make a match.'
+        }
+      />
+
       {isEditMode && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg bg-primary px-4 py-3 text-primary-foreground shadow-md">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-          <div>
-            <p className="font-semibold text-sm">✏️ EDIT MODE</p>
-            <p className="text-xs opacity-90">You are updating an existing item</p>
-          </div>
-        </div>
-      )}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground mb-2">
-          {isEditMode ? 'Edit Item Details' : 'Post a Lost or Found Item'}
-        </h1>
-        <p className="text-muted-foreground">
-          {isEditMode
-            ? 'Update the information for your item. Changes are saved once you submit.'
-            : 'Help reunite lost items with their owners or report items you\'ve found.'}
+        <p className="mt-6 flex items-start gap-2 text-sm text-muted-foreground">
+          <PencilLine className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          You are editing an existing item. Cancel at the bottom to leave it unchanged.
         </p>
-      </div>
+      )}
 
-      {/* API Error Display */}
-      <FormError error={error || undefined} className="mb-6" />
-
-      {/* Success Message */}
-      {success && (
-        <div className="bg-success/10 border border-success/30 rounded-lg p-4 text-success mb-6">
-          <p>✅ {success}</p>
+      {/* Transport / API failures sit at the top, above the fields they belong to. */}
+      {error && (
+        <div role="alert" className="mt-8 border-l-2 border-destructive bg-destructive/5 px-4 py-3">
+          <p className="text-sm text-destructive">{error}</p>
         </div>
       )}
 
-      {/* Duplicate warning: 409 DUPLICATE_SUSPECTED from POST /api/items */}
-      {duplicateWarning && (
-        <div role="alert" className="bg-warning/10 border border-warning/30 rounded-lg p-4 mb-6">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 flex-shrink-0 text-warning" aria-hidden="true" />
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-warning">Possible duplicate</p>
-              <p className="text-sm text-warning mt-1">
-                {duplicateWarning.candidates.length === 1
-                  ? 'You recently posted a very similar item:'
-                  : 'You recently posted very similar items:'}
-              </p>
-
-              <ul className="mt-3 space-y-2">
-                {duplicateWarning.candidates.map((candidate) => (
-                  <li key={candidate.id} className="bg-card border border-warning/30 rounded-md p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <Link
-                          href={`/item/${candidate.id}`}
-                          className="text-sm font-medium text-foreground hover:text-primary hover:underline"
-                        >
-                          {candidate.title}
-                        </Link>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {candidate.location} · {candidate.itemType === 'LOST' ? 'Lost' : 'Found'} ·{' '}
-                          {new Date(candidate.createdAt).toLocaleDateString()}
-                        </p>
-                        {candidate.reasons.length > 0 && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {candidate.reasons.slice(0, 3).map((reason) => reason.label).join(' · ')}
-                          </p>
-                        )}
-                      </div>
-                      <span className="text-xs font-semibold text-warning whitespace-nowrap">
-                        {Math.round(candidate.score)}% match
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="flex gap-3 mt-4">
-                <Button
-                  type="button"
-                  variant="warning"
-                  onClick={handlePostAnyway}
-                  disabled={isLoading}
-                >
-                  Post anyway
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDuplicateWarning(null)}
-                  disabled={isLoading}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Item Type Selection */}
-        <div>
-          <label className="block text-sm font-medium text-foreground/85 mb-3">
-            Item Status
-          </label>
-          <div className="flex gap-4">
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="itemType"
-                value="LOST"
-                checked={values.itemType === 'LOST'}
-                onChange={(e) => getFieldProps('itemType').onChange(e)}
-                onBlur={getFieldProps('itemType').onBlur}
-                className="mr-2"
-              />
-              <span className="text-sm font-medium text-destructive">🔍 I Lost This</span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="itemType"
-                value="FOUND"
-                checked={values.itemType === 'FOUND'}
-                onChange={(e) => getFieldProps('itemType').onChange(e)}
-                onBlur={getFieldProps('itemType').onBlur}
-                className="mr-2"
-              />
-              <span className="text-sm font-medium text-success">✨ I Found This</span>
-            </label>
-          </div>
-          <FieldError error={errors.itemType} />
-        </div>
-
-        {/* Title Field */}
-        <ValidationInput
-          {...getFieldProps('title')}
-          label="Item Title"
-          placeholder="e.g., Black iPhone 13, Blue Nike Shoes, Car Keys"
-          error={errors.title}
-          isValid={!!values.title && !errors.title}
-          showCheckIcon={true}
-          helperText="Give a brief, descriptive title for the item"
-        />
-
-        {/* Description Field */}
-        <div>
-          <label className="block text-sm font-medium text-foreground/85 mb-2">
-            Description
-          </label>
-          <Textarea
-            {...getFieldProps('description')}
-            placeholder="Describe the item in detail... Where did you lose/find it? What makes it unique?"
-            rows={4}
-            className={errors.description 
-              ? 'border-destructive/30 focus:border-destructive/30' 
-              : ''
-            }
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-10 space-y-8" noValidate>
+        {/* The uploader is the hero: a photo is the single most useful field on
+            this form, so it leads instead of hiding below the fold. */}
+        <Field
+          id="item-image"
+          label="Photo"
+          optional
+          hint="A clear photo of the item itself, not the surroundings. It is compressed automatically."
+        >
+          <ImageUpload
+            inputId="item-image"
+            onImageUpload={setImageUrl}
+            onImageRemove={() => setImageUrl(null)}
+            currentImage={imageUrl}
           />
-          <FieldError error={errors.description} />
-          <p className="text-sm text-muted-foreground mt-1">
-            {values.description.length}/2000 characters
-          </p>
-        </div>
+        </Field>
 
-        {/* Location Field */}
-        <ValidationInput
-          {...getFieldProps('location')}
+        {/* Item type is one field with two options, so the options share a row. */}
+        <fieldset>
+          <legend className="text-sm font-medium text-foreground">Item status</legend>
+          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+            {([
+              {
+                value: 'LOST' as const,
+                label: 'I lost this',
+                description: 'You are looking for it',
+                Icon: PackageSearch,
+              },
+              {
+                value: 'FOUND' as const,
+                label: 'I found this',
+                description: 'You picked it up',
+                Icon: PackageCheck,
+              },
+            ]).map(({ value, label, description, Icon }) => (
+              <label
+                key={value}
+                className={cn(
+                  'flex cursor-pointer items-start gap-3 rounded-lg border border-input p-4 transition-colors',
+                  'hover:bg-accent/50',
+                  'has-[:checked]:border-primary has-[:checked]:bg-primary/5',
+                  'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background'
+                )}
+              >
+                <input
+                  type="radio"
+                  name="itemType"
+                  value={value}
+                  checked={values.itemType === value}
+                  onChange={(event) => getFieldProps('itemType').onChange(event)}
+                  onBlur={getFieldProps('itemType').onBlur}
+                  className="sr-only"
+                />
+                <Icon className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span className="min-w-0">
+                  <span className="block text-base font-medium text-foreground">{label}</span>
+                  <span className="mt-0.5 block text-sm text-muted-foreground">{description}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          <div id="item-type-message" className="mt-2">
+            {errors.itemType && (
+              <p role="alert" className="flex items-start gap-1.5 text-sm text-destructive">
+                <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <span>{errors.itemType}</span>
+              </p>
+            )}
+          </div>
+        </fieldset>
+
+        <Field
+          id="item-title"
+          label="Title"
+          error={errors.title}
+          hint="Be specific: “Black iPhone 13 with a cracked corner” finds its owner."
+        >
+          <Input
+            id="item-title"
+            {...bind('title')}
+            placeholder="Black iPhone 13, blue water bottle, car keys"
+            aria-invalid={!!errors.title}
+            aria-describedby="item-title-message"
+            className={invalidBorder(!!errors.title)}
+          />
+        </Field>
+
+        <Field
+          id="item-description"
+          label="Description"
+          error={errors.description}
+          hint="Anything that would let the owner recognise it — colour, brand, stickers, contents."
+          footer={
+            <p className="text-sm text-muted-foreground">
+              {values.description.length}/2000 characters
+            </p>
+          }
+        >
+          <Textarea
+            id="item-description"
+            {...bind('description')}
+            placeholder="Where did you lose or find it? What makes it unmistakably yours?"
+            rows={5}
+            maxLength={2000}
+            aria-invalid={!!errors.description}
+            aria-describedby="item-description-message"
+            className={cn('text-base md:text-sm', invalidBorder(!!errors.description))}
+          />
+        </Field>
+
+        <Field
+          id="item-location"
           label="Location"
-          placeholder="e.g., Library, Cafeteria, Parking Lot A"
           error={errors.location}
-          isValid={!!values.location && !errors.location}
-          showCheckIcon={true}
-          helperText="Where was the item lost or found?"
-        />
+          hint="The building, room, or stop where it was lost or found."
+        >
+          <Input
+            id="item-location"
+            {...bind('location')}
+            placeholder="Library, 2nd floor — Cafeteria — Parking Lot A"
+            aria-invalid={!!errors.location}
+            aria-describedby="item-location-message"
+            className={invalidBorder(!!errors.location)}
+          />
+        </Field>
 
-        {/* Category and Zone (held in local state, not in the string-only hook) */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="item-category" className="block text-sm font-medium text-foreground/85 mb-2">
-              Category (Optional)
-            </label>
+        <Field
+          id="item-category"
+          label="Category"
+          optional
+          hint="Used to match this report against the opposite side."
+        >
+          <div className="relative">
             <select
               id="item-category"
               value={categorySlug}
-              onChange={(e) => setCategorySlug(e.target.value)}
-              disabled={isLoading || taxonomyLoading}
-              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring disabled:bg-muted/40 disabled:text-muted-foreground"
+              onChange={(event) => setCategorySlug(event.target.value)}
+              disabled={isBusy || taxonomyLoading}
+              aria-describedby="item-category-message"
+              className={SELECT_CLASSES}
             >
               <option value="">
                 {taxonomyLoading ? 'Loading categories…' : 'Select a category'}
@@ -723,18 +807,27 @@ export default function PostItemForm({ className }: PostItemFormProps) {
                 </option>
               ))}
             </select>
+            <ChevronDown
+              className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
           </div>
+        </Field>
 
-          <div>
-            <label htmlFor="item-zone" className="block text-sm font-medium text-foreground/85 mb-2">
-              Campus Zone (Optional)
-            </label>
+        <Field
+          id="item-zone"
+          label="Campus zone"
+          optional
+          hint="Zones are how the map and match scores narrow down where an item went missing."
+        >
+          <div className="relative">
             <select
               id="item-zone"
               value={zoneSlug}
-              onChange={(e) => setZoneSlug(e.target.value)}
-              disabled={isLoading || taxonomyLoading}
-              className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring disabled:bg-muted/40 disabled:text-muted-foreground"
+              onChange={(event) => setZoneSlug(event.target.value)}
+              disabled={isBusy || taxonomyLoading}
+              aria-describedby="item-zone-message"
+              className={SELECT_CLASSES}
             >
               <option value="">
                 {taxonomyLoading ? 'Loading zones…' : 'Select a zone'}
@@ -745,15 +838,27 @@ export default function PostItemForm({ className }: PostItemFormProps) {
                 </option>
               ))}
             </select>
+            <ChevronDown
+              className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
           </div>
-        </div>
+        </Field>
 
-        {/* Tags */}
-        <div>
-          <label htmlFor="item-tags" className="block text-sm font-medium text-foreground/85 mb-2">
-            Tags (Optional)
-          </label>
-          <div className="flex flex-wrap items-center gap-2 w-full px-3 py-2 border border-border rounded-md focus-within:border-ring focus-within:ring-2 focus-within:ring-ring">
+        <Field
+          id="item-tags"
+          label="Tags"
+          optional
+          error={tagError ?? undefined}
+          hint={`Press Enter or comma to add a tag — up to ${MAX_TAGS_PER_ITEM} tags of ${MIN_TAG_LENGTH}-${MAX_TAG_LENGTH} characters (letters, numbers, and hyphens).`}
+        >
+          <div
+            className={cn(
+              'flex w-full flex-wrap items-center gap-2 rounded-lg border border-input bg-transparent px-2.5 py-2 shadow-xs transition-colors',
+              'focus-within:border-ring focus-within:ring-2 focus-within:ring-ring',
+              invalidBorder(!!tagError)
+            )}
+          >
             {tags.map((tag) => (
               <TagPill
                 key={tag}
@@ -770,67 +875,143 @@ export default function PostItemForm({ className }: PostItemFormProps) {
               value={tagInput}
               onChange={handleTagInputChange}
               onKeyDown={handleTagKeyDown}
-              disabled={isLoading}
-              placeholder={tags.length > 0 ? 'Add another tag…' : 'e.g., leather, blue, water-bottle'}
-              aria-describedby="item-tags-help"
-              className="flex-1 min-w-[8rem] border-0 p-0 text-sm focus:outline-none focus:ring-0 disabled:bg-transparent"
+              disabled={isBusy}
+              placeholder={tags.length > 0 ? 'Add another tag…' : 'leather, blue, water-bottle'}
+              aria-describedby="item-tags-message"
+              aria-invalid={!!tagError}
+              className="min-w-[8rem] flex-1 border-0 bg-transparent px-1 py-1 text-base text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50 md:text-sm"
             />
           </div>
-          <p id="item-tags-help" className="text-sm text-muted-foreground mt-1">
-            Press Enter or comma to add a tag — up to {MAX_TAGS_PER_ITEM} tags of{' '}
-            {MIN_TAG_LENGTH}-{MAX_TAG_LENGTH} characters (letters, numbers, and hyphens).
+        </Field>
+
+        {/* Feedback for the action below, kept in view with it: a blocked submit
+            and the duplicate confirmation both belong next to the button that
+            caused them. */}
+        {blockedSubmitMessage && (
+          <div role="alert" className="border-l-2 border-destructive bg-destructive/5 px-4 py-3">
+            <p className="text-sm text-destructive">{blockedSubmitMessage}</p>
+          </div>
+        )}
+
+        {duplicateWarning && (
+          <div role="alert" className="rounded-xl border border-warning/30 bg-warning/5 p-5">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden="true" />
+              <div className="min-w-0">
+                <p className="text-base font-medium text-foreground">Possible duplicate</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {duplicateWarning.candidates.length === 1
+                    ? 'This looks like an item you already posted:'
+                    : 'This looks like items you already posted:'}{' '}
+                  Post it anyway only if it is a different item.
+                </p>
+              </div>
+            </div>
+
+            <ul className="mt-4 space-y-2">
+              {duplicateWarning.candidates.map((candidate) => (
+                <li key={candidate.id}>
+                  <Link
+                    href={`/item/${candidate.id}`}
+                    className="card-surface block p-3 transition-shadow hover:shadow-card-hover"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-medium text-foreground">
+                          {candidate.title}
+                        </p>
+                        <p className="mt-0.5 text-sm text-muted-foreground">
+                          {candidate.location} · {candidate.itemType === 'LOST' ? 'Lost' : 'Found'} ·{' '}
+                          {new Date(candidate.createdAt).toLocaleDateString()}
+                        </p>
+                        {candidate.reasons.length > 0 && (
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {candidate.reasons.slice(0, 3).map((reason) => reason.label).join(' · ')}
+                          </p>
+                        )}
+                      </div>
+                      <span className="shrink-0 text-sm font-medium text-warning">
+                        {Math.round(candidate.score)}% match
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                variant="warning"
+                onClick={handlePostAnyway}
+                disabled={isBusy}
+              >
+                Post anyway
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDuplicateWarning(null)}
+                disabled={isBusy}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {success && (
+          <p role="status" className="flex items-center gap-2 text-sm text-success">
+            <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
+            {success}
           </p>
-          <FieldError error={tagError ?? undefined} />
-        </div>
+        )}
 
-        {/* Image Upload Field */}
-        <div>
-          <label className="block text-sm font-medium text-foreground/85 mb-3">
-            Item Image (Optional)
-          </label>
-          <ImageUpload
-            onImageUpload={setImageUrl}
-            onImageRemove={() => setImageUrl(null)}
-            currentImage={imageUrl}
-          />
-        </div>
-
-        {/* Submit Button */}
-        <div className="flex gap-3">
-          {isEditMode && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                localStorage.removeItem('editItem');
-                router.push('/dashboard');
-              }}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-          )}
-          <Button
-            type="submit"
-            disabled={!isValid || isSubmitting || isLoading || isAuthLoading}
-            className={isEditMode ? 'flex-1' : 'w-full'}
-          >
-            {isLoading ? (
-              <>
-                <ButtonSpinner className="mr-2" />
-                {isEditMode ? 'Saving Changes...' : 'Posting Item...'}
-              </>
-            ) : isAuthLoading ? (
-              <>
-                <ButtonSpinner className="mr-2" />
-                Loading...
-              </>
-            ) : (
-              isEditMode ? 'Save Changes' : 'Post Item'
+        {/* Sticky on mobile so the primary action never scrolls away; an inline
+            row on desktop, where the whole form is visible anyway. */}
+        <div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-background/95 px-4 py-4 backdrop-blur-sm sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+          <div className="flex items-center gap-3">
+            {isEditMode && (
+              <Button
+                type="button"
+                variant="quiet"
+                onClick={() => {
+                  localStorage.removeItem('editItem');
+                  setIsEditMode(false);
+                  setEditingItemId(null);
+                  router.push('/dashboard');
+                }}
+                disabled={isBusy}
+              >
+                Cancel
+              </Button>
             )}
-          </Button>
+
+            <Button
+              type="submit"
+              size="lg"
+              className="flex-1 sm:flex-none sm:min-w-44"
+              disabled={!isValid || isBusy || isAuthLoading}
+            >
+              {isLoading ? (
+                <>
+                  <ButtonSpinner className="mr-2" />
+                  {isEditMode ? 'Saving changes…' : 'Posting item…'}
+                </>
+              ) : isAuthLoading ? (
+                <>
+                  <ButtonSpinner className="mr-2" />
+                  Checking your session…
+                </>
+              ) : isEditMode ? (
+                'Save changes'
+              ) : (
+                'Post item'
+              )}
+            </Button>
+          </div>
         </div>
       </form>
-    </Card>
+    </div>
   );
 }

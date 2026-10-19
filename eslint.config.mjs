@@ -10,6 +10,9 @@ const eslintConfig = [
       "build/**",
       "coverage/**",
       "next-env.d.ts",
+      // Agent/verification scratch output — never project source
+      ".tmp-*/**",
+      ".tmp-*",
       "src/generated/**",
       "prisma/generated/**",
     ],

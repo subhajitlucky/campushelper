@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Loader2, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useAuthFetch } from '@/lib/auth-fetch';
 import { showError, showSuccess } from '@/lib/toast-config';
 import { cn } from '@/lib/utils';
@@ -9,9 +10,12 @@ import { cn } from '@/lib/utils';
 /**
  * Bulk moderation bar.
  *
- * Appears once rows are selected. Bulk actions are destructive at scale, so the
- * API requires a reason for anything but a restore, and every change is
- * individually audited.
+ * Appears once rows are selected, docked to the bottom of the viewport so the
+ * selection and the action stay in view while the table scrolls behind it
+ * (brief §4.7: a sticky footer bar, never an inline block in the table).
+ *
+ * Bulk actions are destructive at scale, so the API requires a reason for
+ * anything but a restore, and every change is individually audited.
  */
 
 export type BulkItemAction = 'FLAG' | 'REMOVE' | 'RESTORE';
@@ -41,6 +45,10 @@ const USER_ACTIONS: { value: BulkUserAction; label: string; destructive: boolean
   { value: 'DEACTIVATE', label: 'Deactivate', destructive: true },
   { value: 'REACTIVATE', label: 'Reactivate', destructive: false },
 ];
+
+/** Native controls get the same focus ring as every other control on the page. */
+const FIELD =
+  'rounded-lg border border-input bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
 export default function BulkActionBar({
   target,
@@ -115,22 +123,22 @@ export default function BulkActionBar({
   return (
     <div
       className={cn(
-        'sticky bottom-0 z-10 flex flex-wrap items-center gap-3 rounded-lg border border-info/30 bg-info/10 p-3 shadow-sm',
+        'sticky bottom-4 z-20 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border-subtle bg-card/95 p-3 shadow-card backdrop-blur',
         className
       )}
       role="region"
       aria-label={`Bulk actions for ${selectedIds.length} selected ${target}`}
     >
-      <p className="text-sm font-medium text-primary">
+      <p className="text-sm font-medium tabular-nums text-foreground">
         {selectedIds.length} selected
       </p>
 
-      <label className="text-sm text-primary">
+      <label className="text-sm">
         <span className="sr-only">Bulk action</span>
         <select
           value={action}
           onChange={(event) => setAction(event.target.value)}
-          className="rounded-md border border-info/30 bg-card px-2 py-1.5 text-sm"
+          className={FIELD}
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -140,36 +148,42 @@ export default function BulkActionBar({
         </select>
       </label>
 
-      <label className="min-w-[12rem] flex-1 text-sm text-primary">
+      <label className="min-w-[12rem] flex-1 text-sm">
         <span className="sr-only">Reason (recorded in the audit log)</span>
         <input
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           placeholder={reasonRequired ? 'Reason (required, recorded in audit log)' : 'Reason (optional)'}
           maxLength={500}
-          className="w-full rounded-md border border-info/30 px-2 py-1.5 text-sm"
+          className={cn(FIELD, 'w-full')}
         />
       </label>
 
-      <button
+      <p className="hidden text-xs text-muted-foreground lg:block">
+        Recorded in the audit log
+      </p>
+
+      <Button
         type="button"
+        size="sm"
+        variant={selected?.destructive ? 'destructive' : 'default'}
         onClick={() => void submit()}
         disabled={isSubmitting}
-        className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
       >
-        {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+        {isSubmitting && <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />}
         Apply
-      </button>
+      </Button>
 
-      <button
+      <Button
         type="button"
+        size="icon-sm"
+        variant="ghost"
         onClick={onClear}
         disabled={isSubmitting}
         aria-label="Clear selection"
-        className="rounded p-1.5 text-primary transition-colors hover:bg-info/10 disabled:opacity-50"
       >
-        <X className="h-4 w-4" aria-hidden="true" />
-      </button>
+        <X className="size-4" aria-hidden="true" />
+      </Button>
     </div>
   );
 }

@@ -1,109 +1,52 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, CheckCircle, Clock } from "lucide-react";
-
 /**
- * DashboardStats Component
+ * DashboardStats
  *
- * PURPOSE:
- * - Shows quick stats about user's activity
- * - Displayed at top of dashboard
- * - Client component for smooth UI updates
+ * The dashboard's opening figures: three or four large numbers with micro
+ * labels, and nothing else. This used to be a row of shadcn `<Card>`s — each one
+ * a bordered box wrapping a 14px label and a single number, which is the
+ * anti-pattern the redesign brief deletes on sight (§3: "a bordered box whose
+ * only content is a heading and a short paragraph").
+ *
+ * Grouping is done with a grid and whitespace, so the numbers carry the
+ * hierarchy on their own. Type comes straight from the ladder (§2): the value is
+ * the stat role (`text-2xl font-semibold tabular-nums`), the label is micro
+ * (`text-xs font-medium text-muted-foreground`). Weight never exceeds 600.
+ *
+ * Marked up as a description list so the label/value pairing survives without
+ * sight — `flex-col-reverse` puts the number first visually while keeping
+ * `<dt>` before `<dd>` in the DOM.
  */
-interface DashboardStatsProps {
-  postedCount: number;
-  claimedCount: number;
-  pendingClaimsCount: number;
+
+export interface DashboardStat {
+  /** Micro label under the number, e.g. "Items posted". */
+  label: string;
+  /** The figure itself. */
+  value: number;
 }
 
-export default function DashboardStats({
-  postedCount,
-  claimedCount,
-  pendingClaimsCount
-}: DashboardStatsProps) {
-  const stats = [
-    {
-      title: "Items Posted",
-      value: postedCount,
-      description: "Lost items you've reported",
-      icon: Package,
-      color: "text-primary"
-    },
-    {
-      title: "Items Claimed",
-      value: claimedCount,
-      description: "Found items you've claimed",
-      icon: CheckCircle,
-      color: "text-success"
-    },
-    {
-      title: "Pending Claims",
-      value: pendingClaimsCount,
-      description: "Claims awaiting your review",
-      icon: Clock,
-      color: "text-warning"
-    }
-  ];
+interface DashboardStatsProps {
+  stats: DashboardStat[];
+  className?: string;
+}
+
+export default function DashboardStats({ stats, className = "" }: DashboardStatsProps) {
+  if (stats.length === 0) {
+    return null;
+  }
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      {stats.map((stat) => {
-        const Icon = stat.icon;
-        return (
-          <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {stat.title}
-              </CardTitle>
-              <Icon className={`h-4 w-4 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stat.description}
-              </p>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+    <dl
+      className={`grid grid-cols-2 gap-x-8 gap-y-8 sm:grid-cols-4 ${className}`}
+      aria-label="Your activity"
+    >
+      {stats.map((stat) => (
+        <div key={stat.label} className="flex flex-col-reverse gap-1.5">
+          <dt className="text-xs font-medium text-muted-foreground">{stat.label}</dt>
+          <dd className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">
+            {stat.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
-
-/*
-COMPONENT DESIGN:
-
-1. Stateless:
-   - Only receives data as props
-   - No internal state or effects
-   - Pure render function
-
-2. Reusable:
-   - Accepts any numbers as props
-   - Works for any user's stats
-   - Easy to modify or extend
-
-3. Visual Hierarchy:
-   - Large numbers for quick scanning
-   - Icons for visual recognition
-   - Color coding for different types
-
-ALTERNATIVE APPROACHES:
-
-1. Static (Current):
-   - Good for simple displays
-   - Easy to understand
-   - Minimal re-renders
-
-2. Animated Counters:
-   - Add counting animation
-   - More engaging but complex
-   - Use for special occasions
-
-3. Server Component:
-   - Render HTML on server
-   - Less client JavaScript
-   - Harder to add animations
-
-CURRENT CHOICE:
-Server-rendered HTML + Client-side stats = Best of both worlds
-*/

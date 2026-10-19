@@ -2,14 +2,16 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { MapPin } from 'lucide-react';
+import { X } from 'lucide-react';
 import CampusMap, { type CampusMapZone } from '@/components/CampusMap';
 import ItemCard from '@/components/ui/ItemCard';
 import EmptyState, { EmptyStateIcons } from '@/components/ui/EmptyState';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import PageHeader from '@/components/ui/PageHeader';
+import SectionHeader from '@/components/ui/SectionHeader';
+import { SkeletonCardGrid } from '@/components/ui/SkeletonCard';
 import { Button } from '@/components/ui/button';
-import { ItemListSkeleton } from '@/components/ui/LoadingSkeleton';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { useAuthFetch } from '@/lib/auth-fetch';
 
 interface MapItem {
@@ -21,6 +23,8 @@ interface MapItem {
   location: string;
   createdAt: string;
   images?: string[] | null;
+  category?: { slug: string; name: string; icon: string } | null;
+  zone?: { slug: string; name: string } | null;
   postedBy: {
     id: string;
     name: string | null;
@@ -36,7 +40,9 @@ interface MapUser {
 const ITEMS_PER_ZONE = 12;
 
 /**
- * Campus map page: zones on a schematic map, items for the selected zone below.
+ * Campus map page: the schematic map is the hero, the selected zone is a right
+ * rail on desktop and a bottom sheet on mobile, and the zone's reports follow
+ * below.
  *
  * Both endpoints require authentication, so `useAuthFetch(true)` guards the
  * page and reports an authentication error rather than an empty map.
@@ -137,159 +143,209 @@ export default function MapPage() {
 
   const selectedZone = zones.find((zone) => zone.slug === selectedSlug) ?? null;
   const isAuthError = (zonesError ?? itemsError ?? '').toLowerCase().includes('auth');
+  const totalItems = zones.reduce((sum, zone) => sum + zone.itemCount, 0);
+  const hasMap = !zonesLoading && !zonesError && zones.length > 0;
 
   return (
-    <div className="min-h-screen bg-muted/40 py-8">
-      <div className="container mx-auto px-4">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground mb-2">Campus Map</h1>
-          <p className="text-muted-foreground">
-            Browse lost and found reports by campus zone. Select a zone to see what was reported there.
-          </p>
-        </div>
+    <main className="page-canvas min-h-screen">
+      <div
+        className={cn(
+          'container mx-auto px-4 pt-10 sm:pt-12 lg:pt-14',
+          selectedZone ? 'pb-64 lg:pb-16' : 'pb-12 lg:pb-16'
+        )}
+      >
+        <PageHeader
+          title="Campus Map"
+          description="Browse lost and found reports by campus zone. Select a zone to see what was reported there."
+        />
 
-        <div className="grid gap-6 lg:grid-cols-5">
-          {/* Map */}
-          <Card hover={false} className="lg:col-span-3">
-            <CardHeader>
-              <CardTitle className="text-lg">Zones</CardTitle>
-              <CardDescription>Pin size shows how many items were reported in a zone</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {zonesLoading ? (
-                <Skeleton className="aspect-square w-full" />
-              ) : zonesError ? (
-                <div className="flex min-h-[16rem] flex-col items-center justify-center gap-3 text-center">
-                  <p className="text-muted-foreground">{zonesError}</p>
-                  {isAuthError ? (
-                    <Button asChild>
-                      <Link href="/auth/login">Sign In</Link>
-                    </Button>
-                  ) : (
-                    <Button onClick={fetchZones} variant="outline">
-                      Try Again
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <CampusMap
-                  zones={zones}
-                  selectedSlug={selectedSlug}
-                  onSelectZone={handleSelectZone}
-                />
-              )}
-            </CardContent>
-          </Card>
+        {/* The map is the hero: full-width, tall, with its own legend inside it.
+            The selected-zone panel is a sibling rail on desktop and a bottom
+            sheet on mobile, never a card pushed below the map. */}
+        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
+          <section
+            aria-label="Campus zones map"
+            className="rise-in relative aspect-[16/10] min-h-[420px] w-full overflow-hidden rounded-xl border border-border-subtle bg-card shadow-card"
+          >
+            {zonesLoading ? (
+              <Skeleton className="h-full w-full rounded-none" />
+            ) : zonesError ? (
+              <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
+                <p className="max-w-sm text-sm text-muted-foreground">{zonesError}</p>
+                {isAuthError ? (
+                  <Button asChild>
+                    <Link href="/auth/login">Sign in</Link>
+                  </Button>
+                ) : (
+                  <Button onClick={fetchZones} variant="outline">
+                    Try again
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <CampusMap
+                zones={zones}
+                selectedSlug={selectedSlug}
+                onSelectZone={handleSelectZone}
+                className="h-full"
+              />
+            )}
 
-          {/* Selected zone stats */}
-          <Card hover={false} className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {selectedZone ? selectedZone.name : 'Zone details'}
-              </CardTitle>
-              <CardDescription>
-                {selectedZone
-                  ? selectedZone.description || 'No description for this zone'
-                  : 'Select a zone on the map to see its statistics.'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {selectedZone ? (
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-2xl font-semibold text-foreground">{selectedZone.itemCount}</p>
-                    <p className="text-sm text-muted-foreground">Total items</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-semibold text-destructive">{selectedZone.lostCount}</p>
-                    <p className="text-sm text-muted-foreground">Lost</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-semibold text-success">{selectedZone.foundCount}</p>
-                    <p className="text-sm text-muted-foreground">Found</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4" aria-hidden="true" />
-                  {zones.length > 0
-                    ? 'No zone selected'
-                    : 'Campus zones will appear here once they are configured.'}
-                </div>
+            {/* Campus-wide totals, in the corner the legend does not use. */}
+            {hasMap && (
+              <p className="absolute right-3 top-3 z-10 rounded-full bg-card/90 px-3 py-1 text-xs text-muted-foreground shadow-card backdrop-blur-sm">
+                {zones.length} {zones.length === 1 ? 'zone' : 'zones'}
+                <span aria-hidden="true"> · </span>
+                {totalItems} {totalItems === 1 ? 'report' : 'reports'}
+              </p>
+            )}
+          </section>
+
+          {/* Selected zone: right rail on desktop, bottom sheet on mobile. */}
+          <aside
+            key={selectedZone?.slug ?? 'none'}
+            aria-label="Selected zone"
+            className={cn(
+              'rise-in z-40 bg-card/95 shadow-card backdrop-blur-sm',
+              'fixed inset-x-0 bottom-0 max-h-[70vh] overflow-y-auto rounded-t-2xl border-t border-border-subtle px-5 pb-6 pt-3',
+              'lg:static lg:max-h-none lg:overflow-visible lg:rounded-xl lg:border lg:border-border-subtle lg:p-6 lg:backdrop-blur-none',
+              !selectedZone && 'hidden lg:block'
+            )}
+          >
+            <span
+              className="mx-auto mb-3 block h-1 w-10 rounded-full bg-border lg:hidden"
+              aria-hidden="true"
+            />
+
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-xl font-semibold tracking-tight text-foreground">
+                  {selectedZone ? selectedZone.name : 'No zone selected'}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {selectedZone
+                    ? selectedZone.description || 'No description for this zone.'
+                    : zones.length > 0
+                      ? 'Choose a zone on the map to see what was reported there.'
+                      : 'Campus zones appear here once they are configured.'}
+                </p>
+              </div>
+
+              {selectedZone && (
+                <Button
+                  variant="quiet"
+                  size="icon-sm"
+                  onClick={() => setSelectedSlug(null)}
+                  aria-label="Close zone details"
+                  className="shrink-0 lg:hidden"
+                >
+                  <X className="size-4" aria-hidden="true" />
+                </Button>
               )}
-            </CardContent>
-          </Card>
+            </div>
+
+            {selectedZone ? (
+              <>
+                <dl className="mt-5 grid grid-cols-3 gap-4">
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Total</dt>
+                    <dd className="mt-0.5 text-2xl font-semibold tabular-nums text-foreground">
+                      {selectedZone.itemCount}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Lost</dt>
+                    <dd className="mt-0.5 text-2xl font-semibold tabular-nums text-destructive">
+                      {selectedZone.lostCount}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Found</dt>
+                    <dd className="mt-0.5 text-2xl font-semibold tabular-nums text-success">
+                      {selectedZone.foundCount}
+                    </dd>
+                  </div>
+                </dl>
+
+                <Button
+                  variant="quiet"
+                  size="sm"
+                  onClick={() => setSelectedSlug(null)}
+                  className="mt-5 hidden px-0 lg:inline-flex"
+                >
+                  Clear selection
+                </Button>
+              </>
+            ) : null}
+          </aside>
         </div>
 
         {/* Items in the selected zone */}
         {selectedZone && (
-          <div className="mt-8">
-            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-lg font-semibold text-foreground">
-                Items reported in {selectedZone.name}
-              </h2>
-              {!itemsLoading && !itemsError && items.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Showing {items.length} of {itemsTotal} {itemsTotal === 1 ? 'item' : 'items'}
-                </p>
+          <section className="rise-in mt-12" aria-label={`Items reported in ${selectedZone.name}`}>
+            <SectionHeader
+              title={`Items reported in ${selectedZone.name}`}
+              action={
+                !itemsLoading && !itemsError && items.length > 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Showing {items.length} of {itemsTotal} {itemsTotal === 1 ? 'item' : 'items'}
+                  </p>
+                ) : undefined
+              }
+            />
+
+            <div className="mt-6">
+              {itemsLoading ? (
+                <SkeletonCardGrid count={6} className="lg:grid-cols-3 xl:grid-cols-4" />
+              ) : itemsError ? (
+                <div className="flex flex-col items-center gap-4 py-12 text-center">
+                  <p className="text-sm text-destructive">{itemsError}</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setItemsReloadToken((token) => token + 1)}
+                  >
+                    Try again
+                  </Button>
+                </div>
+              ) : items.length === 0 ? (
+                <EmptyState
+                  icon={EmptyStateIcons.items}
+                  title="No items in this zone"
+                  description={`Nothing has been reported in ${selectedZone.name} yet. Pick another zone on the map.`}
+                  action={{ label: 'Clear selection', onClick: () => setSelectedSlug(null) }}
+                />
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {items.map((item) => (
+                    <ItemCard
+                      key={item.id}
+                      item={{
+                        id: item.id,
+                        title: item.title,
+                        description: item.description,
+                        itemType: item.itemType,
+                        status: item.status,
+                        location: item.location,
+                        createdAt: item.createdAt,
+                        images: item.images,
+                        category: item.category,
+                        zone: item.zone,
+                        postedBy: {
+                          name: item.postedBy?.name ?? null,
+                          avatar: item.postedBy?.avatar ?? null
+                        }
+                      }}
+                      user={user}
+                      showActions={true}
+                      variant="compact"
+                    />
+                  ))}
+                </div>
               )}
             </div>
-
-            {itemsLoading ? (
-              <ItemListSkeleton count={6} />
-            ) : itemsError ? (
-              <Card hover={false}>
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <p className="text-destructive mb-4">{itemsError}</p>
-                    <Button
-                      variant="outline"
-                      onClick={() => setItemsReloadToken((token) => token + 1)}
-                    >
-                      Try Again
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : items.length === 0 ? (
-              <Card hover={false}>
-                <CardContent className="pt-6">
-                  <EmptyState
-                    icon={EmptyStateIcons.items}
-                    title="No items in this zone"
-                    description={`Nothing has been reported in ${selectedZone.name} yet. Pick another zone on the map.`}
-                  />
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {items.map((item) => (
-                  <ItemCard
-                    key={item.id}
-                    item={{
-                      id: item.id,
-                      title: item.title,
-                      description: item.description,
-                      itemType: item.itemType,
-                      status: item.status,
-                      location: item.location,
-                      createdAt: item.createdAt,
-                      images: item.images,
-                      postedBy: {
-                        name: item.postedBy?.name ?? null,
-                        avatar: item.postedBy?.avatar ?? null
-                      }
-                    }}
-                    user={user}
-                    showActions={true}
-                    variant="compact"
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          </section>
         )}
       </div>
-    </div>
+    </main>
   );
 }

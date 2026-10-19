@@ -1,18 +1,31 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Card
+ *
+ * One surface, one elevation level (brief §3): `rounded-xl`, a faint
+ * `border-border-subtle` outline, `shadow-card`. The old default was
+ * `hover:shadow-lg hover:-translate-y-1` on *every* card, which is what made the
+ * app read as a generic template — a panel that is not clickable should not lift
+ * when the cursor crosses it.
+ *
+ * Elevation is therefore opt-in: pass `hover` for cards that really are
+ * interactive. Prefer a SectionHeader plus whitespace over a Card when grouping
+ * content that is not a discrete object.
+ */
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & {
     hover?: boolean;
     glow?: boolean;
   }
->(({ className, hover = true, glow = false, ...props }, ref) => (
+>(({ className, hover = false, glow = false, ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
-      "rounded-lg border bg-card text-card-foreground shadow-sm transition-all duration-300 ease-in-out",
-      hover && "card-enhanced hover:shadow-lg hover:-translate-y-1",
+      "rounded-xl border border-border-subtle bg-card text-card-foreground shadow-card transition-shadow duration-200 ease-out",
+      hover && "hover:shadow-card-hover",
       glow && "glow-blue",
       className
     )}
@@ -38,7 +51,9 @@ const CardTitle = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
+      // A card title is a card title, not a page title: 18px/600, one step
+      // under a SectionHeader, instead of the 24px it used to shout at.
+      "text-lg font-semibold leading-snug tracking-tight",
       animated && "transition-colors duration-200 ease-in-out hover:text-primary",
       className
     )}

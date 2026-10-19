@@ -6,6 +6,8 @@ import { signIn } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertCircle } from 'lucide-react';
+
 import { setSafeErrorMessage } from '@/lib/security';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,9 +20,15 @@ import {
     FormMessage,
 } from '@/components/ui/form';
 
-// Add Google Icon for the button
-const GoogleIcon = () => (
-    <svg className="w-5 h-5" viewBox="0 0 24 24">
+/**
+ * The real Google mark, in its brand colours.
+ *
+ * The one deliberate exception to the token rule: this is a third-party logo,
+ * and recolouring it would misrepresent the provider. It is a fixed asset
+ * rather than a theme colour, so it is identical in light and dark.
+ */
+const GoogleMark = () => (
+    <svg className="size-4" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path
             fill="#4285F4"
             d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -47,6 +55,9 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+/** Which action is in flight, so each button reports its own progress. */
+type PendingAction = 'credentials' | 'google' | null;
+
 export default function LoginForm() {
     const router = useRouter();
     const form = useForm<LoginFormValues>({
@@ -57,20 +68,22 @@ export default function LoginForm() {
         },
     });
 
-    const [isLoading, setIsLoading] = useState(false);
+    const [pending, setPending] = useState<PendingAction>(null);
     const [errorMessage, setErrorMessage] = useState('');
+
+    const isLoading = pending !== null;
 
     // Google Sign-In handler (Step 132: Add Google sign-in button)
     const handleGoogleSignIn = async () => {
-        setIsLoading(true);
+        setPending('google');
         setErrorMessage('');
-        
+
         try {
             const result = await signIn('google', {
                 redirect: false,
                 callbackUrl: '/dashboard'
             });
-            
+
             if (result?.error) {
                 setErrorMessage(setSafeErrorMessage('Google sign-in failed. Please try again.'));
             } else if (result?.url) {
@@ -80,13 +93,13 @@ export default function LoginForm() {
         } catch {
             setErrorMessage(setSafeErrorMessage('Something went wrong with Google sign-in.'));
         } finally {
-            setIsLoading(false);
+            setPending(null);
         }
     };
 
     const onSubmit = async (values: LoginFormValues) => {
         setErrorMessage('');
-        setIsLoading(true);
+        setPending('credentials');
 
         try {
             const result = await signIn('credentials', {
@@ -104,89 +117,98 @@ export default function LoginForm() {
         } catch {
             setErrorMessage(setSafeErrorMessage('Something went wrong. Please try again.'));
         } finally {
-            setIsLoading(false);
+            setPending(null);
         }
     };
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" noValidate>
-                <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                                <Input
-                                    {...field}
-                                    type="email"
-                                    placeholder="Enter your email"
-                                    autoComplete="email"
-                                    disabled={isLoading}
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
-                <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                                <Input
-                                    {...field}
-                                    type="password"
-                                    placeholder="Enter your password"
-                                    autoComplete="current-password"
-                                    disabled={isLoading}
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" noValidate>
+                {/* Errors sit above the form, in one line of destructive text —
+                    no box, so the fields stay the loudest thing on the card. */}
                 {errorMessage && (
-                    <div
+                    <p
                         role="alert"
                         aria-live="polite"
-                        className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                        className="flex items-start gap-1.5 text-sm text-destructive"
                     >
-                        {errorMessage}
-                    </div>
+                        <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                        <span>{errorMessage}</span>
+                    </p>
                 )}
 
-                {/* Google Sign-In Button (Step 132: Add Google sign-in button) */}
-                <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                    </div>
+                <div className="space-y-5">
+                    <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        {...field}
+                                        type="email"
+                                        placeholder="you@campus.edu"
+                                        autoComplete="email"
+                                        autoFocus
+                                        disabled={isLoading}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Password</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        {...field}
+                                        type="password"
+                                        placeholder="Your password"
+                                        autoComplete="current-password"
+                                        disabled={isLoading}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                 </div>
-                
+
+                {/* One primary action. */}
+                <Button
+                    type="submit"
+                    size="lg"
+                    className="w-full"
+                    loading={pending === 'credentials'}
+                    disabled={isLoading}
+                >
+                    Sign in
+                </Button>
+
+                <div className="flex items-center gap-3">
+                    <span className="h-px flex-1 bg-border" aria-hidden="true" />
+                    <span className="text-sm text-muted-foreground">or</span>
+                    <span className="h-px flex-1 bg-border" aria-hidden="true" />
+                </div>
+
+                {/* Secondary, outlined, with the real Google mark. */}
                 <Button
                     type="button"
                     variant="outline"
-                    className="w-full"
+                    size="lg"
+                    className="w-full gap-2"
                     onClick={handleGoogleSignIn}
+                    loading={pending === 'google'}
                     disabled={isLoading}
                 >
-                    <GoogleIcon />
-                    <span className="ml-2">
-                        {isLoading ? 'Signing in with Google...' : 'Continue with Google'}
-                    </span>
-                </Button>
-
-                {/* Email/Password Submit Button */}
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? 'Signing in...' : 'Sign in with Email'}
+                    <GoogleMark />
+                    Continue with Google
                 </Button>
             </form>
         </Form>

@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { BellPlus, Bookmark, Loader2, Trash2 } from 'lucide-react';
 import { useAuthFetch } from '@/lib/auth-fetch';
 import { showError, showSuccess } from '@/lib/toast-config';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import SectionHeader from '@/components/ui/SectionHeader';
 import { MAX_SAVED_SEARCHES_PER_USER } from '@/lib/schemas/saved-search';
 
 /**
@@ -164,78 +166,102 @@ export default function SavedSearches({
   const atLimit = searches.length >= MAX_SAVED_SEARCHES_PER_USER;
 
   return (
-    <section
-      className={cn('rounded-lg border border-border bg-card p-4 shadow-sm', className)}
-      aria-labelledby="saved-searches-heading"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2
-          id="saved-searches-heading"
-          className="flex items-center gap-1.5 text-sm font-medium text-foreground"
-        >
-          <Bookmark className="h-4 w-4 text-primary" aria-hidden="true" />
-          Saved searches
-          {searches.length > 0 && (
-            <span className="text-muted-foreground">
-              ({searches.length}/{MAX_SAVED_SEARCHES_PER_USER})
-            </span>
-          )}
-        </h2>
-
-        <button
-          type="button"
-          onClick={() => void save()}
-          disabled={isSaving || atLimit}
-          title={atLimit ? 'Delete one to make room' : undefined}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground/85 transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isSaving ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-          ) : (
-            <BellPlus className="h-3.5 w-3.5" aria-hidden="true" />
-          )}
-          Save this search
-        </button>
-      </div>
+    <section className={className} aria-labelledby="saved-searches-heading">
+      <SectionHeader
+        id="saved-searches-heading"
+        divider={false}
+        title={
+          <span className="inline-flex items-center gap-2">
+            <Bookmark className="size-5 text-primary" aria-hidden="true" />
+            Saved searches
+            {searches.length > 0 && (
+              <span className="text-sm font-normal tabular-nums text-muted-foreground">
+                {searches.length}/{MAX_SAVED_SEARCHES_PER_USER}
+              </span>
+            )}
+          </span>
+        }
+        action={
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => void save()}
+            disabled={isSaving || atLimit}
+            title={atLimit ? 'Delete one to make room' : undefined}
+          >
+            {isSaving ? (
+              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+            ) : (
+              <BellPlus className="size-3.5" aria-hidden="true" />
+            )}
+            Save this search
+          </Button>
+        }
+      />
 
       {isLoading ? (
-        <p className="mt-3 text-sm text-muted-foreground">Loading…</p>
+        <div role="status" aria-busy="true">
+          <ul className="mt-1 divide-y divide-border-subtle">
+            {[1, 2].map((row) => (
+              <li key={row} className="flex items-center justify-between gap-3 py-3">
+                <span className="min-w-0 flex-1 space-y-2">
+                  <Skeleton className="h-3.5 w-40" />
+                  <Skeleton className="h-3 w-56 max-w-full" />
+                </span>
+                <Skeleton className="size-9 shrink-0 rounded-md" />
+              </li>
+            ))}
+          </ul>
+          <span className="sr-only">Loading saved searches…</span>
+        </div>
       ) : searches.length === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">
           Save a filter set and you will be notified when a matching item is posted.
         </p>
       ) : (
-        <ul className="mt-3 divide-y divide-border">
+        <ul className="mt-1 divide-y divide-border-subtle">
           {searches.map((search) => (
-            <li key={search.id} className="flex items-center justify-between gap-3 py-2">
+            <li key={search.id} className="flex items-center justify-between gap-3 py-3">
               <button
                 type="button"
                 onClick={() => onApply?.(search.filters)}
                 disabled={!onApply}
-                className="min-w-0 flex-1 text-left text-sm text-foreground transition-colors hover:text-primary disabled:cursor-default"
+                className="group/row min-w-0 flex-1 rounded text-left transition-colors disabled:cursor-default"
               >
-                <span className="font-medium">{search.name}</span>
-                <span className="block truncate text-xs text-muted-foreground">
+                <span className="block truncate text-sm font-medium text-foreground transition-colors group-hover/row:text-primary">
+                  {search.name}
+                </span>
+                <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                   {describeFilters(search.filters)}
                 </span>
               </button>
 
-              <button
+              <Button
                 type="button"
+                variant="quiet"
+                size="icon-sm"
                 onClick={() => void remove(search.id)}
                 disabled={pendingId === search.id}
                 aria-label={`Delete saved search ${search.name}`}
-                className="rounded p-1.5 text-muted-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                className="shrink-0 hover:bg-destructive/10 hover:text-destructive"
               >
                 {pendingId === search.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  <Trash2 className="size-4" aria-hidden="true" />
                 )}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
+      )}
+
+      {atLimit && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          You have reached the limit of {MAX_SAVED_SEARCHES_PER_USER} saved searches. Delete one to
+          save another.
+        </p>
       )}
     </section>
   );

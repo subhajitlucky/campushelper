@@ -3,11 +3,45 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================================
+   TYPE SCALE — the source of truth for the redesign.
+   See docs/plans/2026-10-18-ui-redesign-brief.md §2.
+
+   Nothing can feel designed at 14px, and 353 of 427 text elements were 12–14px.
+   These six roles are the whole ladder. Reach for a component (PageHeader,
+   SectionHeader, ItemCard, EmptyState) before reaching for a size class.
+
+     Role                Classes                                     Colour
+     ------------------  ------------------------------------------  ----------------------
+     Page title          text-3xl sm:text-4xl font-semibold          text-foreground
+                         tracking-tight
+     Section title       text-xl font-semibold tracking-tight        text-foreground
+     Card title          text-base font-medium                       text-foreground
+     Body / prose        text-base (max-w-[65ch])                    text-foreground/85
+     Meta / label        text-sm                                     text-muted-foreground
+     Micro (counts,      text-xs font-medium                         text-muted-foreground
+      timestamps)
+     Stat number         text-2xl font-semibold tracking-tight       text-foreground
+                         tabular-nums
+
+   Rules: body copy is 16px, never below 12px, one page title per page, and
+   font-bold does not exist in this interface — 600 is the ceiling. If two
+   things must differ, differ in size or colour before weight.
+   ============================================================================ */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Geist was referenced here but never loaded, which left --font-sans pointing
+     at an undefined variable and dropped the whole app to the browser default
+     (Times on this machine). The stack is explicit now: SF on macOS, Segoe UI
+     Variable on Windows, Noto Sans on Linux, and it still defers to
+     --font-geist-sans if a self-hosted face is wired up later. */
+  --font-sans: var(--font-geist-sans, ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI Variable Text", "Segoe UI", "Noto Sans", Roboto, "Helvetica Neue",
+    Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji");
+  --font-mono: var(--font-geist-mono, ui-monospace, SFMono-Regular, "SF Mono",
+    Menlo, Consolas, "Liberation Mono", monospace);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,6 +82,13 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+
+  /* Surface system. See the :root / .dark blocks below for the values. */
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --shadow-card: var(--elevation-card);
+  --shadow-card-hover: var(--elevation-card-hover);
+  --shadow-overlay: var(--elevation-overlay);
 }
 
 :root {
@@ -96,6 +137,31 @@
   --warning-foreground: oklch(0.985 0 0);
   --info: oklch(0.52 0.15 250);
   --info-foreground: oklch(0.985 0 0);
+
+  /* --- surface system ------------------------------------------------------
+     A card is only for a discrete object, so its outline should whisper rather
+     than box the content in. --border-subtle is fainter than --border and is
+     what cards, skeletons and row dividers use; --border stays for structural
+     rules (section headings, navbar, footer) and --border-strong is reserved
+     for emphasis (hovered outlines, active tab rules). */
+  --border-subtle: oklch(0.945 0.003 286.32);
+  --border-strong: oklch(0.87 0.005 286.32);
+
+  /* One elevation level, one hover step, one overlay step. Two stops each, so
+     the shadow reads as light falling on a surface rather than as a grey
+     smear. Dark mode gets deeper, tighter shadows instead of the same ones. */
+  --elevation-card: 0 1px 2px -1px oklch(0.21 0.006 285.885 / 0.1),
+    0 2px 6px -2px oklch(0.21 0.006 285.885 / 0.06);
+  --elevation-card-hover: 0 2px 4px -2px oklch(0.21 0.006 285.885 / 0.12),
+    0 8px 20px -6px oklch(0.21 0.006 285.885 / 0.12);
+  --elevation-overlay: 0 4px 10px -4px oklch(0.21 0.006 285.885 / 0.14),
+    0 12px 32px -8px oklch(0.21 0.006 285.885 / 0.22);
+
+  /* The sweep that crosses a skeleton. Light themes need a bright sheen, dark
+     themes only a suggestion of one. */
+  --shimmer-highlight: oklch(1 0 0 / 0.85);
+  /* The single sanctioned page-level gradient (see .page-canvas). */
+  --wash: oklch(0.55 0.02 286 / 0.06);
 }
 
 .dark {
@@ -138,579 +204,175 @@
   --warning-foreground: oklch(0.18 0.04 80);
   --info: oklch(0.75 0.13 250);
   --info-foreground: oklch(0.16 0.03 250);
+
+  /* --- surface system, dark -----------------------------------------------
+     In dark mode the surface step (background 0.141 → card 0.21) already
+     separates a card from the page, so the outline has to be fainter than the
+     light-mode hairline or every card turns back into a box. */
+  --border-subtle: oklch(1 0 0 / 0.08);
+  --border-strong: oklch(1 0 0 / 0.2);
+
+  --elevation-card: 0 1px 2px -1px oklch(0 0 0 / 0.45),
+    0 2px 6px -2px oklch(0 0 0 / 0.35);
+  --elevation-card-hover: 0 2px 6px -2px oklch(0 0 0 / 0.5),
+    0 10px 24px -8px oklch(0 0 0 / 0.45);
+  --elevation-overlay: 0 6px 14px -6px oklch(0 0 0 / 0.5),
+    0 16px 40px -8px oklch(0 0 0 / 0.6);
+
+  --shimmer-highlight: oklch(1 0 0 / 0.07);
+  --wash: oklch(0.9 0.01 286 / 0.05);
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Smooth Transitions and Animations */
 @layer base {
   * {
     @apply border-border;
   }
-  
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-background text-foreground;
+    text-rendering: optimizeLegibility;
     /* Smooth color transitions for theme changes */
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
   }
 
-  /* Smooth scrolling */
-  html {
-    scroll-behavior: smooth;
+  /* Headlines balance; running text does not. */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  /* Keyboard users get a ring that matches the control radius everywhere,
+     including the few controls that still ship without one. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
 }
 
 @layer components {
-  /* Page transition styles */
-  .page-transition {
-    @apply transition-all duration-300 ease-out;
+  /* --- surfaces ------------------------------------------------------------
+     The one card surface: rounded-xl + a faint outline + one elevation level.
+     Reach for this instead of writing the trio by hand, and never nest it. */
+  .card-surface {
+    @apply rounded-xl border border-border-subtle bg-card shadow-card;
   }
 
-  /* Smooth color transitions for interactive elements */
-  .interactive-element {
-    @apply transition-all duration-200 ease-in-out;
-  }
-
-  /* Enhanced button hover effects */
-  .btn-enhanced {
-    @apply transition-all duration-200 ease-in-out transform;
-    @apply hover:scale-105 hover:shadow-lg active:scale-95;
-  }
-
-  /* Card hover effects */
+  /* Legacy hook kept because shadcn's <Card> applies it to every card. Its old
+     definition was `hover:shadow-xl hover:-translate-y-1` — the lift is what
+     made the whole app read as a template. Interactive surfaces now change
+     elevation only; position never moves. */
   .card-enhanced {
-    @apply transition-all duration-300 ease-in-out;
-    @apply hover:shadow-xl hover:-translate-y-1;
+    @apply transition-shadow duration-200 ease-out;
   }
 
-
-
-  /* Pulse animation for loading states */
-  .pulse-smooth {
-    animation: pulse-smooth 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  .card-enhanced:hover {
+    @apply shadow-card-hover;
   }
 
-  /* Floating animation */
-  .float-animation {
-    animation: float 6s ease-in-out infinite;
+  /* Filled controls brighten instead of scaling. `transform: scale(1.05)` on
+     hover was the other half of the template feel. */
+  .btn-enhanced {
+    @apply transition-colors duration-150 ease-out;
   }
 
-  /* Glow effects */
+  .input-enhanced {
+    @apply transition-colors duration-150 ease-out;
+  }
+
+  .interactive-element {
+    @apply transition-colors duration-150 ease-out;
+  }
+
+  /* Legacy hook for <Card glow>. A coloured halo is off-brand now, so emphasis
+     is expressed through the elevation token instead — and it works in dark. */
   .glow-blue {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-    transition: box-shadow 0.3s ease;
+    box-shadow: var(--elevation-card-hover);
   }
 
-  .glow-blue:hover {
-    box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+  /* --- motion --------------------------------------------------------------
+     One entrance per page, not one per card: apply .rise-in to the section
+     wrapper. 150ms fade + 4px rise, exactly as briefed in §6. */
+  .rise-in {
+    animation: rise-in 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  .glow-green {
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
-    transition: box-shadow 0.3s ease;
+  .rise-in-delay-1 {
+    animation-delay: 60ms;
   }
 
-  .glow-green:hover {
-    box-shadow: 0 0 30px rgba(34, 197, 94, 0.5);
+  .rise-in-delay-2 {
+    animation-delay: 120ms;
   }
 
-  .glow-red {
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
-    transition: box-shadow 0.3s ease;
+  .rise-in-delay-3 {
+    animation-delay: 180ms;
   }
 
-  .glow-red:hover {
-    box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
-  }
-
-  /* Smooth text color transitions */
-  .text-transition {
-    @apply transition-colors duration-300 ease-in-out;
-  }
-
-  /* Enhanced focus states */
-  .focus-enhanced {
-    @apply transition-all duration-200 ease-in-out;
-    @apply focus:outline-none focus:ring-2 focus:ring-blue-500;
-    @apply focus:ring-offset-2;
-  }
-
-  /* Smooth background color transitions */
-  .bg-transition {
-    @apply transition-colors duration-300 ease-in-out;
-  }
-
-  /* Smooth border transitions */
-  .border-transition {
-    @apply transition-all duration-300 ease-in-out;
-  }
-
-  /* Loading skeleton animation */
-  .skeleton-loading {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: loading 1.5s infinite;
-  }
-
-  /* Ripple effect */
-  .ripple {
+  /* Skeletons shimmer, they do not pulse. The sweep is a pseudo-element so the
+     element's own background colour is untouched. */
+  .shimmer {
     position: relative;
     overflow: hidden;
+    background-color: var(--muted);
   }
 
-  .ripple::before {
-    content: '';
+  .shimmer::after {
+    content: "";
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.5);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
-  }
-
-  .ripple:active::before {
-    width: 300px;
-    height: 300px;
-  }
-
-  /* Slide in animations */
-  .slide-in-right {
-    animation: slide-in-right 0.5s ease-out;
-  }
-
-  .slide-in-left {
-    animation: slide-in-left 0.5s ease-out;
-  }
-
-  .slide-in-up {
-    animation: slide-in-up 0.5s ease-out;
-  }
-
-  .slide-in-down {
-    animation: slide-in-down 0.5s ease-out;
-  }
-
-  /* Fade in animations */
-  .fade-in {
-    animation: fade-in 0.5s ease-out;
-  }
-
-  .fade-in-up {
-    animation: fade-in-up 0.5s ease-out;
-  }
-
-  .fade-in-down {
-    animation: fade-in-down 0.5s ease-out;
-  }
-
-  /* Scale animations */
-  .scale-in {
-    animation: scale-in 0.3s ease-out;
-  }
-
-  .scale-in-bounce {
-    animation: scale-in-bounce 0.5s ease-out;
-  }
-
-  /* Rotation animations */
-  .rotate-in {
-    animation: rotate-in 0.5s ease-out;
-  }
-
-  /* Stagger animation container */
-  .stagger-container {
-    @apply space-y-4;
-  }
-
-  .stagger-item {
-    @apply opacity-0 translate-y-4;
-    animation: stagger-item 0.6s ease-out forwards;
-  }
-
-  /* Enhanced form input transitions */
-  .input-enhanced {
-    @apply transition-all duration-200 ease-in-out;
-    @apply focus:border-blue-500 focus:ring-2 focus:ring-blue-500;
-    @apply hover:border-gray-400;
-  }
-
-  /* Navigation transitions */
-  .nav-item {
-    @apply transition-all duration-200 ease-in-out;
-    @apply hover:scale-105 hover:text-blue-600;
-  }
-
-  .nav-item.active {
-    @apply text-blue-600 scale-105;
-  }
-
-  /* Modal transitions */
-  .modal-overlay {
-    @apply transition-opacity duration-300 ease-in-out;
-    background: rgba(0, 0, 0, 0.5);
-  }
-
-  .modal-content {
-    @apply transition-all duration-300 ease-out;
-    @apply scale-95 opacity-0;
-  }
-
-  .modal-content.open {
-    @apply scale-100 opacity-100;
-  }
-
-  /* Tooltip transitions */
-  .tooltip {
-    @apply transition-all duration-200 ease-in-out;
-    @apply opacity-0 scale-95;
-  }
-
-  .tooltip.show {
-    @apply opacity-100 scale-100;
-  }
-
-  /* Progress bar transitions */
-  .progress-bar {
-    @apply transition-all duration-500 ease-out;
-  }
-
-  /* Tabs transitions */
-  .tab-content {
-    @apply transition-all duration-300 ease-in-out;
-    @apply opacity-0 translate-x-2;
-  }
-
-  .tab-content.active {
-    @apply opacity-100 translate-x-0;
-  }
-
-  /* Accordion transitions */
-  .accordion-content {
-    @apply transition-all duration-300 ease-in-out;
-    @apply overflow-hidden;
-    max-height: 0;
-  }
-
-  .accordion-content.open {
-    max-height: 1000px;
-  }
-
-  /* Badge animations */
-  .badge-pulse {
-    animation: badge-pulse 2s infinite;
-  }
-
-  /* Icon animations */
-  .icon-spin {
-    animation: icon-spin 1s linear infinite;
-  }
-
-  .icon-bounce {
-    animation: icon-bounce 1s ease infinite;
-  }
-
-  .icon-pulse {
-    animation: icon-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  /* Enhanced shadows */
-  .shadow-colored {
-    box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.1), 0 4px 6px -2px rgba(59, 130, 246, 0.05);
-    transition: box-shadow 0.3s ease;
-  }
-
-  .shadow-colored:hover {
-    box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.2), 0 10px 10px -4px rgba(59, 130, 246, 0.1);
-  }
-}
-
-@layer utilities {
-  /* Animation delay utilities */
-  .delay-75 {
-    animation-delay: 75ms;
-  }
-  
-  .delay-100 {
-    animation-delay: 100ms;
-  }
-  
-  .delay-150 {
-    animation-delay: 150ms;
-  }
-  
-  .delay-200 {
-    animation-delay: 200ms;
-  }
-  
-  .delay-300 {
-    animation-delay: 300ms;
-  }
-  
-  .delay-500 {
-    animation-delay: 500ms;
-  }
-  
-  .delay-700 {
-    animation-delay: 700ms;
-  }
-  
-  .delay-1000 {
-    animation-delay: 1000ms;
-  }
-
-  /* Duration utilities */
-  .duration-75 {
-    transition-duration: 75ms;
-  }
-  
-  .duration-100 {
-    transition-duration: 100ms;
-  }
-  
-  .duration-150 {
-    transition-duration: 150ms;
-  }
-  
-  .duration-200 {
-    transition-duration: 200ms;
-  }
-  
-  .duration-300 {
-    transition-duration: 300ms;
-  }
-  
-  .duration-500 {
-    transition-duration: 500ms;
-  }
-  
-  .duration-700 {
-    transition-duration: 700ms;
-  }
-  
-  .duration-1000 {
-    transition-duration: 1000ms;
-  }
-
-  /* Easing utilities */
-  .ease-spring {
-    transition-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-  
-  .ease-out-back {
-    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-  
-  .ease-in-out-quad {
-    transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  }
-  
-  .ease-in-out-cubic {
-    transition-timing-function: cubic-bezier(0.645, 0.045, 0.355, 1);
-  }
-}
-
-/* Keyframe animations */
-@keyframes pulse-smooth {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes loading {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-@keyframes slide-in-right {
-  0% {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slide-in-left {
-  0% {
+    inset: 0;
     transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--shimmer-highlight) 50%,
+      transparent 100%
+    );
+    animation: shimmer 1.6s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* --- page canvas ---------------------------------------------------------
+     The one restrained page-level gradient: a faint wash at the top of a page.
+     Opt-in, applied to <main>, because a page whose own root paints an opaque
+     bg-background would hide it. Colours come from --wash, so it is defined for
+     both themes and can never be a light-mode-only effect. */
+  .page-canvas {
+    background-image: radial-gradient(
+      120% 55% at 50% 0%,
+      var(--wash) 0%,
+      transparent 70%
+    );
+    background-repeat: no-repeat;
+  }
+}
+
+@keyframes rise-in {
+  from {
     opacity: 0;
+    transform: translateY(4px);
   }
-  100% {
-    transform: translateX(0);
+  to {
     opacity: 1;
+    transform: none;
   }
 }
 
-@keyframes slide-in-up {
-  0% {
-    transform: translateY(100%);
-    opacity: 0;
+@keyframes shimmer {
+  from {
+    transform: translateX(-100%);
   }
-  100% {
-    transform: translateY(0);
-    opacity: 1;
+  to {
+    transform: translateX(100%);
   }
 }
 
-@keyframes slide-in-down {
-  0% {
-    transform: translateY(-100%);
-    opacity: 0;
-  }
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes fade-in {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-@keyframes fade-in-up {
-  0% {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fade-in-down {
-  0% {
-    opacity: 0;
-    transform: translateY(-30px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scale-in {
-  0% {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes scale-in-bounce {
-  0% {
-    transform: scale(0.3);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes rotate-in {
-  0% {
-    transform: rotate(-180deg) scale(0.5);
-    opacity: 0;
-  }
-  100% {
-    transform: rotate(0) scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes stagger-item {
-  0% {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes badge-pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes icon-spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes icon-bounce {
-  0%, 20%, 53%, 80%, 100% {
-    transform: translate3d(0,0,0);
-  }
-  40%, 43% {
-    transform: translate3d(0,-8px,0);
-  }
-  70% {
-    transform: translate3d(0,-4px,0);
-  }
-  90% {
-    transform: translate3d(0,-2px,0);
-  }
-}
-
-@keyframes icon-pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-/* Reduced motion preferences */
+/* Motion is opt-in for the user too, never shipped unconditionally. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -720,11 +382,18 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
 
-/* Dark mode transitions */
-@media (prefers-color-scheme: dark) {
-  body {
-    @apply transition-colors duration-300 ease-in-out;
+  .rise-in,
+  .rise-in-delay-1,
+  .rise-in-delay-2,
+  .rise-in-delay-3 {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .shimmer::after {
+    animation: none;
+    opacity: 0;
   }
 }

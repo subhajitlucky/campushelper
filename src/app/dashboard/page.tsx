@@ -1,37 +1,67 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Package, MessageSquare, CheckCircle, Search, Plus } from "lucide-react";
-import UserProfileSection from '@/components/UserProfileSection';
-import UserItemsSection from '@/components/UserItemsSection';
-import UserClaimsSection from '@/components/UserClaimsSection';
+
+import DashboardStats, { type DashboardStat } from '@/components/dashboard/DashboardStats';
 import IncomingClaimsSection from '@/components/IncomingClaimsSection';
-// Simple PageLoader component
-const PageLoader = ({ text }: { text: string }) => (
-  <div className="text-center py-8">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-info/30 mx-auto mb-4"></div>
-    <p className="text-muted-foreground">{text}</p>
-  </div>
-);
+import UserClaimsSection from '@/components/UserClaimsSection';
+import UserItemsSection from '@/components/UserItemsSection';
+import UserProfileSection from '@/components/UserProfileSection';
+import { cn } from '@/lib/utils';
+
+import { DashboardShellSkeleton } from './loading';
+
+const TABS = [
+  { id: 'items', label: 'My items' },
+  { id: 'claims', label: 'My claims' },
+  { id: 'incoming', label: 'Incoming claims' },
+] as const;
+
+type DashboardTab = (typeof TABS)[number]['id'];
+
+interface StatsPayload {
+  myItems: number;
+  claimsMade: number;
+  resolvedItems: number;
+  thisWeek: number;
+}
 
 /**
- * Dashboard Page - Protected Route
+ * Dashboard — protected route.
+ *
+ * The page is three flat bands instead of a stack of panels: the profile
+ * `PageHeader`, a strip of four numbers, then an underline tab set whose panels
+ * are each introduced by a `SectionHeader`. That replaces five bordered
+ * containers at the top of the old page (four stat `Card`s and a `Quick Actions`
+ * box) with no containers at all — the actions they held now live in the
+ * header, and search moved into the items section.
+ *
+ * Tabs are a real tab set, not styled buttons: `role="tab"` / `aria-selected`
+ * with roving `tabIndex`, arrow/Home/End keys, and `role="tabpanel"` panels
+ * wired back with `aria-controls` / `aria-labelledby`. All three panels stay
+ * mounted (inactive ones are `hidden`), so switching tabs never refetches and a
+ * half-finished approve/reject flow survives a look at another tab.
  */
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [userStats, setUserStats] = useState({
+  const [userStats, setUserStats] = useState<StatsPayload>({
     myItems: 0,
     claimsMade: 0,
     resolvedItems: 0,
-    thisWeek: 0
+    thisWeek: 0,
   });
+  /**
+   * Taken from `postedBy.reputation` on the user's own item rows — there is no
+   * endpoint that returns the signed-in user's total. Falls back to 0, which is
+   * where every account starts.
+   */
+  const [reputation, setReputation] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<DashboardTab>('items');
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -44,26 +74,36 @@ export default function DashboardPage() {
   const fetchUserStats = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Fetch user's items using postedById filter
       const itemsResponse = await fetch(`/api/items?postedById=${session?.user?.id}&limit=100`);
       if (itemsResponse.ok) {
         const itemsData = await itemsResponse.json();
-        const items = itemsData.items || [];
-        
+        const items: Array<{
+          status: string;
+          createdAt: string;
+          postedBy?: { reputation?: number | null } | null;
+        }> = itemsData.items || [];
+
         // Calculate item stats from real data
         const myItems = items.length;
-        const resolvedItems = items.filter((item: { status: string }) => 
-          item.status === 'RESOLVED' || item.status === 'CLAIMED'
+        const resolvedItems = items.filter(
+          (item) => item.status === 'RESOLVED' || item.status === 'CLAIMED'
         ).length;
-        
+
         // Calculate this week's items
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        const thisWeek = items.filter((item: { createdAt: string }) => 
-          new Date(item.createdAt) > oneWeekAgo
-        ).length;
-        
+        const thisWeek = items.filter((item) => new Date(item.createdAt) > oneWeekAgo).length;
+
+        // Either own row carries the same denormalised total.
+        const withReputation = items.find(
+          (item) => typeof item.postedBy?.reputation === 'number'
+        );
+        if (withReputation?.postedBy?.reputation !== undefined) {
+          setReputation(withReputation.postedBy.reputation ?? 0);
+        }
+
         // Fetch user's claims
         let claimsMade = 0;
         try {
@@ -73,13 +113,14 @@ export default function DashboardPage() {
             claimsMade = claimsData.claims?.length || 0;
           }
         } catch {
+          // A missing claims count must not blank the rest of the stats.
         }
-        
+
         setUserStats({
           myItems,
           resolvedItems,
           thisWeek,
-          claimsMade
+          claimsMade,
         });
       }
     } catch {
@@ -96,16 +137,36 @@ export default function DashboardPage() {
     }
   }, [status, session?.user?.id, fetchUserStats]);
 
-  // Show loading while checking authentication or fetching data
+  /** Arrow keys move between tabs, as the tab pattern requires. */
+  const handleTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const lastIndex = TABS.length - 1;
+    let nextIndex: number | null = null;
+
+    switch (event.key) {
+      case 'ArrowRight':
+        nextIndex = index === lastIndex ? 0 : index + 1;
+        break;
+      case 'ArrowLeft':
+        nextIndex = index === 0 ? lastIndex : index - 1;
+        break;
+      case 'Home':
+        nextIndex = 0;
+        break;
+      case 'End':
+        nextIndex = lastIndex;
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    setActiveTab(TABS[nextIndex].id);
+    tabRefs.current[nextIndex]?.focus();
+  };
+
+  // Show skeletons of the real layout while checking auth or fetching data
   if (status === 'loading' || (status === 'authenticated' && loading)) {
-    const loadingText = status === 'loading' ? 'Checking authentication...' : 'Loading dashboard...';
-    return (
-      <div className="min-h-screen bg-muted/40 py-8">
-        <div className="container mx-auto px-4">
-          <PageLoader text={loadingText} />
-        </div>
-      </div>
-    );
+    return <DashboardShellSkeleton />;
   }
 
   // Don't render if not authenticated
@@ -113,102 +174,79 @@ export default function DashboardPage() {
     return null;
   }
 
+  const userId = session?.user?.id || '';
+  const stats: DashboardStat[] = [
+    { label: 'Items posted', value: userStats.myItems },
+    { label: 'Claims submitted', value: userStats.claimsMade },
+    { label: 'Items resolved', value: userStats.resolvedItems },
+    { label: 'New this week', value: userStats.thisWeek },
+  ];
+
   return (
-    <div className="min-h-screen bg-background py-6">
-      <div className="container mx-auto px-4 max-w-7xl">
-        {/* Step 118: User Profile Section */}
-        <div className="mb-6">
-          <UserProfileSection userStats={userStats} />
-        </div>
+    <main className="page-canvas min-h-screen pb-24 pt-10 sm:pt-14">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="rise-in space-y-10">
+          <UserProfileSection reputation={reputation} />
 
-        {/* Quick Stats */}
-        <div className="grid gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="hover:shadow-lg transition-shadow duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-foreground/85">My Items</CardTitle>
-              <Package className="h-5 w-5 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{userStats.myItems}</div>
-              <p className="text-xs text-muted-foreground mt-1">Items posted</p>
-            </CardContent>
-          </Card>
+          <DashboardStats stats={stats} />
 
-          <Card className="hover:shadow-lg transition-shadow duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-foreground/85">Claims Made</CardTitle>
-              <MessageSquare className="h-5 w-5 text-success" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{userStats.claimsMade}</div>
-              <p className="text-xs text-muted-foreground mt-1">Claims submitted</p>
-            </CardContent>
-          </Card>
+          <div>
+            <div
+              role="tablist"
+              aria-label="Dashboard sections"
+              className="flex gap-6 overflow-x-auto border-b border-border sm:gap-8"
+            >
+              {TABS.map((tab, index) => {
+                const selected = activeTab === tab.id;
 
-          <Card className="hover:shadow-lg transition-shadow duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-foreground/85">Resolved</CardTitle>
-              <CheckCircle className="h-5 w-5 text-success" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{userStats.resolvedItems}</div>
-              <p className="text-xs text-muted-foreground mt-1">Items resolved</p>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-foreground/85">This Week</CardTitle>
-              <Search className="h-5 w-5 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{userStats.thisWeek}</div>
-              <p className="text-xs text-muted-foreground mt-1">New items posted</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <Card className="mb-6 bg-info/10 border-info/30">
-          <CardHeader>
-            <CardTitle className="text-lg">Quick Actions</CardTitle>
-            <CardDescription>
-              Get started with common tasks
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button asChild className="flex-1 bg-primary hover:bg-primary/90">
-                <Link href="/post">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Post New Item
-                </Link>
-              </Button>
-              <Button variant="outline" asChild className="flex-1 border-info/30 hover:bg-info/10">
-                <Link href="/search">
-                  <Search className="mr-2 h-4 w-4" />
-                  Search Items
-                </Link>
-              </Button>
+                return (
+                  <button
+                    key={tab.id}
+                    ref={(node) => {
+                      tabRefs.current[index] = node;
+                    }}
+                    type="button"
+                    role="tab"
+                    id={`tab-${tab.id}`}
+                    aria-selected={selected}
+                    aria-controls={`panel-${tab.id}`}
+                    tabIndex={selected ? 0 : -1}
+                    onClick={() => setActiveTab(tab.id)}
+                    onKeyDown={(event) => handleTabKeyDown(event, index)}
+                    className={cn(
+                      '-mb-px whitespace-nowrap rounded-t-sm border-b-2 px-0.5 pb-3 pt-1',
+                      'text-sm font-medium transition-colors',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                      selected
+                        ? 'border-primary text-foreground'
+                        : 'border-transparent text-muted-foreground hover:border-border-strong hover:text-foreground'
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Step 115: User's Posted Items Section */}
-        <div className="mb-6">
-          <UserItemsSection userId={session?.user?.id || ''} />
-        </div>
-
-        {/* Step 116: User's Claims Section */}
-        <div className="mb-6">
-          <UserClaimsSection userId={session?.user?.id || ''} />
-        </div>
-
-        {/* Step 117: Incoming Claims Section */}
-        <div className="mb-6">
-          <IncomingClaimsSection userId={session?.user?.id || ''} />
+            {TABS.map((tab) => (
+              <div
+                key={tab.id}
+                role="tabpanel"
+                id={`panel-${tab.id}`}
+                aria-labelledby={`tab-${tab.id}`}
+                hidden={activeTab !== tab.id}
+                className="pt-8"
+              >
+                {tab.id === 'items' && <UserItemsSection userId={userId} />}
+                {tab.id === 'claims' && <UserClaimsSection userId={userId} />}
+                {tab.id === 'incoming' && (
+                  <IncomingClaimsSection userId={userId} onGoToItems={() => setActiveTab('items')} />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

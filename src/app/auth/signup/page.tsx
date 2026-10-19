@@ -4,19 +4,43 @@ import SignupForm from "@/components/SignupForm";
 
 export default function SignupPage() {
   return (
-    <div className="mx-auto flex min-h-[80vh] w-full max-w-md flex-col justify-center gap-6 px-4 py-12">
-      <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Create your account</h1>
-        <p className="text-sm text-muted-foreground">
+    <main className="flex min-h-[80vh] items-center justify-center bg-background px-4 py-12">
+      <div className="w-full max-w-sm">
+        {/* Product identity above the card: what this is, before asking for
+            anything. The wordmark is also the way back to the homepage. */}
+        <div className="mb-8">
+          <Link
+            href="/"
+            className="text-xl font-semibold tracking-tight text-foreground transition-colors hover:text-primary"
+          >
+            Campus Helper
+          </Link>
+          <p className="mt-2 text-sm text-muted-foreground">
+            The campus lost-and-found. Report what went missing, and get it back.
+          </p>
+        </div>
+
+        <div className="card-surface p-6 sm:p-8">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Create an account</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            One account to report items, claim them, and hear about matches.
+          </p>
+
+          <div className="mt-6">
+            <SignupForm />
+          </div>
+        </div>
+
+        <p className="mt-6 text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link href="/auth/login" className="font-medium text-primary hover:underline">
+          <Link
+            href="/auth/login"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
             Sign in
           </Link>
         </p>
       </div>
-      <div className="rounded-lg border bg-card p-6 shadow-sm">
-        <SignupForm />
-      </div>
-    </div>
+    </main>
   );
 }

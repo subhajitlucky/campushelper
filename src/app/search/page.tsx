@@ -1,29 +1,18 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ButtonSpinner } from "@/components/ui/loading-spinner";
-import ItemImage from "@/components/ui/ItemImage";
-import StatusBadge from "@/components/ui/StatusBadge";
-import UserDisplay from "@/components/ui/UserDisplay";
-import Pagination from "@/components/ui/Pagination";
-import SavedSearches from "@/components/SavedSearches";
-import CategoryFilter from "@/components/CategoryFilter";
+import Link from 'next/link';
+import { PackageSearch } from 'lucide-react';
 
-interface Item {
-  id: string;
-  title: string;
-  description: string;
-  itemType: 'LOST' | 'FOUND';
-  status: string;
-  location: string;
-  createdAt: string;
-  images?: string[] | null;
-  postedBy: {
-    name: string | null;
-    avatar: string | null;
-    // email intentionally excluded for public access
-  };
-}
+import CategoryFilter from '@/components/CategoryFilter';
+import ItemListShell, {
+  type ListItem,
+  type ListSelectConfig,
+} from '@/components/ItemListShell';
+import SavedSearches from '@/components/SavedSearches';
+import { Button } from '@/components/ui/button';
+
+type Item = ListItem;
 
 interface SearchFilters {
   search: string;
@@ -35,13 +24,46 @@ interface SearchFilters {
   category: string;
 }
 
+const ITEM_TYPE_OPTIONS = [
+  { value: '', label: 'All types' },
+  { value: 'LOST', label: 'Lost items' },
+  { value: 'FOUND', label: 'Found items' },
+] as const;
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'All statuses' },
+  { value: 'LOST', label: 'Lost' },
+  { value: 'FOUND', label: 'Found' },
+  { value: 'CLAIMED', label: 'Claimed' },
+  { value: 'RESOLVED', label: 'Resolved' },
+] as const;
+
+const LOCATION_OPTIONS = [
+  { value: '', label: 'All locations' },
+  { value: 'Library', label: 'Library' },
+  { value: 'Engineering Building', label: 'Engineering Building' },
+  { value: 'Cafeteria', label: 'Cafeteria' },
+  { value: 'Student Center', label: 'Student Center' },
+  { value: 'Gym', label: 'Gym' },
+  { value: 'Main Hall', label: 'Main Hall' },
+] as const;
+
+/**
+ * Search — the filterable index of every report.
+ *
+ * The results stay empty until the first explicit search: the shell is handed
+ * an `idle` intro until then, and refetches on every filter change after it.
+ * The API is queried through the same params as before; only the presentation
+ * around it changed.
+ */
 export default function SearchPage() {
-  // Main search state
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [user, setUser] = useState<{isLoggedIn: boolean; userId?: string}>({ isLoggedIn: false });
+  const [user, setUser] = useState<{ isLoggedIn: boolean; userId?: string }>({
+    isLoggedIn: false,
+  });
   const [filters, setFilters] = useState<SearchFilters>({
     search: '',
     itemType: '',
@@ -49,82 +71,90 @@ export default function SearchPage() {
     location: '',
     from: '',
     to: '',
-    category: ''
+    category: '',
   });
 
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const limit = 20; // Items per page
+  const limit = 20;
 
-  // Fetch items from API
-  const fetchItems = useCallback(async (page?: number) => {
-    try {
-      setLoading(true);
-      setSearchError(null);
-      setHasSearched(true); // Mark that user has performed a search
-      
-      const queryParams = new URLSearchParams({
-        page: (page || currentPage).toString(),
-        limit: limit.toString(),
-        ...(filters.search && { search: filters.search }),
-        ...(filters.itemType && { itemType: filters.itemType }),
-        ...(filters.status && { status: filters.status }),
-        ...(filters.location && { location: filters.location }),
-        ...(filters.from && { from: filters.from }),
-        ...(filters.to && { to: filters.to }),
-        ...(filters.category && { category: filters.category }),
-      });
+  const fetchItems = useCallback(
+    async (page?: number) => {
+      try {
+        setLoading(true);
+        setSearchError(null);
+        setHasSearched(true);
 
-      const response = await fetch(`/api/items?${queryParams.toString()}`);
-      
-      if (!response.ok) {
-        // Handle HTTP errors gracefully without throwing
-        let errorMessage = 'Failed to search items. Please try again.';
-        
-        if (response.status >= 500) {
-          errorMessage = 'Server error. Please try again later.';
-        } else if (response.status >= 400) {
-          errorMessage = 'Search request failed. Please check your input.';
+        const queryParams = new URLSearchParams({
+          page: (page || currentPage).toString(),
+          limit: limit.toString(),
+          ...(filters.search && { search: filters.search }),
+          ...(filters.itemType && { itemType: filters.itemType }),
+          ...(filters.status && { status: filters.status }),
+          ...(filters.location && { location: filters.location }),
+          ...(filters.from && { from: filters.from }),
+          ...(filters.to && { to: filters.to }),
+          ...(filters.category && { category: filters.category }),
+        });
+
+        const response = await fetch(`/api/items?${queryParams.toString()}`);
+
+        if (!response.ok) {
+          // Handle HTTP errors gracefully without throwing
+          let errorMessage = 'Failed to search items. Please try again.';
+
+          if (response.status >= 500) {
+            errorMessage = 'Server error. Please try again later.';
+          } else if (response.status >= 400) {
+            errorMessage = 'Search request failed. Please check your input.';
+          }
+
+          setSearchError(errorMessage);
+          setItems([]);
+          return;
         }
-        
-        setSearchError(errorMessage);
+
+        const data = await response.json();
+
+        setItems(data.items || []);
+        setCurrentPage(data.pagination?.page || 1);
+        setTotalPages(data.pagination?.totalPages || 1);
+        setTotal(data.pagination?.total || 0);
+
+        setUser(data.user || { isLoggedIn: false });
+      } catch {
         setItems([]);
-        return; // Exit early, don't continue processing
+        setSearchError('Network error. Please check your connection and try again.');
+      } finally {
+        setLoading(false);
       }
+    },
+    [filters, currentPage, limit]
+  );
 
-      const data = await response.json();
-      
-      // Update state with API response
-      setItems(data.items || []);
-      setCurrentPage(data.pagination?.page || 1);
-      setTotalPages(data.pagination?.totalPages || 1);
-      setTotal(data.pagination?.total || 0);
-      
-      // Store user authentication status
-      setUser(data.user || { isLoggedIn: false });
-      
-    } catch {
-      setItems([]);
-      setSearchError('Network error. Please check your connection and try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, currentPage, limit]); // Include all dependencies
-
-  // Don't auto-load items on mount - wait for user to search
-  // Re-fetch when filters change
+  // Don't auto-load on mount — wait for the first search, then track filters.
   useEffect(() => {
     if (hasSearched) {
       fetchItems(currentPage);
     }
-  }, [fetchItems, currentPage, hasSearched]); // Re-fetch when fetchItems changes or page changes
+  }, [fetchItems, currentPage, hasSearched]);
 
-  // Function to update filters and reset page
   const updateFilters = (newFilters: Partial<SearchFilters>) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
-    setCurrentPage(1); // Reset to first page when filters change
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+    setCurrentPage(1);
+  };
+
+  const clearFilters = () => {
+    updateFilters({
+      search: '',
+      itemType: '',
+      status: '',
+      location: '',
+      from: '',
+      to: '',
+      category: '',
+    });
   };
 
   // Saved searches only store filters that GET /api/items understands, so
@@ -137,12 +167,82 @@ export default function SearchPage() {
     ...(filters.to ? { to: filters.to } : {}),
   };
 
+  const selects: ListSelectConfig[] = [
+    {
+      id: 'filter-item-type',
+      label: 'Item type',
+      value: filters.itemType,
+      options: ITEM_TYPE_OPTIONS,
+      onChange: (value) => updateFilters({ itemType: value }),
+      className: 'sm:w-40',
+    },
+    {
+      id: 'filter-status',
+      label: 'Status',
+      value: filters.status,
+      options: STATUS_OPTIONS,
+      onChange: (value) => updateFilters({ status: value }),
+      className: 'sm:w-40',
+    },
+    {
+      id: 'filter-location',
+      label: 'Location',
+      value: filters.location,
+      options: LOCATION_OPTIONS,
+      onChange: (value) => updateFilters({ location: value }),
+      className: 'sm:w-48',
+    },
+  ];
+
+  // `from`/`to` have no control in the bar — they arrive from a saved search —
+  // so the count has to account for them or the page would claim "nothing yet"
+  // about a filtered, empty result set.
+  const activeFilterCount =
+    (filters.search ? 1 : 0) +
+    (filters.itemType ? 1 : 0) +
+    (filters.status ? 1 : 0) +
+    (filters.location ? 1 : 0) +
+    (filters.category ? 1 : 0) +
+    (filters.from ? 1 : 0) +
+    (filters.to ? 1 : 0);
+
   return (
-    <div className="min-h-screen bg-muted/40 py-8">
-      <div className="container mx-auto px-4">
-        {user.isLoggedIn && (
+    <ItemListShell
+      title="Search"
+      description="Search every report by title, description, or location — then narrow it down by type, status, or place."
+      noun={{ singular: 'result', plural: 'results' }}
+      actions={
+        <Button asChild variant="outline">
+          <Link href="/post">Report an item</Link>
+        </Button>
+      }
+      items={items}
+      total={total}
+      loading={loading}
+      error={searchError}
+      onRetry={() => fetchItems(currentPage)}
+      search={{
+        id: 'search',
+        label: 'Search items',
+        placeholder: 'Search by title, description, or location…',
+        value: filters.search,
+        onChange: (value) => updateFilters({ search: value }),
+        onSubmit: () => fetchItems(),
+        submitLabel: 'Search',
+        busy: loading,
+      }}
+      selects={selects}
+      facets={
+        <CategoryFilter
+          value={filters.category || null}
+          onChange={(slug) => updateFilters({ category: slug ?? '' })}
+        />
+      }
+      activeFilterCount={activeFilterCount}
+      onClearFilters={clearFilters}
+      beforeFilters={
+        user.isLoggedIn ? (
           <SavedSearches
-            className="mb-6"
             currentFilters={savedSearchFilters}
             onApply={(applied) =>
               updateFilters({
@@ -154,351 +254,78 @@ export default function SearchPage() {
               })
             }
           />
-        )}
+        ) : undefined
+      }
+      idle={!hasSearched ? <SearchIntro /> : undefined}
+      emptyCopy={{
+        nothing: {
+          title: 'No items have been reported yet',
+          description:
+            'The board is empty. Post what you lost or found, and it will show up here.',
+          action: { label: 'Report an item', href: '/post' },
+        },
+        noResults: {
+          title: filters.search
+            ? `Nothing matches “${filters.search}”`
+            : 'No items match these filters',
+          description:
+            'Try fewer words, a different spelling, or clear the filters to search the whole board.',
+        },
+      }}
+      currentPage={currentPage}
+      totalPages={totalPages}
+      onPageChange={(page) => {
+        setCurrentPage(page);
+        fetchItems(page);
+      }}
+    />
+  );
+}
 
-        {/* Category facets */}
-        <div className="bg-card rounded-lg shadow p-4 mb-6">
-          <h2 className="mb-3 text-sm font-medium text-foreground">Browse by category</h2>
-          <CategoryFilter
-            value={filters.category || null}
-            onChange={(slug) => updateFilters({ category: slug ?? '' })}
-          />
-        </div>
+/**
+ * The pre-search state. It is deliberately not an empty state: nothing has
+ * failed and nothing is missing — the page is simply waiting for a query.
+ */
+function SearchIntro() {
+  return (
+    <div className="mx-auto max-w-lg py-16 text-center">
+      <PackageSearch
+        className="mx-auto size-12 text-muted-foreground/70"
+        aria-hidden="true"
+      />
+      <h2 className="mt-5 text-base font-medium text-foreground">
+        Start your search
+      </h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Search by title, description, or location, or narrow the board by type,
+        status, and place.
+      </p>
 
-        {/* Search and filters */}
-        <div className="bg-card rounded-lg shadow p-6 mb-8">
-          <div className="space-y-4">
-            {/* Search Input */}
-            <div>
-              <label htmlFor="search" className="block text-sm font-medium text-foreground/85 mb-2">
-                Search Items
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  id="search"
-                  placeholder="Search by title, description, or location..."
-                  value={filters.search}
-                  onChange={(e) => updateFilters({ search: e.target.value })}
-                  className="flex-1 px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
-                  onKeyDown={(e) => e.key === 'Enter' && fetchItems()}
-                />
-                <button
-                  onClick={() => fetchItems()}
-                  disabled={loading}
-                  className="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <ButtonSpinner />
-                      Searching...
-                    </>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  )}
-                  {loading ? 'Searching...' : 'Search'}
-                </button>
-              </div>
-            </div>
+      <ul className="mt-6 space-y-2 text-left text-sm text-foreground/85">
+        <li>Try the thing itself: “laptop”, “phone”, “keys”, “wallet”.</li>
+        <li>Separate lost reports from found ones with the type filter.</li>
+        <li>
+          Log in to save a search and get notified when a match is posted.
+        </li>
+      </ul>
 
-            {/* Advanced Filter Dropdowns */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Item Type Filter */}
-              <div>
-                <label htmlFor="filter-item-type" className="block text-sm font-medium text-foreground/85 mb-2">Item Type</label>
-                <select id="filter-item-type"
-                  value={filters.itemType}
-                  onChange={(e) => updateFilters({ itemType: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
-                >
-                  <option value="">All Types</option>
-                  <option value="LOST">Lost Items</option>
-                  <option value="FOUND">Found Items</option>
-                </select>
-              </div>
-
-              {/* Status Filter */}
-              <div>
-                <label htmlFor="filter-status" className="block text-sm font-medium text-foreground/85 mb-2">Status</label>
-                <select id="filter-status"
-                  value={filters.status}
-                  onChange={(e) => updateFilters({ status: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
-                >
-                  <option value="">All Statuses</option>
-                  <option value="LOST">Lost</option>
-                  <option value="FOUND">Found</option>
-                  <option value="CLAIMED">Claimed</option>
-                  <option value="RESOLVED">Resolved</option>
-                </select>
-              </div>
-
-              {/* Location Filter */}
-              <div>
-                <label htmlFor="filter-location" className="block text-sm font-medium text-foreground/85 mb-2">Location</label>
-                <select id="filter-location"
-                  value={filters.location}
-                  onChange={(e) => updateFilters({ location: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
-                >
-                  <option value="">All Locations</option>
-                  <option value="Library">Library</option>
-                  <option value="Engineering Building">Engineering Building</option>
-                  <option value="Cafeteria">Cafeteria</option>
-                  <option value="Student Center">Student Center</option>
-                  <option value="Gym">Gym</option>
-                  <option value="Main Hall">Main Hall</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Quick Filter Buttons */}
-            <div className="flex flex-wrap gap-2">
-              <span className="text-sm font-medium text-foreground/85 mr-2">Quick Filters:</span>
-              <button
-                onClick={() => updateFilters({ itemType: 'LOST' })}
-                className={`px-3 py-1 rounded-full text-sm border ${
-                  filters.itemType === 'LOST'
-                    ? 'bg-destructive/10 text-destructive border-destructive/30'
-                    : 'bg-muted text-foreground/85 border-border hover:bg-muted'
-                }`}
-              >
-                Lost Items
-              </button>
-              <button
-                onClick={() => updateFilters({ itemType: 'FOUND' })}
-                className={`px-3 py-1 rounded-full text-sm border ${
-                  filters.itemType === 'FOUND'
-                    ? 'bg-success/10 text-success border-success/30'
-                    : 'bg-muted text-foreground/85 border-border hover:bg-muted'
-                }`}
-              >
-                Found Items
-              </button>
-              <button
-                onClick={() => updateFilters({ itemType: '', status: '' })}
-                className="px-3 py-1 rounded-full text-sm border bg-muted text-foreground/85 border-border hover:bg-muted"
-              >
-                Clear Filters
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Items display */}
-        <div className="bg-card rounded-lg shadow">
-          <div className="p-6 border-b">
-            <h2 className="text-lg font-semibold text-foreground">
-              {hasSearched ? `Search Results (${total})` : 'Search Items'}
-            </h2>
-          </div>
-          
-          <div className="p-6">
-            {searchError ? (
-              <div className="text-center py-8">
-                <div className="text-destructive mb-4">
-                  <svg className="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                </div>
-                <p className="text-destructive font-medium mb-2">{searchError}</p>
-                <p className="text-muted-foreground text-sm">
-                  {searchError.includes('login') ? (
-                    <>
-                      Please{' '}
-                      <a href="/auth/login" className="text-primary hover:text-info underline">
-                        log in
-                      </a>{' '}
-                      to search for items, or try{' '}
-                      <a href="/resolved" className="text-primary hover:text-info underline">
-                        browsing resolved items
-                      </a>.
-                    </>
-                  ) : (
-                    'Please try searching again or adjust your filters.'
-                  )}
-                </p>
-              </div>
-            ) : !hasSearched ? (
-              <div className="text-center py-16">
-                <div className="text-muted-foreground/70 mb-4">
-                  <svg className="w-20 h-20 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-foreground mb-3">Start Your Search</h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Use the search box and filters above to find lost and found items across campus.
-                </p>
-                <div className="bg-info/10 border border-info/30 rounded-lg p-6 max-w-lg mx-auto text-left">
-                  <p className="text-sm font-medium text-primary mb-3">💡 Search Tips:</p>
-                  <ul className="space-y-2 text-sm text-primary">
-                    <li className="flex items-start">
-                      <span className="mr-2">•</span>
-                      <span>{'Type item names: "laptop", "phone", "keys", "wallet"'}</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="mr-2">•</span>
-                      <span>Use filters to narrow by type, status, or location</span>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="mr-2">•</span>
-                      <span>Try quick filters below for common searches</span>
-                    </li>
-                  </ul>
-                </div>
-                <p className="text-sm text-muted-foreground mt-6">
-                  Looking for only lost items?{' '}
-                  <a href="/lost-items" className="text-primary hover:text-info font-medium underline">
-                    Browse Lost Items
-                  </a>
-                </p>
-              </div>
-            ) : items.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="text-muted-foreground/70 mb-4">
-                  <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0012 15c-2.34 0-4.5-.785-6.172-2.172M12 3c3.314 0 6 2.686 6 6 0 1.86-.792 3.542-2.073 4.828" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-foreground mb-2">No Items Found</h3>
-                <p className="text-muted-foreground mb-4">
-                  {filters.search 
-                    ? `No items found for "${filters.search}". Try different keywords or check your filters.`
-                    : 'No items match your current filters. Try adjusting your search criteria.'
-                  }
-                </p>
-                <button 
-                  onClick={() => updateFilters({ search: '', itemType: '', status: '', location: '', from: '', to: '' })}
-                  className="text-primary hover:text-info text-sm font-medium"
-                >
-                  Clear all filters
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {items.map((item) => {
-                  const formatDate = (dateString: string) => {
-                    return new Date(dateString).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
-                    });
-                  };
-
-                  return (
-                    <div key={item.id} className="bg-card rounded-lg border shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
-                      {/* Item Image */}
-                      <ItemImage images={item.images} alt={item.title} />
-
-                      {/* Card Header */}
-                      <div className="p-4 border-b bg-muted/40">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="text-lg font-semibold text-foreground line-clamp-2">{item.title}</h3>
-                          <StatusBadge status={item.status} />
-                        </div>
-                        <p className="text-sm text-muted-foreground">{formatDate(item.createdAt)}</p>
-                      </div>
-
-                      {/* Card Body */}
-                      <div className="p-4">
-                        <p className="text-muted-foreground mb-4 line-clamp-3 text-sm">{item.description}</p>
-
-                        {/* Item Details */}
-                        <div className="space-y-2">
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            {item.location}
-                          </div>
-
-                          <UserDisplay
-                            user={{
-                              name: item.postedBy.name,
-                              avatar: item.postedBy.avatar
-                            }}
-                            showLabel={true}
-                            labelPrefix="Posted by"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Card Footer */}
-                      <div className="p-4 bg-muted/40 border-t">
-                        {user.isLoggedIn ? (
-                          // Logged-in user actions
-                          <div className="space-y-2">
-                            <button 
-                              onClick={() => window.location.href = `/item/${item.id}`}
-                              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
-                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                              View Details
-                            </button>
-                            {item.status === 'LOST' && (
-                              <button 
-                                onClick={() => window.location.href = `/item/${item.id}`}
-                                className="w-full bg-success hover:bg-success/90 text-success-foreground text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
-                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                </svg>
-                                I Found This!
-                              </button>
-                            )}
-                          </div>
-                        ) : (
-                          // Guest user actions
-                          <div className="space-y-2">
-                            <button 
-                              onClick={() => window.location.href = '/auth/login'}
-                              className="w-full bg-muted text-muted-foreground text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center"
-                            >
-                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                              Login to View Details
-                            </button>
-                            <button 
-                              onClick={() => window.location.href = '/auth/login'}
-                              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center"
-                            >
-                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                              </svg>
-                              Post Your Item
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={(page) => {
-              setCurrentPage(page);
-              fetchItems(page);
-            }}
-            total={total}
-            className="mt-8"
-          />
-        )}
-      </div>
+      <p className="mt-8 text-sm text-muted-foreground">
+        Looking for something specific?{' '}
+        <Link
+          href="/lost-items"
+          className="font-medium text-primary underline-offset-4 hover:underline"
+        >
+          Browse lost items
+        </Link>{' '}
+        or read the{' '}
+        <Link
+          href="/resolved"
+          className="font-medium text-primary underline-offset-4 hover:underline"
+        >
+          resolved stories
+        </Link>
+        .
+      </p>
     </div>
   );
 }

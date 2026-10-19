@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Bell,
@@ -17,8 +16,10 @@ import {
   Sparkles,
   type LucideIcon,
 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import EmptyState from '@/components/ui/EmptyState';
+import PageHeader from '@/components/ui/PageHeader';
 import Pagination from '@/components/ui/Pagination';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthFetch } from '@/lib/auth-fetch';
@@ -57,6 +58,15 @@ interface NotificationPagination {
   totalPages: number;
 }
 
+interface NotificationDay {
+  /** DOM id — `day-0`, `day-1`, … A date string is not a valid id. */
+  id: string;
+  /** Calendar day this group covers, used to detect the group boundary. */
+  key: string;
+  label: string;
+  items: Notification[];
+}
+
 const PAGE_SIZE = 20;
 
 const FILTERS: { value: NotificationFilter; label: string }[] = [
@@ -82,6 +92,13 @@ const NOTIFICATION_ICONS: Record<string, LucideIcon> = {
   Sparkles,
 };
 
+/** Shared geometry for the headerless "tabs" (filter here, tabs on /dashboard). */
+const UNDERLINE_BUTTON = [
+  '-mb-px whitespace-nowrap rounded-t-sm border-b-2 px-0.5 pb-3 pt-1',
+  'text-sm font-medium transition-colors',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+].join(' ');
+
 /**
  * `fetchWithAuth` throws on 401 with the API's own message, which is how the
  * page tells "your session ended" apart from "the request failed".
@@ -90,25 +107,105 @@ function isAuthenticationError(error: unknown): boolean {
   return error instanceof Error && /authentication|log in/i.test(error.message);
 }
 
-function NotificationListSkeleton({ count = 5 }: { count?: number }) {
+function startOfDay(date: Date): Date {
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function dayLabel(date: Date, today: Date, yesterday: Date): string {
+  if (Number.isNaN(date.getTime())) return 'Earlier';
+
+  if (date >= today) return 'Today';
+  if (date >= yesterday) return 'Yesterday';
+
+  return date.toLocaleDateString(
+    'en-IN',
+    date.getFullYear() === today.getFullYear()
+      ? { day: 'numeric', month: 'long' }
+      : { day: 'numeric', month: 'long', year: 'numeric' }
+  );
+}
+
+/**
+ * Collapse a page of notifications into day groups, newest first.
+ *
+ * The API already orders by `createdAt desc`; the copy is sorted defensively so
+ * a single out-of-order row cannot produce two "Today" headings.
+ */
+function groupByDay(notifications: Notification[]): NotificationDay[] {
+  const today = startOfDay(new Date());
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const ordered = [...notifications].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const groups: NotificationDay[] = [];
+
+  for (const notification of ordered) {
+    const date = new Date(notification.createdAt);
+    const key = Number.isNaN(date.getTime()) ? 'earlier' : date.toDateString();
+    const current = groups[groups.length - 1];
+
+    if (current?.key === key) {
+      current.items.push(notification);
+      continue;
+    }
+
+    groups.push({
+      id: `day-${groups.length}`,
+      key,
+      label: dayLabel(date, today, yesterday),
+      items: [notification],
+    });
+  }
+
+  return groups;
+}
+
+function NotificationRowsSkeleton({ count = 5 }: { count?: number }) {
   return (
-    <div className="space-y-3" role="status" aria-label="Loading notifications">
-      {Array.from({ length: count }, (_, index) => (
-        <div key={index} className="bg-card rounded-lg border border-border p-4 shadow-sm">
-          <div className="flex items-start gap-3">
-            <Skeleton className="size-9 rounded-full" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-1/3" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-3 w-24" />
+    <div role="status" aria-label="Loading notifications">
+      <div className="flex items-center gap-3 pb-1 pt-8">
+        <Skeleton className="h-3 w-16" />
+        <span className="h-px flex-1 bg-border-subtle" aria-hidden="true" />
+      </div>
+
+      <ul className="divide-y divide-border-subtle">
+        {Array.from({ length: count }, (_, index) => (
+          <li key={index} className="flex items-start gap-4 py-5">
+            <Skeleton className="size-8 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-3">
+              <div className="flex items-center justify-between gap-4">
+                <Skeleton className="h-5 w-1/3" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+              <Skeleton className="h-4 w-2/3" />
             </div>
-          </div>
-        </div>
-      ))}
+          </li>
+        ))}
+      </ul>
+      <span className="sr-only">Loading…</span>
     </div>
   );
 }
 
+/**
+ * Notification inbox.
+ *
+ * Rows, not cards: one full-width list separated by `divide-border-subtle`, with
+ * day dividers between the groups. An unread row is marked by a 2px accent bar
+ * on its leading edge and a `font-medium` title — no coloured background, no
+ * badge dot, nothing that turns a list into a patchwork. The type icon sits in a
+ * 32px muted circle, and "Mark all as read" is a quiet text action in the page
+ * header rather than a bordered button floating above the list.
+ *
+ * Behaviour is untouched: the same 20-per-page fetch, the same mark-read POST
+ * (single row on click, `{ all: true }` for the header action), the same
+ * All/Unread filter with `aria-pressed`, and the same pagination.
+ */
 export default function NotificationsPage() {
   const { fetchWithAuth } = useAuthFetch(true);
   const router = useRouter();
@@ -248,78 +345,77 @@ export default function NotificationsPage() {
       ? `You have ${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}`
       : 'You have no unread notifications';
 
+  const days = groupByDay(notifications);
+
   return (
-    <div className="min-h-screen bg-muted/40 py-8">
-      <div className="container mx-auto max-w-3xl px-4">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
-          </div>
-          <Button
-            variant="outline"
-            onClick={handleMarkAllRead}
-            disabled={unreadCount === 0 || markingAll}
-          >
-            <CheckCheck className="mr-2 size-4" />
-            {markingAll ? 'Marking...' : 'Mark all as read'}
-          </Button>
-        </div>
+    <main className="page-canvas min-h-screen pb-24 pt-10 sm:pt-14">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        <PageHeader
+          title="Notifications"
+          description={subtitle}
+          actions={
+            <Button
+              variant="quiet"
+              size="sm"
+              onClick={handleMarkAllRead}
+              disabled={unreadCount === 0 || markingAll}
+            >
+              <CheckCheck className="mr-1.5 size-4" aria-hidden="true" />
+              {markingAll ? 'Marking…' : 'Mark all as read'}
+            </Button>
+          }
+        />
 
         <div
-          className="mb-4 inline-flex items-center gap-1 rounded-lg border border-border bg-card p-1"
+          className="flex items-center gap-6 border-b border-border sm:gap-8"
           role="group"
           aria-label="Filter notifications"
         >
-          {FILTERS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => handleFilterChange(option.value)}
-              aria-pressed={filter === option.value}
-              className={cn(
-                'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                filter === option.value
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
+          {FILTERS.map((option) => {
+            const pressed = filter === option.value;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => handleFilterChange(option.value)}
+                aria-pressed={pressed}
+                className={cn(
+                  UNDERLINE_BUTTON,
+                  pressed
+                    ? 'border-primary text-foreground'
+                    : 'border-transparent text-muted-foreground hover:border-border-strong hover:text-foreground'
+                )}
+              >
+                {option.label}
+              </button>
+            );
+          })}
         </div>
 
-        {loading && <NotificationListSkeleton />}
+        <div className="rise-in">
+          {loading && <NotificationRowsSkeleton />}
 
-        {!loading && error && (
-          <div className="bg-card rounded-lg border border-border p-6 text-center shadow-sm">
-            <p className="mb-4 text-muted-foreground">{error}</p>
-            {signInRequired ? (
-              <Button asChild className="bg-primary hover:bg-primary/90">
-                <Link href="/auth/login?callbackUrl=/notifications">Sign In</Link>
-              </Button>
-            ) : (
-              <Button
-                onClick={() => loadNotifications(page, filter)}
-                className="bg-primary hover:bg-primary/90"
-              >
-                Try Again
-              </Button>
-            )}
-          </div>
-        )}
-
-        {!loading && !error && notifications.length === 0 && (
-          <div className="bg-card rounded-lg border border-border shadow-sm">
+          {!loading && error && (
             <EmptyState
-              icon={
-                filter === 'unread' ? (
-                  <Inbox className="h-16 w-16 mx-auto" />
-                ) : (
-                  <Bell className="h-16 w-16 mx-auto" />
-                )
+              icon={signInRequired ? <ShieldAlert /> : <Bell />}
+              title={signInRequired ? 'Sign in to view notifications' : 'Notifications unavailable'}
+              description={error}
+              action={
+                signInRequired
+                  ? {
+                      label: 'Sign in',
+                      variant: 'default',
+                      onClick: () => router.push('/auth/login?callbackUrl=/notifications'),
+                    }
+                  : { label: 'Try again', onClick: () => loadNotifications(page, filter) }
               }
+            />
+          )}
+
+          {!loading && !error && notifications.length === 0 && (
+            <EmptyState
+              icon={filter === 'unread' ? <Inbox /> : <Bell />}
               title={filter === 'unread' ? 'Nothing unread' : 'No notifications yet'}
               description={
                 filter === 'unread'
@@ -327,76 +423,96 @@ export default function NotificationsPage() {
                   : 'Claim updates, comments, matches, and handover messages will show up here.'
               }
             />
-          </div>
-        )}
+          )}
 
-        {!loading && !error && notifications.length > 0 && (
-          <>
-            <ul className="bg-card rounded-lg border border-border shadow-sm divide-y divide-border">
-              {notifications.map((notification) => {
-                const unread = isUnread(notification.readAt);
-                const Icon = NOTIFICATION_ICONS[notificationIconName(notification.type)] ?? Bell;
+          {!loading && !error && notifications.length > 0 && (
+            <>
+              {days.map((day) => (
+                <section key={day.id} aria-labelledby={day.id}>
+                  <div className="flex items-center gap-3 pb-1 pt-8">
+                    <h2 id={day.id} className="text-xs font-medium text-muted-foreground">
+                      {day.label}
+                    </h2>
+                    <span className="h-px flex-1 bg-border-subtle" aria-hidden="true" />
+                  </div>
 
-                return (
-                  <li key={notification.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleNotificationClick(notification)}
-                      className={cn(
-                        'flex w-full items-start gap-3 px-4 py-4 text-left transition-colors',
-                        'hover:bg-muted/40',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
-                        unread && 'border-l-4 border-info/30 bg-info/10'
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          'mt-0.5 flex size-9 flex-shrink-0 items-center justify-center rounded-full',
-                          unread ? 'bg-info/10 text-primary' : 'bg-muted text-muted-foreground'
-                        )}
-                      >
-                        <Icon className="size-4" aria-hidden="true" />
-                      </span>
+                  <ul className="divide-y divide-border-subtle">
+                    {day.items.map((notification) => {
+                      const unread = isUnread(notification.readAt);
+                      const Icon =
+                        NOTIFICATION_ICONS[notificationIconName(notification.type)] ?? Bell;
 
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-start justify-between gap-2">
-                          <span className="font-medium text-foreground">
-                            {unread && <span className="sr-only">Unread: </span>}
-                            {notification.title}
-                          </span>
-                          {unread && (
+                      return (
+                        <li key={notification.id}>
+                          <button
+                            type="button"
+                            onClick={() => handleNotificationClick(notification)}
+                            className={cn(
+                              'relative flex w-full items-start gap-4 py-5 text-left transition-colors',
+                              'hover:bg-muted/40',
+                              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring'
+                            )}
+                          >
+                            {/* Unread marker: a 2px accent bar, never a fill */}
+                            {unread && (
+                              <span
+                                aria-hidden="true"
+                                className="absolute inset-y-0 left-0 w-0.5 bg-primary"
+                              />
+                            )}
+
                             <span
-                              aria-hidden="true"
-                              className="mt-1.5 size-2 flex-shrink-0 rounded-full bg-primary"
-                            />
-                          )}
-                        </span>
-                        <span className="mt-1 block text-sm text-muted-foreground">
-                          {notification.body}
-                        </span>
-                        <time
-                          dateTime={notification.createdAt}
-                          className="mt-1 block text-sm text-muted-foreground"
-                        >
-                          {formatRelativeTime(notification.createdAt)}
-                        </time>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+                              className={cn(
+                                'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted',
+                                unread ? 'text-foreground' : 'text-muted-foreground'
+                              )}
+                            >
+                              <Icon className="size-4" aria-hidden="true" />
+                            </span>
 
-            <Pagination
-              currentPage={pagination.page}
-              totalPages={pagination.totalPages}
-              onPageChange={setPage}
-              total={pagination.total}
-              className="mt-6"
-            />
-          </>
-        )}
+                            <span className="min-w-0 flex-1">
+                              <span className="flex items-baseline justify-between gap-4">
+                                <span
+                                  className={cn(
+                                    'text-base text-foreground',
+                                    unread && 'font-medium'
+                                  )}
+                                >
+                                  {unread && <span className="sr-only">Unread: </span>}
+                                  {notification.title}
+                                </span>
+
+                                <time
+                                  dateTime={notification.createdAt}
+                                  className="shrink-0 text-xs font-medium tabular-nums text-muted-foreground"
+                                >
+                                  {formatRelativeTime(notification.createdAt)}
+                                </time>
+                              </span>
+
+                              <span className="mt-1 line-clamp-2 text-base text-foreground/85">
+                                {notification.body}
+                              </span>
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              ))}
+
+              <Pagination
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                onPageChange={setPage}
+                total={pagination.total}
+                className="mt-12"
+              />
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

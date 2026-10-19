@@ -1,7 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { X } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { sanitizeInput } from '@/lib/security';
 import { useAuthFetch } from '@/lib/auth-fetch';
 
@@ -14,6 +19,14 @@ interface ClaimsModalProps {
   onSuccess?: () => void;
 }
 
+/**
+ * Claim dialog.
+ *
+ * A real modal, not a box in the page flow: it dims the page with the overlay
+ * elevation token, closes on Escape or a backdrop click, keeps focus inside the
+ * panel while it is open, and locks background scrolling. Everything the dialog
+ * does with the API is unchanged.
+ */
 export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwner, onSuccess }: ClaimsModalProps) {
   const { data: session } = useSession();
   const { fetchWithAuth } = useAuthFetch(true); // Require authentication
@@ -24,6 +37,68 @@ export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwne
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Close: reset the form, then hand control back to the parent.
+  const close = useCallback(() => {
+    setFormData({ claimType: 'FOUND_IT', message: '' });
+    setError(null);
+    setSuccess(null);
+    onClose();
+  }, [onClose]);
+
+  // Escape closes, Tab stays inside the panel, and the page behind cannot
+  // scroll. Hooks run before the early returns below so the order never changes.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const panel = panelRef.current;
+      if (!panel) return;
+
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    // Move focus into the dialog, matching where sighted attention already is.
+    panelRef.current?.focus();
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen, close]);
 
   // Don't render if modal is not open
   if (!isOpen) return null;
@@ -60,21 +135,21 @@ export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwne
       }
 
       await response.json();
-      
+
       setSuccess('Claim submitted successfully!');
-      
+
       // Call onSuccess callback if provided
       if (onSuccess) {
         onSuccess();
       }
-      
+
       // Close modal after 2 seconds
       setTimeout(() => {
         onClose();
         setSuccess(null);
         setFormData({ claimType: 'FOUND_IT', message: '' });
       }, 2000);
-      
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit claim');
     } finally {
@@ -86,56 +161,65 @@ export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwne
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
+
     if (error) {
       setError(null);
     }
   };
 
-  // Close modal and reset state
-  const handleClose = () => {
-    setFormData({ claimType: 'FOUND_IT', message: '' });
-    setError(null);
-    setSuccess(null);
-    onClose();
-  };
+  const controlClasses =
+    'w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground shadow-xs transition-colors placeholder:text-muted-foreground focus:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50';
 
   return (
-    <div className="fixed inset-0 bg-primary/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-md"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !loading) close();
+      }}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="claims-modal-title"
+        aria-describedby="claims-modal-description"
+        tabIndex={-1}
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-border-strong bg-card shadow-overlay outline-none"
+      >
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b">
-          <h2 className="text-xl font-semibold text-foreground">
-            Claim Item
-          </h2>
+        <div className="flex items-start justify-between gap-4 border-b border-border-subtle px-6 py-5">
+          <div className="min-w-0">
+            <h2 id="claims-modal-title" className="text-xl font-semibold tracking-tight text-foreground">
+              Claim this item
+            </h2>
+            <p id="claims-modal-description" className="mt-1 text-sm text-muted-foreground">
+              You are claiming{' '}
+              <span className="font-medium text-foreground">{itemTitle}</span>. The poster
+              reviews every claim before anything is handed over.
+            </p>
+          </div>
+
           <button
-            onClick={handleClose}
-            className="text-muted-foreground/70 hover:text-muted-foreground transition-colors"
+            type="button"
+            onClick={close}
+            aria-label="Close"
+            className="-mr-1.5 -mt-1 shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="size-5" aria-hidden="true" />
           </button>
         </div>
 
-        {/* Item Info */}
-        <div className="p-6 border-b bg-muted/40">
-          <p className="text-sm text-muted-foreground mb-1">You are claiming:</p>
-          <p className="font-medium text-foreground">{itemTitle}</p>
-        </div>
-
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5 px-6 py-6">
           {/* Claim Type */}
-          <div>
-            <label className="block text-sm font-medium text-foreground/85 mb-2">
-              What type of claim is this? *
-            </label>
+          <div className="space-y-2">
+            <Label htmlFor="claim-type">What kind of claim is this?</Label>
             <select
+              id="claim-type"
               name="claimType"
               value={formData.claimType}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring"
+              className={controlClasses}
               required
             >
               <option value="FOUND_IT">I found this item</option>
@@ -144,56 +228,50 @@ export default function ClaimsModal({ isOpen, onClose, itemId, itemTitle, isOwne
           </div>
 
           {/* Message */}
-          <div>
-            <label className="block text-sm font-medium text-foreground/85 mb-2">
-              Message *
-            </label>
-            <textarea
+          <div className="space-y-2">
+            <Label htmlFor="claim-message">Message</Label>
+            <Textarea
+              id="claim-message"
               name="message"
               value={formData.message}
               onChange={handleInputChange}
-              placeholder="Describe how this item relates to you..."
+              placeholder="Describe how this item relates to you…"
               rows={4}
-              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring resize-none"
+              className="resize-none"
               required
               maxLength={500}
             />
-            <div className="mt-1 text-sm text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               {formData.message.length}/500 characters
-            </div>
+            </p>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+            <div role="alert" className="rounded-r-lg border-l-2 border-destructive bg-destructive/5 px-3 py-2">
               <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
 
           {/* Success Message */}
           {success && (
-            <div className="p-3 bg-success/10 border border-success/30 rounded-lg">
+            <div role="status" className="rounded-r-lg border-l-2 border-success bg-success/5 px-3 py-2">
               <p className="text-sm text-success">{success}</p>
             </div>
           )}
 
           {/* Buttons */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="flex-1 px-4 py-2 border border-border text-foreground/85 rounded-lg hover:bg-muted/40 transition-colors"
-              disabled={loading}
-            >
+          <div className="flex justify-end gap-3 border-t border-border-subtle pt-5">
+            <Button type="button" variant="outline" onClick={close} disabled={loading}>
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              loading={loading}
               disabled={loading || !formData.message.trim()}
-              className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? 'Submitting...' : 'Submit Claim'}
-            </button>
+              Submit claim
+            </Button>
           </div>
         </form>
       </div>

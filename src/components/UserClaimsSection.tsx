@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
-import { Eye, Calendar, MessageSquare, AlertCircle } from "lucide-react";
-import EmptyState from "@/components/ui/EmptyState";
-import { ListItemSkeleton } from "@/components/ui/LoadingSkeleton";
+import Link from 'next/link';
+import { MessageSquare, Search } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import EmptyState from '@/components/ui/EmptyState';
+import SectionHeader from '@/components/ui/SectionHeader';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface UserClaim {
   id: string;
@@ -35,6 +35,74 @@ interface UserClaimsSectionProps {
   userId: string;
 }
 
+const CLAIM_TYPE_LABEL: Record<UserClaim['claimType'], string> = {
+  FOUND_IT: 'You found this item',
+  OWN_IT: 'You reported this as yours',
+};
+
+const STATUS_LABEL: Record<UserClaim['status'], string> = {
+  PENDING: 'Pending',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+};
+
+/**
+ * The pill geometry is written out rather than delegated to `<Badge>`: that
+ * component spreads `props` after its `className`, so any caller that passes a
+ * className silently loses the variant's `rounded-full border px-2.5` base. A
+ * status chip should keep its shape no matter which colours it is given.
+ */
+const PILL = 'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold';
+
+/** Same colour contract as `StatusBadge`, applied to claim states. */
+const STATUS_CLASSES: Record<UserClaim['status'], string> = {
+  PENDING: `${PILL} border-warning/30 bg-warning/10 text-warning`,
+  APPROVED: `${PILL} border-success/30 bg-success/10 text-success`,
+  REJECTED: `${PILL} border-destructive/30 bg-destructive/10 text-destructive`,
+};
+
+function formatDate(iso: string | null): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+
+  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function ClaimRowsSkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <ul
+      className="mt-6 divide-y divide-border-subtle"
+      role="status"
+      aria-label="Loading your claims"
+    >
+      {Array.from({ length: count }, (_, index) => (
+        <li key={index} className="flex items-start justify-between gap-6 py-5">
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-3 w-40" />
+          </div>
+          <Skeleton className="h-9 w-24 shrink-0" />
+        </li>
+      ))}
+      <span className="sr-only">Loading…</span>
+    </ul>
+  );
+}
+
+/**
+ * The "My claims" tab panel.
+ *
+ * Claims are records in a list, not objects you browse, so they are rows: a
+ * title, the message, one meta line, and quiet actions — separated by
+ * `divide-border-subtle` rather than wrapped in per-claim bordered boxes inside
+ * a Card. The previous version nested a `border rounded-lg p-4` row per claim
+ * inside a card, which is three levels of container for two lines of text.
+ */
 export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
   const [claims, setClaims] = useState<UserClaim[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,13 +115,13 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
 
       // Fetch claims made by this user
       const response = await fetch(`/api/claims?userId=${userId}`, {
-        credentials: 'include'
+        credentials: 'include',
       });
 
       if (!response.ok) {
         throw new Error('Failed to fetch your claims');
       }
-      
+
       const data = await response.json();
       setClaims(data.claims || []);
     } catch {
@@ -73,7 +141,7 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
       // TODO: Implement cancel claim API endpoint
       // Cancel claim initiated
       // For now, just remove from local state
-      setClaims(prev => prev.filter(claim => claim.id !== claimId));
+      setClaims((prev) => prev.filter((claim) => claim.id !== claimId));
     } catch {
       setError('Failed to cancel claim. Please try again.');
     }
@@ -85,140 +153,135 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
     }
   }, [userId, fetchUserClaims]);
 
+  const header = (description: string, showBrowse: boolean) => (
+    <SectionHeader
+      title="Your claims"
+      description={description}
+      divider={false}
+      action={
+        showBrowse ? (
+          <Button variant="quiet" size="sm" asChild>
+            <Link href="/search">
+              <Search className="mr-1.5 size-4" aria-hidden="true" />
+              Find something to claim
+            </Link>
+          </Button>
+        ) : undefined
+      }
+    />
+  );
+
   // Loading state
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Claims</CardTitle>
-          <CardDescription>Claims you&apos;ve made on items</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ListItemSkeleton count={3} />
-        </CardContent>
-      </Card>
+      <section aria-label="Your claims">
+        {header('Claims you have made on items.', false)}
+        <ClaimRowsSkeleton />
+      </section>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Claims</CardTitle>
-          <CardDescription>Claims you&apos;ve made on items</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <div className="text-destructive mb-4">
-              <AlertCircle className="w-12 h-12 mx-auto" />
-            </div>
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={fetchUserClaims} variant="outline">
-              Try Again
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <section aria-label="Your claims">
+        {header('Claims you have made on items.', false)}
+        <EmptyState
+          icon={<MessageSquare />}
+          title="Your claims could not be loaded"
+          description={error}
+          action={{ label: 'Try again', onClick: fetchUserClaims }}
+        />
+      </section>
     );
   }
 
   // Empty state
   if (claims.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Claims</CardTitle>
-          <CardDescription>Claims you&apos;ve made on items</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
-            icon={<MessageSquare className="w-16 h-16 mx-auto" />}
-            title="No claims made yet"
-            action={{
-              label: "Browse Items to Claim",
-              onClick: () => window.location.href = '/search'
-            }}
-          />
-        </CardContent>
-      </Card>
+      <section aria-label="Your claims">
+        {header('Claims you have made on items.', false)}
+        <EmptyState
+          icon={<MessageSquare />}
+          title="No claims made yet"
+          description="Found something that belongs to someone else? Open the report and claim it."
+          action={{
+            label: 'Browse items to claim',
+            onClick: () => {
+              window.location.href = '/search';
+            },
+          }}
+        />
+      </section>
     );
   }
 
-  // Claims list
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Your Claims ({claims.length})</CardTitle>
-        <CardDescription>Claims you&apos;ve made on items</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {claims.map((claim) => (
-            <div key={claim.id} className="border rounded-lg p-4 hover:bg-muted/40 transition-colors">
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg text-foreground mb-1">
-                    {claim.item.title}
-                  </h3>
-                  {claim.message && (
-                    <p className="text-muted-foreground text-sm mb-2">{claim.message}</p>
-                  )}
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(claim.createdAt).toLocaleDateString()}
-                    </div>
-                    {claim.resolvedAt && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        Resolved {new Date(claim.resolvedAt).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 ml-4">
-                  <Badge 
-                    variant={claim.claimType === 'FOUND_IT' ? 'default' : 'secondary'}
-                    className="text-xs"
-                  >
-                    {claim.claimType === 'FOUND_IT' ? 'I Found This' : 'This is Mine'}
-                  </Badge>
-                  <Badge 
-                    variant="outline"
-                    className={`text-xs ${
-                      claim.status === 'PENDING' ? 'border-warning/30 text-warning' :
-                      claim.status === 'APPROVED' ? 'border-success/30 text-success' :
-                      'border-destructive/30 text-destructive'
-                    }`}
-                  >
-                    {claim.status}
-                  </Badge>
-                </div>
+    <section aria-label="Your claims">
+      {header(
+        `${claims.length} claim${claims.length === 1 ? '' : 's'} submitted.`,
+        true
+      )}
+
+      <ul className="mt-6 divide-y divide-border-subtle">
+        {claims.map((claim) => (
+          <li
+            key={claim.id}
+            className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 py-5"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <Link
+                  href={`/item/${claim.itemId}`}
+                  className="text-base font-medium text-foreground underline-offset-4 hover:underline"
+                >
+                  {claim.item.title}
+                </Link>
+                <span className={STATUS_CLASSES[claim.status]}>
+                  {STATUS_LABEL[claim.status]}
+                </span>
               </div>
-              
-              <div className="flex items-center gap-2 pt-3 border-t">
-                <Button size="sm" variant="outline" asChild>
-                  <Link href={`/item/${claim.itemId}`}>
-                    <Eye className="w-3 h-3 mr-1" />
-                    View Item
-                  </Link>
-                </Button>
-                
-                {claim.status === 'PENDING' && (
-                  <Button 
-                    size="sm" 
-                    variant="destructive"
-                    onClick={() => handleCancelClaim(claim.id)}
-                  >
-                    Cancel Claim
-                  </Button>
+
+              {claim.message && (
+                <p className="mt-2 max-w-2xl text-base text-foreground/85">{claim.message}</p>
+              )}
+
+              <p className="mt-2 text-sm text-muted-foreground">
+                {CLAIM_TYPE_LABEL[claim.claimType]}
+                <span className="mx-1.5" aria-hidden="true">
+                  ·
+                </span>
+                Claimed <time dateTime={claim.createdAt}>{formatDate(claim.createdAt)}</time>
+                {claim.resolvedAt && (
+                  <>
+                    <span className="mx-1.5" aria-hidden="true">
+                      ·
+                    </span>
+                    Resolved <time dateTime={claim.resolvedAt}>{formatDate(claim.resolvedAt)}</time>
+                  </>
                 )}
-              </div>
+              </p>
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+
+            <div className="flex shrink-0 items-center gap-1">
+              <Button variant="quiet" size="sm" asChild>
+                <Link href={`/item/${claim.itemId}`}>View item</Link>
+              </Button>
+
+              {claim.status === 'PENDING' && (
+                <Button
+                  variant="quiet"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => handleCancelClaim(claim.id)}
+                >
+                  Cancel claim
+                </Button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

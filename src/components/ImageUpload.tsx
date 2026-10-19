@@ -10,13 +10,19 @@
  * - Upload progress tracking
  * - Preview before upload
  * - Error handling
+ *
+ * The upload path itself (validate → compress → POST /api/upload through the
+ * authenticated fetch) is unchanged. What changed is the shell: the control is a
+ * large dashed drop zone rather than a card tucked below the fold, the chosen
+ * photo is previewed at size, and removal is a visible action instead of a
+ * hover-only overlay that a touch device cannot reach.
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Upload, X, Loader2 } from 'lucide-react';
+import { AlertCircle, ImagePlus, Loader2, Trash2, Upload } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { UPLOAD_CONFIG } from '@/lib/upload';
 import { useAuthFetch } from '@/lib/auth-fetch';
 
@@ -29,6 +35,8 @@ interface ImageUploadProps {
   currentImage?: string | null;
   // Maximum number of images (default: 1)
   maxImages?: number;
+  // Id for the file input, so an external <label htmlFor> can point at it
+  inputId?: string;
   // ClassName for styling
   className?: string;
 }
@@ -37,15 +45,19 @@ export default function ImageUpload({
   onImageUpload,
   onImageRemove,
   currentImage,
+  inputId = 'image-upload-input',
   className = '',
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(currentImage || null);
   const [imageLoading, setImageLoading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const localPreviewRef = useRef<string | null>(null);
   const { fetchWithAuth } = useAuthFetch(true);
+
+  const busy = uploading || imageLoading;
 
   // Sync preview with currentImage updates from parent (e.g. form reset)
   useEffect(() => {
@@ -74,12 +86,12 @@ export default function ImageUpload({
   }, []);
 
   /**
-   * Handle file selection
+   * Validate, compress, and upload one file.
+   *
+   * Shared by the file picker and the drop zone so both routes behave
+   * identically — same type/size checks, same compression, same endpoint.
    */
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processFile = async (file: File) => {
     setError(null);
 
     // Validate file type
@@ -108,7 +120,7 @@ export default function ImageUpload({
       // Fix: Preserve original filename extension
       // browser-image-compression sometimes loses the extension, so we fix it
       const originalName = file.name;
-  const extension = originalName.includes('.') ? originalName.split('.').pop()! : 'jpg';
+      const extension = originalName.includes('.') ? originalName.split('.').pop()! : 'jpg';
       const baseName = originalName.replace(/\.[^/.]+$/, '');
       // Create new File with proper name and extension
       const finalFile = new File([compressedFile], `${baseName}.${extension}`, {
@@ -133,11 +145,11 @@ export default function ImageUpload({
         } catch {
           errorData = {};
         }
-        
+
         // Provide helpful error messages
         if (response.status === 500) {
           throw new Error(
-            errorData.error || 
+            errorData.error ||
             'Server error occurred. This might be due to missing Vercel Blob configuration. Please check the setup guide.'
           );
         } else if (response.status === 401) {
@@ -146,7 +158,7 @@ export default function ImageUpload({
           throw new Error('File is too large. Please choose a smaller image.');
         } else {
           throw new Error(
-            errorData.error || 
+            errorData.error ||
             `Upload failed with status ${response.status}. Please try again or contact support.`
           );
         }
@@ -183,6 +195,31 @@ export default function ImageUpload({
   };
 
   /**
+   * Handle file selection
+   */
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    await processFile(file);
+  };
+
+  /**
+   * Handle a file dropped onto the zone.
+   */
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (busy) return;
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    await processFile(file);
+  };
+
+  /**
    * Remove uploaded image
    */
   const handleRemove = async () => {
@@ -210,106 +247,120 @@ export default function ImageUpload({
    * Trigger file input
    */
   const handleClick = () => {
-    if (uploading || imageLoading) return;
+    if (busy) return;
     fileInputRef.current?.click();
   };
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      {/* Hidden file input - always rendered so ref stays valid */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileChange}
-        disabled={uploading}
-        className="hidden"
-        id="image-upload-input"
-      />
+    <div className={className}>
+      <div
+        onDragOver={(event) => {
+          event.preventDefault();
+          if (!busy) setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        className={cn(
+          'rounded-xl border-2 border-dashed transition-colors',
+          isDragging ? 'border-primary bg-primary/5' : 'border-border',
+          // The input itself is visually hidden, so the zone carries its focus
+          // indicator — a keyboard user still sees where they are.
+          'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background'
+        )}
+      >
+        <input
+          ref={fileInputRef}
+          id={inputId}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          disabled={uploading}
+          className="sr-only"
+        />
 
-      {/* Upload Area */}
-      {!preview && (
-        <Card className="border-2 border-dashed border-border hover:border-border transition-colors">
-          <div className="p-8 text-center">
-            {uploading ? (
-              <div className="flex flex-col items-center">
-                <Loader2 className="w-12 h-12 text-info animate-spin mb-4" />
-                <p className="text-muted-foreground font-medium">Processing your image...</p>
-                <p className="text-sm text-muted-foreground mt-2">Compressing and uploading</p>
-                <p className="text-xs text-muted-foreground/70 mt-1">Please wait, this may take a moment</p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center cursor-pointer" onClick={handleClick}>
-                <Upload className="w-12 h-12 text-muted-foreground/70 mb-4" />
-                <p className="text-lg font-medium text-foreground/85 mb-2">
-                  Upload an image (optional)
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Click to browse or drag and drop
-                </p>
-                <p className="text-xs text-muted-foreground/70 mt-2">
-                  JPEG, PNG, or WebP • Max {UPLOAD_CONFIG.maxFileSize}MB
-                </p>
-              </div>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {/* Preview Area */}
-      {preview && (
-        <div className="space-y-4">
-          {/* Image container with hover actions */}
-          <div className="relative group">
-            <div className="relative w-full max-w-md mx-auto rounded-lg overflow-hidden border-2 border-border bg-muted/40 shadow-sm">
+        {preview ? (
+          <div className="p-3">
+            <div className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-lg bg-muted/40">
+              {/* Object URL or blob URL preview: next/image would need remote
+                  patterns for every upload host. */}
               <img
                 src={preview}
-                alt="Preview"
-                className="w-full h-auto display-block"
-                style={{ maxHeight: '400px', objectFit: 'contain' }}
+                alt="The photo attached to this item"
+                className="max-h-full max-w-full object-contain"
               />
-              
-              {/* Remove overlay - shows on hover over image only */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
-                <Button
-                  onClick={handleRemove}
-                  variant="destructive"
-                  size="sm"
-                  type="button"
-                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+
+              {/* Replacing keeps the current photo on screen under the progress
+                  state, so the choice is never lost mid-upload. */}
+              {busy && (
+                <div
+                  role="status"
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/75 backdrop-blur-sm"
                 >
-                  <X className="w-4 h-4 mr-2" />
+                  <Loader2 className="size-6 animate-spin text-muted-foreground" aria-hidden="true" />
+                  <p className="text-sm font-medium text-foreground">Uploading…</p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                This photo will be attached to your item.
+              </p>
+
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={handleClick} disabled={busy}>
+                  <Upload className="mr-2 size-4" aria-hidden="true" />
+                  Replace
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRemove}
+                  disabled={busy}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="mr-2 size-4" aria-hidden="true" />
                   Remove
                 </Button>
               </div>
             </div>
           </div>
-
-          {/* Replace button below image */}
-          <Button
-            onClick={handleClick}
-            variant="outline"
-            disabled={uploading || imageLoading}
-            type="button"
-            className="w-full"
+        ) : busy ? (
+          <div
+            role="status"
+            className="flex min-h-[13rem] flex-col items-center justify-center px-6 py-12 text-center sm:min-h-[15rem]"
           >
-            <Upload className="w-4 h-4 mr-2" />
-            Replace Image
-          </Button>
-        </div>
-      )}
+            <Loader2 className="size-8 animate-spin text-muted-foreground" aria-hidden="true" />
+            <p className="mt-4 text-base font-medium text-foreground">Uploading your photo…</p>
+            <p className="mt-1 text-sm text-muted-foreground">Compressing before upload</p>
+          </div>
+        ) : (
+          <label
+            htmlFor={inputId}
+            className="flex min-h-[13rem] cursor-pointer flex-col items-center justify-center px-6 py-12 text-center sm:min-h-[15rem]"
+          >
+            <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <ImagePlus className="size-6" aria-hidden="true" />
+            </span>
+            <span className="mt-4 text-base font-medium text-foreground">
+              Drop a photo here, or choose one
+            </span>
+            <span className="mt-1 text-sm text-muted-foreground">
+              JPEG, PNG, or WebP — up to {UPLOAD_CONFIG.maxFileSize}MB
+            </span>
+            <span className="mt-5 inline-flex h-9 items-center rounded-lg border border-input px-4 text-sm font-medium text-foreground">
+              Choose photo
+            </span>
+          </label>
+        )}
+      </div>
 
       {/* Error Message */}
       {error && (
-        <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
-          <p className="text-sm text-destructive">{error}</p>
-        </div>
-      )}
-
-      {/* Help Text */}
-      {!preview && !uploading && !error && (
-        <p className="text-xs text-muted-foreground text-center">
-          Adding an image helps others identify the item. Images are automatically compressed for faster loading.
+        <p role="alert" className="mt-3 flex items-start gap-1.5 text-sm text-destructive">
+          <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <span>{error}</span>
         </p>
       )}
     </div>

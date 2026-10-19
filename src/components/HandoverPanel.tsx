@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Clock, KeyRound, Loader2, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, Clock, KeyRound, ShieldCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useAuthFetch } from '@/lib/auth-fetch';
 import { showError, showSuccess } from '@/lib/toast-config';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,9 @@ import { cn } from '@/lib/utils';
  *
  * The code is fetched from a dedicated endpoint that authorises the claimer,
  * the item poster, and moderators only.
+ *
+ * Three states, each with one tone: issued (warning — time-limited, action
+ * needed), verified (success), expired or exhausted (destructive).
  */
 
 interface HandoverState {
@@ -149,102 +153,143 @@ export default function HandoverPanel({ claimId, onVerified, className }: Handov
     return (
       <div
         className={cn(
-          'rounded-lg border border-success/30 bg-success/10 p-4',
+          'rounded-xl border border-success/30 bg-success/10 p-4',
           className
         )}
       >
         <div className="flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-success" aria-hidden="true" />
-          <p className="font-medium text-success">Handover verified</p>
+          <ShieldCheck className="size-5 shrink-0 text-success" aria-hidden="true" />
+          <p className="text-base font-medium text-success">Handover verified</p>
         </div>
-        <p className="mt-1 text-sm text-success">
+        <p className="mt-1 text-sm text-foreground/85">
           The item has been marked as returned to its owner.
         </p>
       </div>
     );
   }
 
+  // No usable code: either the attempt budget is gone, or it expired / was never
+  // issued. Both are destructive-ish; a plain "no code" state is only a warning.
+  if (!handover.code) {
+    const isDead = handover.exhausted || handover.expired;
+
+    return (
+      <div
+        className={cn(
+          'rounded-xl border p-4',
+          isDead ? 'border-destructive/30 bg-destructive/10' : 'border-warning/30 bg-warning/10',
+          className
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <AlertTriangle
+            className={cn('size-5 shrink-0', isDead ? 'text-destructive' : 'text-warning')}
+            aria-hidden="true"
+          />
+          <p className={cn('text-base font-medium', isDead ? 'text-destructive' : 'text-warning')}>
+            {handover.exhausted
+              ? 'Handover code locked'
+              : handover.expired
+                ? 'Handover code expired'
+                : 'No active handover code'}
+          </p>
+        </div>
+
+        <p className="mt-1 text-sm text-foreground/85">
+          {handover.exhausted
+            ? 'Too many incorrect attempts were made, so the code is no longer valid.'
+            : handover.expired
+              ? 'This code has expired, so it cannot be used to confirm the handover.'
+              : 'There is no active code for this claim right now.'}
+        </p>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-3"
+          loading={isSubmitting}
+          onClick={() => void reissue()}
+        >
+          Issue a new code
+        </Button>
+      </div>
+    );
+  }
+
+  const hintId = `handover-hint-${claimId}`;
+  const errorId = `handover-error-${claimId}`;
+
   return (
-    <div className={cn('rounded-lg border border-info/30 bg-info/10 p-4', className)}>
+    <div className={cn('rounded-xl border border-warning/30 bg-warning/10 p-4', className)}>
       <div className="flex items-center gap-2">
-        <KeyRound className="h-5 w-5 text-primary" aria-hidden="true" />
-        <h3 className="font-medium text-primary">Handover verification</h3>
+        <KeyRound className="size-5 shrink-0 text-warning" aria-hidden="true" />
+        <h3 className="text-base font-medium text-foreground">Handover verification</h3>
       </div>
 
-      {handover.code ? (
-        <>
-          <p className="mt-2 text-sm text-primary">
-            {handover.isClaimer
-              ? 'Read this code to the other party when you receive the item. Do not share it before then.'
-              : 'Enter this code when the item is physically handed over.'}
-          </p>
+      <p className="mt-1.5 text-sm text-foreground/85">
+        {handover.isClaimer
+          ? 'Read this code to the other party when you receive the item. Do not share it before then.'
+          : 'Enter this code when the item is physically handed over.'}
+      </p>
 
-          <p
-            className="mt-3 select-all font-mono text-3xl font-bold tracking-[0.3em] text-primary"
-            aria-label={`Handover code ${handover.code.split('').join(' ')}`}
+      {/* The one thing this panel exists for — it gets the largest type on the
+          panel, and `select-all` so it can be copied in one gesture. */}
+      <p
+        className="mt-4 select-all font-mono text-3xl tracking-[0.3em] text-foreground"
+        aria-label={`Handover code ${handover.code.split('').join(' ')}`}
+      >
+        {handover.code}
+      </p>
+
+      <p id={hintId} className="mt-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <Clock className="size-3.5 shrink-0" aria-hidden="true" />
+        {formatExpiry(handover.expiresAt)} · {handover.attemptsRemaining} attempt
+        {handover.attemptsRemaining === 1 ? '' : 's'} remaining
+      </p>
+
+      <form onSubmit={submit} className="mt-4 space-y-2">
+        <label
+          htmlFor={`handover-${claimId}`}
+          className="block text-sm font-medium text-foreground"
+        >
+          Enter the code to confirm the handover
+        </label>
+
+        <div className="flex flex-wrap gap-2">
+          <input
+            id={`handover-${claimId}`}
+            value={entry}
+            onChange={(changeEvent) => {
+              // Keep it numeric and bounded so the field cannot hold junk.
+              setEntry(changeEvent.target.value.replace(/\D/g, '').slice(0, 6));
+              if (error) setError(null);
+            }}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="000000"
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? `${hintId} ${errorId}` : hintId}
+            className="w-32 rounded-lg border border-input bg-background px-3 py-2 text-center font-mono text-base tracking-widest text-foreground placeholder:text-muted-foreground focus:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          />
+
+          <Button
+            type="submit"
+            variant="success"
+            loading={isSubmitting}
+            disabled={entry.length !== 6}
           >
-            {handover.code}
-          </p>
-
-          <p className="mt-1 flex items-center gap-1 text-xs text-primary">
-            <Clock className="h-3 w-3" aria-hidden="true" />
-            {formatExpiry(handover.expiresAt)} · {handover.attemptsRemaining} attempt
-            {handover.attemptsRemaining === 1 ? '' : 's'} remaining
-          </p>
-
-          <form onSubmit={submit} className="mt-3 space-y-2">
-            <label htmlFor={`handover-${claimId}`} className="block text-sm font-medium text-primary">
-              Enter the code to confirm the handover
-            </label>
-            <div className="flex gap-2">
-              <input
-                id={`handover-${claimId}`}
-                value={entry}
-                onChange={(changeEvent) => {
-                  // Keep it numeric and bounded so the field cannot hold junk.
-                  setEntry(changeEvent.target.value.replace(/\D/g, '').slice(0, 6));
-                  if (error) setError(null);
-                }}
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="000000"
-                aria-invalid={Boolean(error)}
-                className="w-32 rounded-lg border border-info/30 px-3 py-2 font-mono tracking-widest focus:border-ring focus:ring-2 focus:ring-ring"
-              />
-              <button
-                type="submit"
-                disabled={isSubmitting || entry.length !== 6}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
-              >
-                {isSubmitting && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
-                Verify
-              </button>
-            </div>
-          </form>
-        </>
-      ) : (
-        <div className="mt-2">
-          <p className="flex items-start gap-2 text-sm text-primary">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
-            {handover.exhausted
-              ? 'Too many incorrect attempts were made, so the code is no longer valid.'
-              : 'There is no active code for this claim right now.'}
-          </p>
-
-          <button
-            type="button"
-            onClick={() => void reissue()}
-            disabled={isSubmitting}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-info/30 bg-card px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-info/10 disabled:opacity-50"
-          >
-            {isSubmitting && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
-            Issue a new code
-          </button>
+            Verify
+          </Button>
         </div>
-      )}
+      </form>
 
       {error && (
-        <p role="alert" className="mt-2 rounded-md border border-destructive/30 bg-destructive/10 p-2 text-sm text-destructive">
+        <p
+          id={errorId}
+          role="alert"
+          className="mt-3 rounded-r-lg border-l-2 border-destructive bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
           {error}
         </p>
       )}

@@ -3,7 +3,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
+import Link from 'next/link';
+import { MessageSquare, TriangleAlert, X } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import EmptyState from '@/components/ui/EmptyState';
+import SectionHeader from '@/components/ui/SectionHeader';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 import { sanitizeInput } from '@/lib/security';
+import { formatRelativeTime } from '@/lib/notification-display';
 import { useAuthFetch } from '@/lib/auth-fetch';
 
 interface Comment {
@@ -31,13 +40,21 @@ interface CommentsSectionProps {
   itemStatus: 'LOST' | 'FOUND' | 'CLAIMED' | 'RESOLVED' | 'DELETED';
 }
 
+/**
+ * Comments for one item.
+ *
+ * Deliberately containerless (brief §4.1): a `SectionHeader`, then the form,
+ * then the list — no wrapping card and no grey inner box around the form. The
+ * empty state *replaces* the list rather than sitting underneath the form, which
+ * is what made the old layout look broken.
+ */
 export default function CommentsSection({ itemId, itemStatus }: CommentsSectionProps) {
   const { data: session } = useSession();
   const { fetchWithAuth } = useAuthFetch(true);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Step 110: Form state
   const [formData, setFormData] = useState({
     message: ''
@@ -112,7 +129,7 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
+
     // Clear form error when user starts typing
     if (formError) {
       setFormError(null);
@@ -237,282 +254,264 @@ export default function CommentsSection({ itemId, itemStatus }: CommentsSectionP
 
   if (loading) {
     return (
-      <div className="bg-card rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Comments</h3>
-        <div className="space-y-4">
+      <section aria-labelledby="comments-heading" aria-busy="true">
+        <SectionHeader id="comments-heading" title="Comments" />
+
+        <div className="mt-6 space-y-6" role="status" aria-label="Loading comments">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-muted rounded-full"></div>
-                <div className="flex-1">
-                  <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
-                  <div className="h-3 bg-muted rounded w-full mb-1"></div>
-                  <div className="h-3 bg-muted rounded w-3/4"></div>
-                </div>
+            <div key={i} className="flex items-start gap-3">
+              <Skeleton className="size-8 shrink-0 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </section>
     );
   }
 
   if (error) {
     const isAuthError = error.includes('Authentication required') || error.includes('Authentication');
-    
+
     return (
-      <div className="bg-card rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Comments</h3>
-        <div className="text-center py-8">
-          <p className="text-muted-foreground mb-4">{error}</p>
+      <section aria-labelledby="comments-heading">
+        <SectionHeader id="comments-heading" title="Comments" />
+
+        <div role="alert" className="mt-6 rounded-r-lg border-l-2 border-destructive bg-destructive/5 px-4 py-3">
+          <p className="text-base text-destructive">{error}</p>
+        </div>
+
+        <div className="mt-4">
           {isAuthError ? (
-            <a
-              href="/auth/login"
-              className="inline-block px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              Sign In to View Comments
-            </a>
+            <Button asChild>
+              <Link href="/auth/login">Sign in to view comments</Link>
+            </Button>
           ) : (
-            <button
-              onClick={fetchComments}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-            >
-              Try Again
-            </button>
+            <Button variant="outline" onClick={fetchComments}>
+              Try again
+            </Button>
           )}
         </div>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="bg-card rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">
-        Comments ({comments.length})
-      </h3>
-      
+    <section aria-labelledby="comments-heading">
+      <SectionHeader id="comments-heading" title={`Comments (${comments.length})`} />
+
       {/* Show info message for resolved items */}
       {itemStatus === 'RESOLVED' && (
-        <div className="mb-4 p-4 bg-success/10 border-l-4 border-success/30 rounded-lg">
-          <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-success flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
-              <p className="text-success font-semibold text-sm mb-1">
-                Item Resolved
-              </p>
-              <p className="text-success text-xs">
-                This item has been resolved. You can view existing comments but cannot add new ones.
-              </p>
-            </div>
-          </div>
-        </div>
+        <p className="mt-4 flex items-start gap-2 text-sm text-success">
+          <MessageSquare className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          This item is resolved, so the thread is read-only now.
+        </p>
       )}
-      
+
       {/* Step 110: Comment Form - Only show if logged in and item is not resolved */}
       {session?.user && itemStatus !== 'RESOLVED' && (
-        <div className="mb-6 p-4 bg-muted/40 rounded-lg">
-          <h4 className="text-sm font-medium text-foreground mb-3">Add a Comment</h4>
-          <form onSubmit={submitComment}>
-            <div className="space-y-3">
-              <div>
-                <textarea
-                  name="message"
-                  value={formData.message}
-                  onChange={handleInputChange}
-                  placeholder="Write your comment here..."
-                  rows={3}
-                  maxLength={1000}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-ring resize-none"
-                  disabled={formLoading}
-                />
-                <div className="flex justify-between items-center mt-1">
-                  {formError && (
-                    <p className="text-sm text-destructive">{formError}</p>
-                  )}
-                  <p className={`text-sm ml-auto ${
-                    formData.message.length > 1000 ? 'text-destructive' : 'text-muted-foreground'
-                  }`}>
-                    {formData.message.length}/1000
-                  </p>
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={formLoading || !formData.message.trim()}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
-                >
-                  {formLoading ? 'Posting...' : 'Post Comment'}
-                </button>
-              </div>
+        <form onSubmit={submitComment} className="mt-6">
+          <label htmlFor="comment-message" className="block text-sm font-medium text-foreground">
+            Add a comment
+          </label>
+
+          <Textarea
+            id="comment-message"
+            name="message"
+            value={formData.message}
+            onChange={handleInputChange}
+            placeholder="Write your comment here…"
+            rows={3}
+            maxLength={1000}
+            disabled={formLoading}
+            className="mt-2 resize-none text-base"
+          />
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              {formError ? (
+                <p role="alert" className="text-sm text-destructive">{formError}</p>
+              ) : (
+                <p className="text-xs font-medium text-muted-foreground">
+                  {formData.message.length}/1000
+                </p>
+              )}
             </div>
-          </form>
-        </div>
+
+            <Button
+              type="submit"
+              disabled={formLoading || !formData.message.trim()}
+            >
+              {formLoading ? 'Posting…' : 'Post comment'}
+            </Button>
+          </div>
+        </form>
       )}
-      
+
       {/* Show login prompt if not logged in and item is not resolved */}
       {!session?.user && itemStatus !== 'RESOLVED' && (
-        <div className="mb-6 p-4 bg-muted/40 rounded-lg text-center">
-          <p className="text-muted-foreground mb-3">Sign in to add a comment</p>
-          <a
-            href="/auth/login"
-            className="inline-block px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Sign In
-          </a>
+        <div className="mt-6">
+          <p className="text-base text-muted-foreground">Sign in to add a comment.</p>
+          <Button asChild className="mt-4">
+            <Link href="/auth/login">Sign in</Link>
+          </Button>
         </div>
       )}
-      
-      {/* Comments List */}
+
+      {/* Comments List — the empty state replaces the list, it does not sit below the form */}
       {comments.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <p>No comments yet. Be the first to comment!</p>
-        </div>
+        <EmptyState
+          icon={<MessageSquare aria-hidden="true" />}
+          title="No comments yet"
+          description="Be the first to reply on this report."
+        />
       ) : (
-        <div className="space-y-4">
+        <>
           {/* Fix: Add delete error display */}
           {deleteError && (
-            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-sm text-destructive">{deleteError}</p>
-                <button
-                  onClick={() => setDeleteError(null)}
-                  className="ml-auto text-destructive hover:text-destructive"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
+            <div
+              role="alert"
+              className="mt-6 flex items-start gap-3 rounded-r-lg border-l-2 border-destructive bg-destructive/5 px-4 py-3"
+            >
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden="true" />
+              <p className="text-sm text-destructive">{deleteError}</p>
+              <button
+                type="button"
+                onClick={() => setDeleteError(null)}
+                aria-label="Dismiss error"
+                className="ml-auto rounded text-destructive transition-colors hover:text-destructive/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
             </div>
           )}
-          {comments.map((comment) => (
-            <div key={comment.id} className="border-b border-border pb-4 last:border-b-0">
-              <div className="flex items-start gap-3">
-                {/* User Avatar */}
-                <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center flex-shrink-0">
-                  {comment.user.avatar ? (
-                    <Image
-                      src={comment.user.avatar}
-                      alt={comment.user.name || 'User'}
-                      width={32}
-                      height={32}
-                      className="rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-muted-foreground text-sm font-medium">
-                      {(comment.user.name || 'U')[0].toUpperCase()}
-                    </span>
-                  )}
-                </div>
-                
-                {/* Comment Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {comment.user.name || 'Anonymous'}
-                    </p>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(comment.createdAt).toLocaleDateString()} at{' '}
-                      {new Date(comment.createdAt).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </span>
-                  </div>
-                  
-                  {/* Comment Message - Edit Mode or Display Mode */}
-                  {editingCommentId === comment.id ? (
-                    // Edit Mode
-                    <div className="mt-2">
-                      <textarea
-                        value={editMessage}
-                        onChange={(e) => setEditMessage(e.target.value)}
-                        className="w-full p-2 border border-border rounded-md resize-none focus:ring-2 focus:ring-ring focus:border-ring"
-                        rows={3}
-                        placeholder="Edit your comment..."
-                        disabled={editLoading}
+
+          <ul className="mt-6 divide-y divide-border-subtle">
+            {comments.map((comment) => (
+              <li key={comment.id} className="py-6 first:pt-0">
+                <div className="flex items-start gap-3">
+                  {/* User Avatar */}
+                  <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted">
+                    {comment.user.avatar ? (
+                      <Image
+                        src={comment.user.avatar}
+                        alt=""
+                        width={32}
+                        height={32}
+                        className="size-8 object-cover"
                       />
-                      {editError && (
-                        <p className="text-sm text-destructive mt-1">{editError}</p>
-                      )}
-                      <div className="flex gap-2 mt-2">
+                    ) : (
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {(comment.user.name || 'U')[0].toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Comment Content */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <p className="text-sm font-medium text-foreground">
+                        {comment.user.name || 'Anonymous'}
+                      </p>
+                      <time
+                        dateTime={comment.createdAt}
+                        title={new Date(comment.createdAt).toLocaleString()}
+                        className="text-xs font-medium text-muted-foreground"
+                      >
+                        {formatRelativeTime(comment.createdAt)}
+                      </time>
+                    </div>
+
+                    {/* Comment Message - Edit Mode or Display Mode */}
+                    {editingCommentId === comment.id ? (
+                      // Edit Mode
+                      <div className="mt-3">
+                        <Textarea
+                          value={editMessage}
+                          onChange={(e) => setEditMessage(e.target.value)}
+                          rows={3}
+                          placeholder="Edit your comment…"
+                          disabled={editLoading}
+                          aria-label="Edit comment"
+                          className="resize-none text-base"
+                        />
+                        {editError && (
+                          <p role="alert" className="mt-2 text-sm text-destructive">{editError}</p>
+                        )}
+                        <div className="mt-3 flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => saveEditComment(comment.id)}
+                            disabled={editLoading || !editMessage.trim()}
+                          >
+                            {editLoading ? 'Saving…' : 'Save'}
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={cancelEdit} disabled={editLoading}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      // Display Mode
+                      <p className="mt-1.5 whitespace-pre-wrap break-words text-base text-foreground/85">
+                        {comment.message}
+                      </p>
+                    )}
+
+                    {/* Comment Images */}
+                    {comment.images && comment.images.length > 0 && (
+                      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        {comment.images.map((image, index) => (
+                          <img
+                            key={index}
+                            src={image}
+                            alt={`Comment image ${index + 1}`}
+                            className="h-24 w-full rounded-lg object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Action Buttons (only for comment author, not on resolved items) */}
+                    {session?.user?.id === comment.userId && itemStatus !== 'RESOLVED' && itemStatus !== 'DELETED' && (
+                      <div className="mt-3 flex items-center gap-4">
                         <button
-                          onClick={() => saveEditComment(comment.id)}
-                          disabled={editLoading || !editMessage.trim()}
-                          className="px-3 py-1 bg-primary text-primary-foreground text-xs rounded hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
+                          type="button"
+                          onClick={() => startEditComment(comment)}
+                          disabled={editingCommentId === comment.id}
+                          className="rounded text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                         >
-                          {editLoading ? 'Saving...' : 'Save'}
+                          Edit
                         </button>
                         <button
-                          onClick={cancelEdit}
-                          disabled={editLoading}
-                          className="px-3 py-1 bg-muted text-foreground/85 text-xs rounded hover:bg-muted disabled:cursor-not-allowed"
+                          type="button"
+                          onClick={() => deleteComment(comment.id)}
+                          className="rounded text-xs font-medium text-destructive transition-colors hover:text-destructive/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                         >
-                          Cancel
+                          Delete
                         </button>
                       </div>
-                    </div>
-                  ) : (
-                    // Display Mode
-                    <p className="text-sm text-foreground/85 whitespace-pre-wrap break-words">
-                      {comment.message}
-                    </p>
-                  )}
-                  
-                  {/* Comment Images */}
-                  {comment.images && comment.images.length > 0 && (
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      {comment.images.map((image, index) => (
-                        <img
-                          key={index}
-                          src={image}
-                          alt={`Comment image ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-lg"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  
-                  {/* Action Buttons (only for comment author, not on resolved items) */}
-                  {session?.user?.id === comment.userId && itemStatus !== 'RESOLVED' && itemStatus !== 'DELETED' && (
-                    <div className="mt-2 flex gap-3">
-                      <button
-                        onClick={() => startEditComment(comment)}
-                        className="text-xs text-primary hover:text-primary hover:underline"
-                        disabled={editingCommentId === comment.id}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteComment(comment.id)}
-                        className="text-xs text-destructive hover:text-destructive hover:underline"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                  
-                  {/* Show resolved message if item is resolved */}
-                  {itemStatus === 'RESOLVED' && session?.user?.id === comment.userId && (
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      Comments are locked after resolution
-                    </div>
-                  )}
+                    )}
+
+                    {/* Show resolved message if item is resolved */}
+                    {itemStatus === 'RESOLVED' && session?.user?.id === comment.userId && (
+                      <p className="mt-2 text-xs font-medium text-muted-foreground">
+                        Comments are locked after resolution
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
-    </div>
+    </section>
   );
 }

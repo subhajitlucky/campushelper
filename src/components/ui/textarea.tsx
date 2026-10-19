@@ -27,11 +27,12 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <textarea
         className={cn(
-          "flex min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm shadow-xs ring-offset-background placeholder:text-muted-foreground transition-colors",
-          "focus:outline-none focus:ring-0",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          // Default border color
+          "flex min-h-[80px] w-full rounded-lg border bg-background px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground transition-colors",
+          // Controls share one radius (rounded-lg) and one visible focus ring
+          // with Button — `focus:ring-0` used to erase the indicator entirely.
           "border-input focus:border-ring",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          "disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
         ref={ref}

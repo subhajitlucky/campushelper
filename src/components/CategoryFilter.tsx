@@ -80,10 +80,11 @@ export default function CategoryFilter({
 
   if (isLoading && visibleCategories.length === 0) {
     return (
-      <div className={cn('flex flex-wrap gap-2', className)} aria-busy="true">
+      <div className={cn('flex flex-wrap gap-2', className)} role="status" aria-busy="true">
         {[1, 2, 3, 4].map((i) => (
           <Skeleton key={i} className="h-8 w-28 rounded-full" />
         ))}
+        <span className="sr-only">Loading categories…</span>
       </div>
     );
   }
@@ -97,7 +98,7 @@ export default function CategoryFilter({
           onClick={() => {
             void loadCategories();
           }}
-          className="font-medium text-primary hover:text-primary hover:underline"
+          className="rounded font-medium text-primary underline-offset-4 hover:underline"
         >
           Try again
         </button>
@@ -105,13 +106,19 @@ export default function CategoryFilter({
     );
   }
 
+  /**
+   * Chip geometry is fixed: `h-8` and `rounded-full` so the row of chips reads
+   * as one control strip, active state carried by the primary fill rather than
+   * an outline — a bordered chip next to a filled one looked like two different
+   * components.
+   */
   const chipClasses = (isActive: boolean) =>
     cn(
-      'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+      'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm transition-colors',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
       isActive
-        ? 'border-info/30 bg-primary text-primary-foreground'
-        : 'border-border bg-card text-foreground/85 hover:bg-muted/40'
+        ? 'bg-primary font-medium text-primary-foreground'
+        : 'bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground'
     );
 
   return (
@@ -139,11 +146,16 @@ export default function CategoryFilter({
             type="button"
             onClick={() => onChange(isActive ? null : category.slug)}
             aria-pressed={isActive}
-            className={chipClasses(isActive)}
+            className={cn(chipClasses(isActive), 'whitespace-nowrap')}
           >
-            <Icon className="h-4 w-4" aria-hidden="true" />
+            <Icon className="size-4 shrink-0" aria-hidden="true" />
             <span>{category.name}</span>
-            <span className={cn('text-xs', isActive ? 'text-info' : 'text-muted-foreground')}>
+            <span
+              className={cn(
+                'text-xs tabular-nums',
+                isActive ? 'text-primary-foreground/75' : 'text-muted-foreground'
+              )}
+            >
               {category.itemCount}
             </span>
           </button>

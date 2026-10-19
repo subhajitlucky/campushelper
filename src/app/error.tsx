@@ -1,18 +1,23 @@
 'use client';
 
 import { useEffect } from 'react';
+import { RefreshCw } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
-import { AlertCircle, RefreshCw, Home } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 interface ErrorProps {
   error: Error & { digest?: string };
   reset: () => void;
 }
 
+/**
+ * Route error boundary.
+ *
+ * Centred, `max-w-md`, one sentence, one action (brief §4.9): the action is the
+ * one that can actually help, which is retrying the render. The raw message is
+ * development-only and separated by a rule rather than boxed.
+ */
 export default function GlobalError({ error, reset }: ErrorProps) {
-  const router = useRouter();
-
   useEffect(() => {
     // Log error only in development
     if (process.env.NODE_ENV === 'development') {
@@ -21,47 +26,31 @@ export default function GlobalError({ error, reset }: ErrorProps) {
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-card rounded-lg shadow-lg p-8 text-center">
-        <div className="mb-6">
-          <AlertCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-foreground mb-2">
-            Oops! Something went wrong
-          </h2>
-          <p className="text-muted-foreground">
-            We encountered an unexpected error. Don&apos;t worry, our team has been notified.
-          </p>
-        </div>
+    <main className="flex min-h-[70vh] items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md text-center">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+          Something went wrong
+        </h1>
+
+        <p className="mt-3 text-base text-foreground/85">
+          This page could not be loaded. Trying again usually fixes it.
+        </p>
+
+        <Button size="lg" className="mt-8" onClick={reset}>
+          <RefreshCw className="mr-2 size-4" aria-hidden="true" />
+          Try again
+        </Button>
 
         {process.env.NODE_ENV === 'development' && (
-          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-left">
-            <p className="text-sm font-medium text-destructive mb-2">Error Details:</p>
-            <p className="text-xs text-destructive font-mono break-all">
-              {error.message}
-            </p>
+          <div className="mt-10 border-t border-border pt-6 text-left">
+            <p className="text-sm font-medium text-foreground">Error details (development only)</p>
+            <p className="mt-2 break-all font-mono text-sm text-muted-foreground">{error.message}</p>
             {error.digest && (
-              <p className="text-xs text-destructive mt-2">
-                ID: {error.digest}
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">Digest: {error.digest}</p>
             )}
           </div>
         )}
-
-        <div className="flex flex-col gap-3">
-          <Button onClick={reset} className="w-full">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Try Again
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => router.push('/')}
-            className="w-full"
-          >
-            <Home className="w-4 h-4 mr-2" />
-            Go Home
-          </Button>
-        </div>
       </div>
-    </div>
+    </main>
   );
 }

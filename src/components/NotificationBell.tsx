@@ -87,12 +87,16 @@ export default function NotificationBell() {
     >
       <Bell className="size-5" aria-hidden="true" />
       {/* The live region carries the count for screen readers; the badge below is
-          hidden from them so the number is not announced twice. */}
+          hidden from them so the number is not announced twice.
+
+          The chip is filled with `primary` rather than `destructive`: an unread
+          notification is not an error, and a red pill in the navbar read as one.
+          `tabular-nums` keeps the width steady as the count ticks over. */}
       <span className="absolute -right-1.5 -top-1.5" aria-live="polite">
         {hasUnread && (
           <span
             aria-hidden="true"
-            className="inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-semibold leading-5 text-destructive-foreground"
+            className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium leading-5 tabular-nums text-primary-foreground"
           >
             {unreadCount > MAX_DISPLAYED_COUNT ? `${MAX_DISPLAYED_COUNT}+` : unreadCount}
           </span>

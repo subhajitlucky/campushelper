@@ -1,17 +1,31 @@
-import Link from 'next/link';
-import { Card, CardContent, CardHeader } from './card';
-import StatusBadge from './StatusBadge';
-import UserDisplay from './UserDisplay';
-import ItemImage from './ItemImage';
-import TagPill from './TagPill';
-import ReputationBadge from './ReputationBadge';
-import { Button } from './button';
+import Image from "next/image";
+import Link from "next/link";
+import {
+  Backpack,
+  BookOpen,
+  Dumbbell,
+  FileText,
+  IdCard,
+  ImageIcon,
+  KeyRound,
+  MapPin,
+  Package,
+  Shirt,
+  Smartphone,
+  Watch,
+  type LucideIcon,
+} from "lucide-react";
+
+import { cn } from "@/lib/utils";
+
+import { Button } from "./button";
+import StatusBadge from "./StatusBadge";
 
 interface Item {
   id: string;
   title: string;
   description: string;
-  itemType: 'LOST' | 'FOUND';
+  itemType: "LOST" | "FOUND";
   status: string;
   location: string;
   createdAt: string;
@@ -36,164 +50,162 @@ interface ItemCardProps {
   showActions?: boolean;
   onFound?: (item: Item) => void;
   className?: string;
-  variant?: 'default' | 'compact';
+  variant?: "default" | "compact";
 }
 
 /**
- * ItemCard Component
+ * Category taxonomy → icon. The database stores a lucide icon *name*
+ * (see prisma/migrations/…_seed_categories_zones), so the ten seeded names are
+ * mapped explicitly rather than pulling the whole icon set in through a dynamic
+ * lookup — that would ship every icon in lucide to the browser.
+ */
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  Smartphone,
+  IdCard,
+  FileText,
+  BookOpen,
+  KeyRound,
+  Backpack,
+  Shirt,
+  Watch,
+  Dumbbell,
+  Package,
+};
+
+/**
+ * Relative dates, the way a person would say them. Absolute dates are kept on
+ * the `title` attribute for anyone who needs the exact day.
+ */
+function relativeDate(iso: string) {
+  const then = new Date(iso);
+  const diffMinutes = Math.round((Date.now() - then.getTime()) / 60000);
+
+  if (!Number.isFinite(diffMinutes)) return "";
+  if (diffMinutes < 1) return "just now";
+  if (diffMinutes < 60) return `${diffMinutes} min ago`;
+
+  const hours = Math.round(diffMinutes / 60);
+  if (hours < 24) return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+
+  const days = Math.round(hours / 24);
+  if (days < 30) return days === 1 ? "yesterday" : `${days} days ago`;
+
+  return then.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
+function absoluteDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/**
+ * ItemCard — image-led, fixed-geometry card for a single report.
  *
- * Complete item card with image, status, title, description, and actions.
- * Reusable across lost-items, resolved, and search pages.
+ * The brief's card spec (§4.2): photo at 4:3, title at 16px/500, one meta row
+ * (zone or location + relative date), status badge. No description — it only
+ * ever truncated, and it is what made every card a different height. The card
+ * is the link; secondary actions sit below it as siblings so the markup never
+ * nests a button inside an anchor.
+ *
+ * Props are unchanged from the previous implementation so existing callers keep
+ * working; `variant="compact"` now only tightens the body padding.
  */
 export default function ItemCard({
   item,
   user,
   showActions = true,
   onFound,
-  className = '',
-  variant = 'default'
+  className = "",
+  variant = "default",
 }: ItemCardProps) {
-  const isCompact = variant === 'compact';
+  const isCompact = variant === "compact";
+  const image = item.images?.[0];
+  const place = item.zone?.name ?? item.location;
+  const CategoryIcon = (item.category?.icon && CATEGORY_ICONS[item.category.icon]) || ImageIcon;
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
+  // Only a lost item can be found, and only the list pages pass a handler.
+  const showFoundAction = showActions && item.status === "LOST" && typeof onFound === "function";
 
   return (
-    <Card
-      className={`flex h-full flex-col overflow-hidden border border-border bg-card transition-shadow ${
-        isCompact ? 'hover:shadow-sm' : 'hover:shadow-md'
-      } ${className}`}
+    <article
+      className={cn(
+        "group flex h-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-card shadow-card",
+        "transition-shadow hover:shadow-card-hover",
+        // Keyboard focus rings the whole card, not just the text inside it —
+        // and `has-` keeps the ring outside the clipping image container.
+        "has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring",
+        className
+      )}
     >
-      {/* Item Image */}
-      <ItemImage
-        images={item.images}
-        alt={item.title}
-        aspectRatio={isCompact ? 'square' : 'video'}
-        className={isCompact ? 'max-h-40' : ''}
-      />
-
-      {/* Card Header */}
-      <CardHeader className={`${isCompact ? 'px-3 pt-3 pb-1' : 'px-6 pt-6 pb-3'}`}>
-        <div className={`flex items-start justify-between gap-2 ${isCompact ? 'mb-1' : 'mb-2'}`}>
-          <h3 className={`${isCompact ? 'text-sm' : 'text-lg'} font-semibold text-foreground line-clamp-1`}
-          >
-            {item.title}
-          </h3>
-          <StatusBadge status={item.status} />
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {formatDate(item.createdAt)}
-        </p>
-      </CardHeader>
-
-      {/* Card Content */}
-      <CardContent className={`${isCompact ? 'px-3 pb-3 pt-0' : 'px-6 pb-6 pt-0'} flex flex-col gap-2`}> 
-        <p className={`${isCompact ? 'text-xs' : 'text-sm'} text-foreground/85 ${isCompact ? 'line-clamp-2' : 'line-clamp-3'}`}>
-          {item.description}
-        </p>
-
-        {/* Item Details */}
-        <div className={`${isCompact ? 'space-y-1' : 'space-y-2'}`}>
-          <div className={`${isCompact ? 'text-xs' : 'text-sm'} flex items-center text-muted-foreground`}> 
-            <svg className={`${isCompact ? 'w-3 h-3' : 'w-4 h-4'} mr-1.5`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            {item.location}
-          </div>
-
-          {isCompact ? (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <UserDisplay user={item.postedBy} size="sm" showLabel={false} />
-              <span className="truncate">{item.postedBy.name || 'Anonymous'}</span>
-              {typeof item.postedBy.reputation === 'number' && (
-                <ReputationBadge total={item.postedBy.reputation} />
-              )}
-            </div>
+      <Link
+        href={`/item/${item.id}`}
+        className="flex flex-1 flex-col focus-visible:outline-none"
+      >
+        {/* Image — fixed 4:3, so every card in a row is the same height */}
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
+          {image ? (
+            <Image
+              src={image}
+              alt=""
+              fill
+              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+              className="object-cover transition-transform duration-300 ease-out group-hover:scale-[1.02]"
+            />
           ) : (
-            <div className="flex flex-wrap items-center gap-2">
-              <UserDisplay user={item.postedBy} size="sm" />
-              {typeof item.postedBy.reputation === 'number' && (
-                <ReputationBadge total={item.postedBy.reputation} />
-              )}
+            <div className="flex h-full w-full items-center justify-center">
+              <CategoryIcon className="size-10 text-muted-foreground/70" aria-hidden="true" />
             </div>
           )}
         </div>
 
-        {/* Tags */}
-        {item.tags && item.tags.length > 0 && (
-          <ul className="flex flex-wrap gap-1.5" aria-label="Item tags">
-            {item.tags.slice(0, isCompact ? 3 : 6).map((tag) => (
-              <li key={tag}>
-                <TagPill tag={tag} />
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {/* Actions */}
-        {showActions && user && (
-          <div className={`mt-auto ${isCompact ? 'pt-1.5' : 'pt-3'}`}>
-            {user.isLoggedIn ? (
-              <div className={`${isCompact ? 'space-y-1.5' : 'space-y-2'}`}>
-                <Button asChild size={isCompact ? 'sm' : 'sm'} variant={isCompact ? 'outline' : 'default'} className="w-full">
-                  <Link href={`/item/${item.id}`}>
-                    <svg className={`${isCompact ? 'w-3.5 h-3.5' : 'w-4 h-4'} mr-1.5`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                    {isCompact ? 'View' : 'View Details'}
-                  </Link>
-                </Button>
-                {item.status === 'LOST' && onFound && (
-                  <Button
-                    size={isCompact ? 'sm' : 'sm'}
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => onFound(item)}
-                  >
-                    <svg className={`${isCompact ? 'w-3.5 h-3.5' : 'w-4 h-4'} mr-1.5`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
-                    {isCompact ? 'I Found This' : 'I Found This!'}
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className={`${isCompact ? 'space-y-1.5' : 'space-y-2'}`}>
-                <Button
-                  size={isCompact ? 'sm' : 'sm'}
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => window.location.href = '/auth/login'}
-                >
-                  <svg className={`${isCompact ? 'w-3.5 h-3.5' : 'w-4 h-4'} mr-1.5`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                  {isCompact ? 'Login to View' : 'Login to View Details'}
-                </Button>
-                <Button
-                  size={isCompact ? 'sm' : 'sm'}
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => window.location.href = '/auth/login'}
-                >
-                  <svg className={`${isCompact ? 'w-3.5 h-3.5' : 'w-4 h-4'} mr-1.5`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                  </svg>
-                  {isCompact ? 'Post Item' : 'Post Your Item'}
-                </Button>
-              </div>
-            )}
+        {/* Body */}
+        <div className={cn("flex flex-1 flex-col gap-3", isCompact ? "p-4" : "p-5")}>
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="line-clamp-2 min-h-[2.75rem] text-base font-medium leading-snug text-foreground">
+              {item.title}
+            </h3>
+            <StatusBadge status={item.status} />
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {/* One meta row: place · relative date */}
+          <div className="mt-auto flex items-center gap-1.5 text-sm text-muted-foreground">
+            <MapPin className="size-4 shrink-0" aria-hidden="true" />
+            <span className="truncate">{place}</span>
+            <span aria-hidden="true">·</span>
+            <time
+              dateTime={item.createdAt}
+              title={absoluteDate(item.createdAt)}
+              suppressHydrationWarning
+              className="shrink-0 whitespace-nowrap tabular-nums"
+            >
+              {relativeDate(item.createdAt)}
+            </time>
+          </div>
+        </div>
+      </Link>
+
+      {/* Secondary action — a sibling of the link, never inside it */}
+      {showFoundAction && (
+        <div className="border-t border-border-subtle px-4 py-3">
+          {user?.isLoggedIn ? (
+            <Button
+              variant="quiet"
+              size="sm"
+              className="w-full"
+              onClick={() => onFound?.(item)}
+            >
+              I found this
+            </Button>
+          ) : (
+            <Button variant="quiet" size="sm" className="w-full" asChild>
+              <Link href="/auth/login">Log in to claim</Link>
+            </Button>
+          )}
+        </div>
+      )}
+    </article>
   );
 }

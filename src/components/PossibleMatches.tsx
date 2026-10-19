@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Loader2, Sparkles, X } from 'lucide-react';
+import { CheckCircle2, X } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import SectionHeader from '@/components/ui/SectionHeader';
 import { useAuthFetch } from '@/lib/auth-fetch';
 import { showError, showSuccess } from '@/lib/toast-config';
 import { cn } from '@/lib/utils';
@@ -14,6 +17,9 @@ import { cn } from '@/lib/utils';
  * full description and are only actionable by the person who filed the report.
  * Each suggestion shows *why* it was paired so the user can judge it rather
  * than trusting a bare percentage.
+ *
+ * Containerless like the rest of the page (brief §4.1): a `SectionHeader` draws
+ * the rule, and rows are separated by dividers rather than boxed.
  */
 
 interface MatchReason {
@@ -139,57 +145,45 @@ export default function PossibleMatches({ itemId, className }: PossibleMatchesPr
   if (hidden || isLoading || matches.length === 0) return null;
 
   return (
-    <section
-      className={cn(
-        'bg-card rounded-lg border border-info/30 shadow-sm overflow-hidden',
-        className
-      )}
-      aria-labelledby="possible-matches-heading"
-    >
-      <header className="flex items-start justify-between gap-3 border-b border-info/30 bg-info/10 px-4 py-3">
-        <div className="flex items-start gap-2">
-          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-          <div>
-            <h2 id="possible-matches-heading" className="font-medium text-foreground">
-              Possible {matches.length === 1 ? 'match' : 'matches'}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              These reports look like they could describe the same item.
-            </p>
-          </div>
-        </div>
+    <section className={className} aria-labelledby="possible-matches-heading">
+      <SectionHeader
+        id="possible-matches-heading"
+        title={matches.length === 1 ? 'Possible match' : 'Possible matches'}
+        description="These reports look like they could describe the same item."
+        action={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setHidden(true)}
+            aria-label="Hide possible matches"
+          >
+            <X className="size-4" aria-hidden="true" />
+          </Button>
+        }
+      />
 
-        <button
-          type="button"
-          onClick={() => setHidden(true)}
-          className="rounded p-1 text-muted-foreground transition-colors hover:bg-info/10 hover:text-foreground/85"
-          aria-label="Hide possible matches"
-        >
-          <X className="h-4 w-4" aria-hidden="true" />
-        </button>
-      </header>
-
-      <ul className="divide-y divide-border">
+      <ul className="mt-6 divide-y divide-border-subtle">
         {matches.map((match) => {
           const isPending = pendingId === match.id;
 
           return (
-            <li key={match.id} className="p-4">
+            <li key={match.id} className="py-5 first:pt-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span
                   className={cn(
-                    'rounded-md border px-2 py-0.5 text-xs font-medium',
+                    'rounded-full border px-2.5 py-0.5 text-xs font-medium',
                     scoreTone(match.score)
                   )}
                 >
                   {match.score}% match
                 </span>
-                <span className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                <span className="rounded-full border border-border-subtle bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                   {match.counterpart.itemType === 'FOUND' ? 'Found report' : 'Lost report'}
                 </span>
                 {match.status === 'CONFIRMED' && (
-                  <span className="flex items-center gap-1 rounded-md border border-success/30 bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
-                    <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                  <span className="flex items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
+                    <CheckCircle2 className="size-3" aria-hidden="true" />
                     Confirmed
                   </span>
                 )}
@@ -197,27 +191,29 @@ export default function PossibleMatches({ itemId, className }: PossibleMatchesPr
 
               <Link
                 href={`/item/${match.counterpart.id}`}
-                className="mt-2 block font-medium text-foreground transition-colors hover:text-primary"
+                className="mt-3 block rounded text-base font-medium text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {match.counterpart.title}
               </Link>
 
-              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+              <p className="mt-1 line-clamp-2 text-base text-foreground/85">
                 {match.counterpart.description}
               </p>
 
-              <p className="mt-1 text-sm text-muted-foreground">
-                {match.counterpart.location}
-                {relativeDate(match.counterpart.createdAt) &&
-                  ` · ${relativeDate(match.counterpart.createdAt)}`}
-              </p>
+              {(match.counterpart.location || relativeDate(match.counterpart.createdAt)) && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {match.counterpart.location}
+                  {match.counterpart.location && relativeDate(match.counterpart.createdAt) && ' · '}
+                  {relativeDate(match.counterpart.createdAt)}
+                </p>
+              )}
 
               {match.reasons.length > 0 && (
-                <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Why these were paired">
+                <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Why these were paired">
                   {match.reasons.map((reason) => (
                     <li
                       key={reason.code}
-                      className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-foreground/85"
+                      className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground/85"
                       title={`Contributes ${reason.weight} points`}
                     >
                       {reason.label}
@@ -226,34 +222,32 @@ export default function PossibleMatches({ itemId, className }: PossibleMatchesPr
                 </ul>
               )}
 
-              <div className="mt-3 flex gap-2">
-                <Link
-                  href={`/item/${match.counterpart.id}`}
-                  className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                >
-                  View report
-                </Link>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button asChild size="sm">
+                  <Link href={`/item/${match.counterpart.id}`}>View report</Link>
+                </Button>
 
                 {match.status !== 'CONFIRMED' && (
-                  <button
+                  <Button
                     type="button"
+                    size="sm"
+                    variant="outline"
+                    loading={isPending}
                     onClick={() => void act(match.id, 'confirm')}
-                    disabled={isPending}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground/85 transition-colors hover:bg-muted/40 disabled:opacity-50"
                   >
-                    {isPending && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
                     This is the same item
-                  </button>
+                  </Button>
                 )}
 
-                <button
+                <Button
                   type="button"
-                  onClick={() => void act(match.id, 'dismiss')}
+                  size="sm"
+                  variant="quiet"
                   disabled={isPending}
-                  className="inline-flex items-center rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                  onClick={() => void act(match.id, 'dismiss')}
                 >
                   Not a match
-                </button>
+                </Button>
               </div>
             </li>
           );

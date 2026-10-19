@@ -1,197 +1,143 @@
 'use client';
 
+import Image from 'next/image';
+import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Edit, User, Mail, Calendar, Package, MessageSquare, CheckCircle } from "lucide-react";
-import EditProfileModal from "./EditProfileModal";
+import { Calendar, Mail, Pencil, Plus } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import PageHeader from '@/components/ui/PageHeader';
+import ReputationBadge from '@/components/ui/ReputationBadge';
 import { useAuthFetch } from '@/lib/auth-fetch';
 
+import EditProfileModal from './EditProfileModal';
+
 interface UserProfileSectionProps {
-  userStats: {
-    myItems: number;
-    claimsMade: number;
-    resolvedItems: number;
-    thisWeek: number;
-  };
+  /**
+   * The user's reputation total, when the caller could determine it.
+   *
+   * There is no endpoint that returns the signed-in user's own total, so the
+   * dashboard reads it off `postedBy.reputation` on the user's own item rows —
+   * the same denormalised `User.reputation` column. Callers that cannot
+   * determine it omit the badge rather than inventing a number.
+   */
+  reputation?: number;
 }
 
-export default function UserProfileSection({ userStats }: UserProfileSectionProps) {
+/** Fields next-auth's session callback does not carry, read defensively. */
+type SessionExtras = { avatar?: string; createdAt?: string };
+
+/**
+ * ProfileHeader — the dashboard's single `PageHeader`.
+ *
+ * The old version was a `<Card>` wrapping a bordered "Activity Overview" grid of
+ * four tinted boxes plus a grey panel of percentages: five containers, four of
+ * them duplicating the same counts the stats strip now shows. What is left is
+ * the identity block (avatar, name, email, member since, reputation) with the
+ * page's one primary action, and the edit modal it owns.
+ *
+ * `PageHeader` supplies the type (30/36px, weight 600) and the hairline rule, so
+ * this file no longer derives either.
+ */
+export default function UserProfileSection({ reputation }: UserProfileSectionProps) {
   const { data: session } = useSession();
   const { fetchWithAuth } = useAuthFetch(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  
+
   if (!session?.user) {
     return null;
   }
 
   const { name, email } = session.user;
-  // Handle optional properties that may not exist
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const userAny = session.user as any;
-  const avatar = userAny.avatar as string | undefined;
-  const createdAt = userAny.createdAt as string | undefined;
+  const { avatar, createdAt } = session.user as typeof session.user & SessionExtras;
 
-  // Calculate additional stats
-  const successRate = userStats.claimsMade > 0 
-    ? Math.round((userStats.resolvedItems / userStats.myItems) * 100) || 0
-    : 0;
+  const displayName = name?.trim() || 'Your dashboard';
+  const memberSince = createdAt ? new Date(createdAt) : null;
+  const hasMemberSince = memberSince !== null && !Number.isNaN(memberSince.getTime());
 
   // Handle profile update
   const handleProfileUpdate = async (updatedData: { name: string }) => {
-    try {
-      // Make API call to update user profile
-      const response = await fetchWithAuth('/api/user/profile', {
-        method: 'PUT',
-        body: JSON.stringify(updatedData),
-      });
+    // A thrown error is surfaced by the modal; the reload below only runs once
+    // the API has accepted the change.
+    const response = await fetchWithAuth('/api/user/profile', {
+      method: 'PUT',
+      body: JSON.stringify(updatedData),
+    });
 
-      if (!response.ok) {
-        throw new Error('Failed to update profile');
-      }
-
-      // On success, refresh the page to get updated session data
-      window.location.reload();
-
-    } catch (error) {
-      throw error; // Re-throw to be handled by modal
+    if (!response.ok) {
+      throw new Error('Failed to update profile');
     }
+
+    // On success, refresh the page to get updated session data
+    window.location.reload();
   };
 
   return (
-    <Card className="mb-8">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <User className="w-5 h-5" />
-          Profile
-        </CardTitle>
-        <CardDescription>
-          Your account information and activity summary
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* User Info Column */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              {/* Avatar */}
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
-                {avatar ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={avatar}
-                    alt={name || 'User'}
-                    className="w-16 h-16 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-primary-foreground font-bold text-xl">
-                    {(name || 'U')[0].toUpperCase()}
-                  </span>
-                )}
-              </div>
-              
-              {/* User Details */}
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-foreground">
-                  {name || 'Anonymous User'}
-                </h3>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Mail className="w-3 h-3" />
-                  {email}
-                </div>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                  <Calendar className="w-3 h-3" />
-                  Member since {new Date(createdAt || Date.now()).toLocaleDateString()}
-                </div>
-              </div>
-            </div>
-            
-            {/* Edit Profile Button */}
-            <Button onClick={() => setIsEditModalOpen(true)} variant="outline" className="w-full">
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Profile
+    <>
+      <PageHeader
+        title={
+          <span className="flex min-w-0 items-center gap-4 sm:gap-5">
+            <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-lg font-semibold text-muted-foreground">
+              {avatar ? (
+                <Image
+                  src={avatar}
+                  alt=""
+                  width={56}
+                  height={56}
+                  className="size-14 object-cover"
+                />
+              ) : (
+                <span aria-hidden="true">{displayName.charAt(0).toUpperCase()}</span>
+              )}
+            </span>
+            <span className="min-w-0 truncate">{displayName}</span>
+          </span>
+        }
+        description="Your reports, the claims you have made, and the claims waiting on your decision."
+        meta={
+          <>
+            {typeof reputation === 'number' && <ReputationBadge total={reputation} showPoints size="md" />}
+            {email && (
+              <span className="inline-flex items-center gap-1.5">
+                <Mail className="size-4 shrink-0" aria-hidden="true" />
+                <span className="truncate">{email}</span>
+              </span>
+            )}
+            {hasMemberSince && (
+              <span className="inline-flex items-center gap-1.5">
+                <Calendar className="size-4 shrink-0" aria-hidden="true" />
+                Member since{' '}
+                {memberSince.toLocaleDateString('en-IN', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+            )}
+          </>
+        }
+        actions={
+          <>
+            <Button variant="outline" onClick={() => setIsEditModalOpen(true)}>
+              <Pencil className="mr-2 size-4" aria-hidden="true" />
+              Edit profile
             </Button>
-          </div>
+            <Button asChild>
+              <Link href="/post">
+                <Plus className="mr-2 size-4" aria-hidden="true" />
+                Post an item
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
-          {/* Activity Stats Column */}
-          <div className="lg:col-span-2">
-            <h4 className="text-md font-semibold text-foreground mb-4">Activity Overview</h4>
-            
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {/* Items Posted */}
-              <div className="bg-info/10 p-4 rounded-lg border border-info/30">
-                <div className="flex items-center justify-between mb-2">
-                  <Package className="w-5 h-5 text-primary" />
-                  <Badge variant="secondary" className="text-xs">
-                    Items
-                  </Badge>
-                </div>
-                <div className="text-2xl font-bold text-primary">{userStats.myItems}</div>
-                <div className="text-xs text-primary">Items posted</div>
-              </div>
-
-              {/* Claims Made */}
-              <div className="bg-success/10 p-4 rounded-lg border border-success/30">
-                <div className="flex items-center justify-between mb-2">
-                  <MessageSquare className="w-5 h-5 text-success" />
-                  <Badge variant="secondary" className="text-xs">
-                    Claims
-                  </Badge>
-                </div>
-                <div className="text-2xl font-bold text-success">{userStats.claimsMade}</div>
-                <div className="text-xs text-success">Claims submitted</div>
-              </div>
-
-              {/* Resolved Items */}
-              <div className="bg-info/10 p-4 rounded-lg border border-info/30">
-                <div className="flex items-center justify-between mb-2">
-                  <CheckCircle className="w-5 h-5 text-primary" />
-                  <Badge variant="secondary" className="text-xs">
-                    Success
-                  </Badge>
-                </div>
-                <div className="text-2xl font-bold text-primary">{userStats.resolvedItems}</div>
-                <div className="text-xs text-primary">Items resolved</div>
-              </div>
-
-              {/* This Week */}
-              <div className="bg-warning/10 p-4 rounded-lg border border-warning/30">
-                <div className="flex items-center justify-between mb-2">
-                  <Calendar className="w-5 h-5 text-warning" />
-                  <Badge variant="secondary" className="text-xs">
-                    Week
-                  </Badge>
-                </div>
-                <div className="text-2xl font-bold text-warning">{userStats.thisWeek}</div>
-                <div className="text-xs text-warning">New this week</div>
-              </div>
-            </div>
-
-            {/* Additional Stats Row */}
-            <div className="mt-4 p-4 bg-muted/40 rounded-lg">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Success Rate:</span>
-                <span className="font-semibold text-foreground">
-                  {successRate}% ({userStats.resolvedItems}/{userStats.myItems} items)
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm mt-2">
-                <span className="text-muted-foreground">Average Claims per Item:</span>
-                <span className="font-semibold text-foreground">
-                  {userStats.myItems > 0 ? (userStats.claimsMade / userStats.myItems).toFixed(1) : '0'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-      <EditProfileModal 
-        isOpen={isEditModalOpen} 
+      <EditProfileModal
+        isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onProfileUpdate={handleProfileUpdate}
       />
-    </Card>
+    </>
   );
 }

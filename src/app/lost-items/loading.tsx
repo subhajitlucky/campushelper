@@ -1,11 +1,12 @@
-import { PageLoader } from "@/components/ui/loading-spinner";
+import { ItemListLoading } from "@/components/ItemListShell";
 
 export default function LostItemsLoading() {
   return (
-    <div className="min-h-screen bg-background py-8">
-      <div className="container mx-auto px-4">
-        <PageLoader text="Loading lost items..." />
-      </div>
-    </div>
+    <ItemListLoading
+      title="Lost items"
+      description="Everything reported missing on campus, newest first. If you have seen one of these, open it and tell the owner."
+      controls={2}
+      facets
+    />
   );
 }

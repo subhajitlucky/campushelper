@@ -1,33 +1,52 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
-import { Edit, Trash2, Eye, Calendar, MapPin } from "lucide-react";
-import EmptyState, { EmptyStateIcons } from "@/components/ui/EmptyState";
-import { ListItemSkeleton } from "@/components/ui/LoadingSkeleton";
+import Link from 'next/link';
+import { Eye, Pencil, Search, Trash2 } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import EmptyState, { EmptyStateIcons } from '@/components/ui/EmptyState';
+import ItemCard from '@/components/ui/ItemCard';
+import SectionHeader from '@/components/ui/SectionHeader';
+import { SkeletonCardGrid } from '@/components/ui/SkeletonCard';
 import { useAuthFetch } from '@/lib/auth-fetch';
 
+/**
+ * Shape returned by `GET /api/items?postedById=…`, narrowed to what the card
+ * needs. `ItemCard`'s own `Item` type is not exported, so this mirrors it
+ * structurally rather than duplicating the component.
+ */
 interface UserItem {
   id: string;
   title: string;
   description: string;
   itemType: 'LOST' | 'FOUND';
-  status: 'LOST' | 'FOUND' | 'CLAIMED' | 'RESOLVED' | 'DELETED';
+  status: string;
   location: string;
-  images: string[];
   createdAt: string;
-  updatedAt: string;
-  commentCount?: number;
-  claimCount?: number;
+  images?: string[] | null;
+  tags?: string[] | null;
+  category?: { slug: string; name: string; icon: string } | null;
+  zone?: { slug: string; name: string } | null;
+  postedBy: { name: string | null; avatar: string | null; reputation?: number | null };
 }
 
 interface UserItemsSectionProps {
   userId: string;
 }
 
+/**
+ * The "My items" tab panel.
+ *
+ * Everything that used to be a bordered row (`border rounded-lg p-4`, twice
+ * nested inside a `Card`, once per item) is now an `ItemCard` — the one card in
+ * this section, and only for a discrete object. Ownership actions sit *under*
+ * the card as quiet text buttons instead of inside it, so the card keeps a
+ * single link target and the rows cannot disagree about geometry.
+ *
+ * The section header is `divider={false}` because the dashboard's tab rule
+ * already closes the space above it.
+ */
 export default function UserItemsSection({ userId }: UserItemsSectionProps) {
   const { fetchWithAuth } = useAuthFetch(true);
   const [items, setItems] = useState<UserItem[]>([]);
@@ -38,16 +57,16 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Fetch items posted by this user
       const response = await fetch(`/api/items?postedById=${userId}&limit=50`, {
-        credentials: 'include'
+        credentials: 'include',
       });
 
       if (!response.ok) {
         throw new Error('Failed to fetch your items');
       }
-      
+
       const data = await response.json();
       setItems(data.items || []);
     } catch {
@@ -77,7 +96,7 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
       }
 
       // Remove item from local state
-      setItems(prev => prev.filter(item => item.id !== itemId));
+      setItems((prev) => prev.filter((item) => item.id !== itemId));
     } catch {
       setError('Failed to delete item. Please try again.');
     }
@@ -95,172 +114,125 @@ export default function UserItemsSection({ userId }: UserItemsSectionProps) {
     }
   }, [userId, fetchUserItems]);
 
+  const header = (description: string, showSearch: boolean) => (
+    <SectionHeader
+      title="Your items"
+      description={description}
+      divider={false}
+      action={
+        showSearch ? (
+          <Button variant="quiet" size="sm" asChild>
+            <Link href="/search">
+              <Search className="mr-1.5 size-4" aria-hidden="true" />
+              Search all items
+            </Link>
+          </Button>
+        ) : undefined
+      }
+    />
+  );
+
   // Loading state
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Posted Items</CardTitle>
-          <CardDescription>Manage your lost & found items</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ListItemSkeleton count={3} />
-        </CardContent>
-      </Card>
+      <section aria-label="Your items">
+        {header('Reports you have posted.', false)}
+        <SkeletonCardGrid count={3} className="mt-6 gap-6" />
+      </section>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Posted Items</CardTitle>
-          <CardDescription>Manage your lost & found items</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <div className="text-destructive mb-4">
-              <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={fetchUserItems} variant="outline">
-              Try Again
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <section aria-label="Your items">
+        {header('Reports you have posted.', false)}
+        <EmptyState
+          icon={EmptyStateIcons.default}
+          title="Your items could not be loaded"
+          description={error}
+          action={{ label: 'Try again', onClick: fetchUserItems }}
+        />
+      </section>
     );
   }
 
   // Empty state
   if (items.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Posted Items</CardTitle>
-          <CardDescription>Manage your lost & found items</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
-            icon={EmptyStateIcons.items}
-            title="No items posted yet"
-            action={{
-              label: "Post Your First Item",
-              onClick: () => window.location.href = '/post'
-            }}
-          />
-        </CardContent>
-      </Card>
+      <section aria-label="Your items">
+        {header('Reports you have posted.', false)}
+        <EmptyState
+          icon={EmptyStateIcons.items}
+          title="No items posted yet"
+          description="Report something you have lost or found and it will show up here."
+          action={{
+            label: 'Post your first item',
+            onClick: () => {
+              window.location.href = '/post';
+            },
+          }}
+        />
+      </section>
     );
   }
 
-  // Items list
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Your Posted Items ({items.length})</CardTitle>
-        <CardDescription>Manage your lost & found items</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {items.map((item) => (
-            <div key={item.id} className="border rounded-lg p-4 hover:bg-muted/40 transition-colors">
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg text-foreground mb-1">{item.title}</h3>
-                  <p className="text-muted-foreground text-sm mb-2 overflow-hidden" style={{
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical'
-                  }}>{item.description}</p>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(item.createdAt).toLocaleDateString()}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {item.location}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span>💬 {item.commentCount || 0}</span>
-                      <span>📋 {item.claimCount || 0}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 ml-4">
-                  <Badge 
-                    variant={item.itemType === 'LOST' ? 'destructive' : 'default'}
-                    className="text-xs"
-                  >
-                    {item.itemType}
-                  </Badge>
-                  <Badge 
-                    variant="outline"
-                    className={`text-xs ${
-                      item.status === 'LOST' ? 'border-destructive/30 text-destructive' :
-                      item.status === 'FOUND' ? 'border-success/30 text-success' :
-                      item.status === 'CLAIMED' ? 'border-info/30 text-primary' :
-                      item.status === 'RESOLVED' ? 'border-info/30 text-primary' :
-                      'border-border text-foreground/85'
-                    }`}
-                  >
-                    {item.status}
-                  </Badge>
+    <section aria-label="Your items">
+      {header(
+        `${items.length} report${items.length === 1 ? '' : 's'} posted. Edit or remove them here.`,
+        true
+      )}
+
+      <ul className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((item) => {
+          const canManage = item.status !== 'DELETED' && item.status !== 'RESOLVED';
+
+          return (
+            <li key={item.id} className="flex">
+              <div className="flex w-full flex-col">
+                <ItemCard item={item} showActions={false} className="flex-1" />
+
+                <div className="mt-3 flex items-center gap-1">
+                  <Button variant="quiet" size="sm" asChild>
+                    <Link href={`/item/${item.id}`}>
+                      <Eye className="mr-1.5 size-4" aria-hidden="true" />
+                      View
+                    </Link>
+                  </Button>
+
+                  {canManage && (
+                    <>
+                      <Button
+                        variant="quiet"
+                        size="sm"
+                        onClick={() => handleEditItem(item.id)}
+                      >
+                        <Pencil className="mr-1.5 size-4" aria-hidden="true" />
+                        Edit
+                      </Button>
+
+                      <Button
+                        variant="quiet"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteItem(item.id)}
+                      >
+                        <Trash2 className="mr-1.5 size-4" aria-hidden="true" />
+                        Delete
+                      </Button>
+                    </>
+                  )}
+
+                  <span className="ml-auto text-xs font-medium text-muted-foreground">
+                    {item.itemType === 'LOST' ? 'Lost report' : 'Found report'}
+                  </span>
                 </div>
               </div>
-              
-              <div className="flex items-center gap-2 pt-3 border-t">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  asChild
-                  className="flex-1"
-                >
-                  <Link href={`/item/${item.id}`}>
-                    <Eye className="w-3 h-3 mr-1" />
-                    View
-                  </Link>
-                </Button>
-                
-                {item.status !== 'DELETED' && item.status !== 'RESOLVED' && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditItem(item.id)}
-                      className="flex-1"
-                    >
-                      <Edit className="w-3 h-3 mr-1" />
-                      Edit
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteItem(item.id)}
-                      className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30 hover:border-destructive/30"
-                    >
-                      <Trash2 className="w-3 h-3 mr-1" />
-                      Delete
-                    </Button>
-                  </>
-                )}
-                
-                {/* Show resolved message for resolved items */}
-                {item.status === 'RESOLVED' && (
-                  <div className="flex-1 text-center py-2 bg-success/10 border border-success/30 rounded text-xs text-success font-medium">
-                    ✅ Resolved
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }

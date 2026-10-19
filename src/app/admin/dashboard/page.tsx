@@ -8,6 +8,10 @@ export const dynamic = 'force-dynamic';
 /**
  * Admin Dashboard Page - Protected Admin Route
  * Only accessible to users with ADMIN or MODERATOR role
+ *
+ * The page paints the standard canvas (`bg-background` plus the one sanctioned
+ * wash) and owns nothing else — the header, tabs and sections belong to
+ * AdminDashboard, so the page cannot disagree with them about spacing.
  */
 export default async function AdminDashboardPage() {
   try {
@@ -27,7 +31,7 @@ export default async function AdminDashboardPage() {
     }
 
     return (
-      <div className="min-h-screen bg-muted/40">
+      <div className="page-canvas min-h-screen bg-background">
         <AdminDashboard />
       </div>
     );

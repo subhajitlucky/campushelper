@@ -1,6 +1,16 @@
 /**
- * ItemDetail Component
- * Displays comprehensive item information in a professional layout
+ * ItemDetail — the /item/[id] page body.
+ *
+ * Layout follows the redesign brief §4.1: the photo leads at 4:3, the
+ * description is plain body copy, and the owner, the spec list and the actions
+ * live in a rail that sticks on desktop (lg) and folds under the content on
+ * mobile. Sections are grouped by whitespace and hairline rules; the only boxes
+ * left are the ones that are genuinely objects.
+ *
+ * Everything behavioural is unchanged from the previous implementation: the
+ * inline edit form and its save/cancel handlers, the double-confirm delete, the
+ * claim modal, and every permission branch (canEdit / isOwner / isAdmin /
+ * isResolved / DELETED).
  */
 
 'use client';
@@ -8,8 +18,43 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import Link from 'next/link';
+import {
+  ArrowDown,
+  ArrowLeft,
+  Backpack,
+  BookOpen,
+  CheckCircle2,
+  Clock,
+  Dumbbell,
+  FileText,
+  IdCard,
+  ImageOff,
+  KeyRound,
+  MapPin,
+  Package,
+  PackageCheck,
+  Pencil,
+  Search,
+  Shirt,
+  Smartphone,
+  Trash2,
+  TriangleAlert,
+  Watch,
+  type LucideIcon,
+} from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import PageHeader from '@/components/ui/PageHeader';
+import SectionHeader from '@/components/ui/SectionHeader';
+import StatusBadge from '@/components/ui/StatusBadge';
+import TagPill from '@/components/ui/TagPill';
+import { Textarea } from '@/components/ui/textarea';
+import { formatRelativeTime } from '@/lib/notification-display';
+import { cn } from '@/lib/utils';
+
 import CommentsSection from './CommentsSection';
 import ClaimsModal from './ClaimsModal';
 import PossibleMatches from './PossibleMatches';
@@ -41,13 +86,170 @@ interface ItemData {
   resolvedAt: string | Date | null;
   postedBy: ItemUser;
   claimedBy?: ItemUser | null;
-  commentCount?: number;
+  /** Present on projections that count claims; otherwise `claims` is used. */
   claimCount?: number;
-  views?: number;
+  /**
+   * Classification fields. The shared item-detail projection does not select
+   * them yet, so they are optional and every consumer below degrades to
+   * something honest rather than inventing a value.
+   */
+  category?: { slug: string; name: string; icon: string } | null;
+  zone?: { slug: string; name: string } | null;
+  tags?: string[] | null;
+  /** Present only for the poster and moderators; used for the claim count. */
+  claims?: { id: string }[] | null;
 }
 
 interface ItemDetailProps {
   item: ItemData;
+}
+
+/**
+ * Category taxonomy → icon. Mirrors the seeded lucide icon names
+ * (`prisma/migrations/…_seed_categories_zones`) and is intentionally a local
+ * copy: ItemCard keeps the same map but does not export it, and pulling the
+ * whole icon set in through a dynamic lookup would ship every lucide icon.
+ */
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  Smartphone,
+  IdCard,
+  FileText,
+  BookOpen,
+  KeyRound,
+  Backpack,
+  Shirt,
+  Watch,
+  Dumbbell,
+  Package,
+};
+
+/**
+ * The file's single `<img>`. Item photos and avatars both render through it, so
+ * there is exactly one place to move to next/image later.
+ *
+ * next/image is deliberately not used here: item photos can live on hosts that
+ * are not in `images.remotePatterns`, where next/image throws and takes the page
+ * to the error boundary instead of degrading to the placeholder.
+ */
+function RemoteImage({
+  src,
+  alt,
+  className,
+  onError,
+  priority = false,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+  onError?: () => void;
+  priority?: boolean;
+}) {
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onError={onError}
+      loading={priority ? 'eager' : 'lazy'}
+      decoding={priority ? 'sync' : 'async'}
+      fetchPriority={priority ? 'high' : 'auto'}
+    />
+  );
+}
+
+/** Relative date plus the absolute date it falls back to on hover. */
+function dateLabels(value: string | Date | null): { relative: string; absolute: string } {
+  if (!value) return { relative: '', absolute: '' };
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return { relative: '', absolute: '' };
+
+  return {
+    relative: formatRelativeTime(date.toISOString()),
+    absolute: date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+  };
+}
+
+function humanType(itemType: 'LOST' | 'FOUND'): string {
+  return itemType === 'LOST' ? 'Lost item' : 'Found item';
+}
+
+/** One label/value row of the spec list. */
+function SpecRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-2.5">
+      <dt className="shrink-0 text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 text-right font-medium text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+/** Avatar with an initials fallback, so a blocked or dead URL never leaves a hole. */
+function Avatar({ user, className }: { user: ItemUser | null | undefined; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  const initial = user?.name?.trim().charAt(0).toUpperCase() || 'U';
+  const showImage = Boolean(user?.avatar) && !failed;
+
+  return (
+    <span
+      className={cn(
+        'flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-medium text-muted-foreground',
+        className
+      )}
+      aria-hidden="true"
+    >
+      {showImage ? (
+        <RemoteImage
+          src={user?.avatar as string}
+          alt=""
+          className="size-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        initial
+      )}
+    </span>
+  );
+}
+
+/** A person in the rail: label, avatar, name, contact line, trust badges. */
+function PersonRow({
+  label,
+  user,
+}: {
+  label: string;
+  user: ItemUser | null | undefined;
+}) {
+  return (
+    <div>
+      <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </h2>
+
+      <div className="mt-3 flex items-start gap-3">
+        <Avatar user={user} />
+
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-base font-medium text-foreground">
+            {user?.name || 'Anonymous user'}
+          </p>
+
+          {user?.email && (
+            <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+          )}
+
+          {(typeof user?.reputation === 'number' || user?.verifiedStudent) && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {typeof user?.reputation === 'number' && (
+                <ReputationBadge total={user.reputation} />
+              )}
+              {user?.verifiedStudent && <VerifiedStudentBadge />}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function ItemDetail({ item }: ItemDetailProps) {
@@ -57,11 +259,11 @@ export default function ItemDetail({ item }: ItemDetailProps) {
   const [isClaimsModalOpen, setIsClaimsModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [itemStatus, setItemStatus] = useState(item.status);
-  
+
   // Fix: Add proper error/success state management
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   // Edit mode states
   const [isEditMode, setIsEditMode] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -71,6 +273,10 @@ export default function ItemDetail({ item }: ItemDetailProps) {
     itemType: item.itemType
   });
   const [isSaving, setIsSaving] = useState(false);
+
+  // Gallery state: which photo leads, and which URLs failed to load.
+  const [activeImage, setActiveImage] = useState(0);
+  const [brokenImages, setBrokenImages] = useState<number[]>([]);
 
   // Step 112: Check permissions
   const isOwner = session?.user?.id === item.postedBy.id;
@@ -97,13 +303,13 @@ export default function ItemDetail({ item }: ItemDetailProps) {
     setError(null);
     setSuccess(null);
   };
-  
+
   // Handle save edit
   const handleSaveEdit = async () => {
     setIsSaving(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       const response = await fetchWithAuth(`/api/items/${item.id}`, {
         method: 'PUT',
@@ -120,19 +326,19 @@ export default function ItemDetail({ item }: ItemDetailProps) {
 
       setSuccess('Item updated successfully!');
       setIsEditMode(false);
-      
+
       // Refresh the page to show updated data
       setTimeout(() => {
         window.location.reload();
       }, 1000);
-      
+
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to update item. Please try again.');
     } finally {
       setIsSaving(false);
     }
   };
-  
+
   // Handle cancel edit
   const handleCancelEdit = () => {
     setIsEditMode(false);
@@ -172,12 +378,12 @@ export default function ItemDetail({ item }: ItemDetailProps) {
       // Update local state to reflect deletion
       setItemStatus('DELETED');
       setSuccess('Item has been deleted successfully. Redirecting...');
-      
+
       // Redirect to dashboard after a short delay
       setTimeout(() => {
         router.push('/dashboard');
       }, 1500);
-      
+
     } catch {
       setError('Failed to delete item. Please try again.');
     } finally {
@@ -196,244 +402,427 @@ export default function ItemDetail({ item }: ItemDetailProps) {
     }
   }, [error, success]);
 
+  const images = (item.images ?? []).filter(Boolean);
+  const heroImage = images[activeImage];
+  const heroIsBroken = brokenImages.includes(activeImage);
+  const showHeroImage = Boolean(heroImage) && !heroIsBroken;
+
+  const CategoryIcon: LucideIcon =
+    (item.category?.icon && CATEGORY_ICONS[item.category.icon]) ||
+    (item.itemType === 'LOST' ? Search : PackageCheck);
+
+  const categoryName = item.category?.name ?? null;
+  const zoneName = item.zone?.name ?? null;
+  const tags = (item.tags ?? []).filter(Boolean);
+  const place = zoneName ?? item.location;
+
+  // Only shown when the projection actually carries a number — an invented "0"
+  // would be worse than the missing row.
+  const claimCount =
+    typeof item.claimCount === 'number' ? item.claimCount : item.claims?.length ?? null;
+
+  const posted = dateLabels(item.createdAt);
+  const resolvedAt = dateLabels(item.resolvedAt);
+
+  const markBroken = (index: number) =>
+    setBrokenImages((previous) =>
+      previous.includes(index) ? previous : [...previous, index]
+    );
+
+  const signInHref = '/auth/login';
+
+  // The action branches, written once so the section can also tell whether it
+  // has anything to show at all (a labelled region with no content is noise).
+  const canAct = itemStatus !== 'DELETED' && !isEditMode && !isResolved;
+  const showEditActions = canEdit && canAct;
+  const showClaimAction = isLoggedIn && !isOwner && canAct;
+  const showSignInToClaim = !isLoggedIn && canAct;
+  const showOwnerNote = isLoggedIn && isOwner && itemStatus !== 'DELETED' && !canEdit;
+  const hasActions =
+    showEditActions || showClaimAction || showSignInToClaim || showOwnerNote || Boolean(error) || Boolean(success);
+
   return (
-    <div className="min-h-screen bg-background py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Back Button */}
+    <main className="page-canvas">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+        {/* Back — kept as history.back() rather than a fixed link, which is what
+            this page has always done. */}
         <button
+          type="button"
           onClick={() => window.history.back()}
-          className="mb-4 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+          className="mb-6 inline-flex items-center gap-1.5 rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span className="font-medium">Back</span>
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Back
         </button>
 
-        {/* Header Section */}
-        <div className="mb-6 bg-card rounded-xl shadow-sm p-6 border border-border/60">
-          {isEditMode ? (
-            /* EDIT MODE */
-            <div className="space-y-4">
-              <div className="bg-info/10 border border-info/30 rounded-lg p-3 mb-4">
-                <p className="text-sm text-primary font-medium">✏️ Edit Mode - Update item details below</p>
-              </div>
-              
-              {/* Title Input */}
-              <div>
-                <label className="block text-sm font-medium text-foreground/85 mb-2">Title</label>
-                <input
-                  type="text"
-                  value={editForm.title}
-                  onChange={(e) => setEditForm({...editForm, title: e.target.value})}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
-                  placeholder="Item title"
-                />
-              </div>
-              
-              {/* Description Input */}
-              <div>
-                <label className="block text-sm font-medium text-foreground/85 mb-2">Description</label>
-                <textarea
-                  value={editForm.description}
-                  onChange={(e) => setEditForm({...editForm, description: e.target.value})}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
-                  placeholder="Item description"
-                />
-              </div>
-              
-              {/* Location Input */}
-              <div>
-                <label className="block text-sm font-medium text-foreground/85 mb-2">Location</label>
-                <input
-                  type="text"
-                  value={editForm.location}
-                  onChange={(e) => setEditForm({...editForm, location: e.target.value})}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
-                  placeholder="Where was it lost/found?"
-                />
-              </div>
-              
-              {/* Item Type */}
-              <div>
-                <label className="block text-sm font-medium text-foreground/85 mb-2">Item Type</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="itemType"
-                      value="LOST"
-                      checked={editForm.itemType === 'LOST'}
-                      onChange={(e) => setEditForm({...editForm, itemType: e.target.value as 'LOST' | 'FOUND'})}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">🔍 Lost</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="itemType"
-                      value="FOUND"
-                      checked={editForm.itemType === 'FOUND'}
-                      onChange={(e) => setEditForm({...editForm, itemType: e.target.value as 'LOST' | 'FOUND'})}
-                      className="mr-2"
-                    />
-                    <span className="text-sm">✨ Found</span>
-                  </label>
-                </div>
-              </div>
-              
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t">
-                <Button
-                  onClick={handleSaveEdit}
-                  disabled={isSaving || !editForm.title || !editForm.description || !editForm.location}
-                  className="flex-1 bg-primary hover:bg-primary/90"
-                >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </Button>
-                <Button
-                  onClick={handleCancelEdit}
-                  variant="outline"
-                  disabled={isSaving}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          ) : (
-            /* VIEW MODE */
+        <PageHeader
+          title={item.title}
+          meta={
             <>
-              <div className="flex items-start justify-between gap-4 mb-3">
-                <div className="flex-1">
-                  <h1 className="text-2xl font-bold tracking-tight text-foreground mb-3">
-                    {item.title}
-                  </h1>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Item Type Badge */}
-                    <Badge variant={item.itemType === 'LOST' ? 'destructive' : 'default'} className="px-3 py-0.5 text-xs font-semibold">
-                      {item.itemType === 'LOST' ? '🔍 Lost' : '✨ Found'}
-                    </Badge>
-                    
-                    {/* Status Badge */}
-                    <Badge 
-                      className={`px-3 py-0.5 text-xs font-semibold ${
-                        itemStatus === 'LOST' ? 'bg-destructive/10 text-destructive hover:bg-destructive/15' :
-                        itemStatus === 'FOUND' ? 'bg-success/10 text-success hover:bg-success/15' :
-                        itemStatus === 'CLAIMED' ? 'bg-info/10 text-primary hover:bg-info/15' :
-                        itemStatus === 'RESOLVED' ? 'bg-info/10 text-primary hover:bg-info/15' :
-                        'bg-muted text-foreground hover:bg-muted'
-                      }`}
-                    >
-                      {itemStatus === 'RESOLVED' ? '✅ Resolved' : 
-                       itemStatus === 'CLAIMED' ? '🤝 Claimed' : 
-                       itemStatus}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
+              {/* Status appears once: the type is only repeated as text when the
+                  status no longer carries it (claimed / resolved / deleted). */}
+              <StatusBadge status={itemStatus} size="md" />
 
-              {/* Location & Date */}
-              <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span className="font-medium">{item.location}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span>Posted {new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                </div>
-                {item.resolvedAt && (
-                  <div className="flex items-center gap-1.5 text-success">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Resolved {new Date(item.resolvedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                  </div>
-                )}
-              </div>
+              {itemStatus !== item.itemType && (
+                <span className="inline-flex items-center gap-1.5">
+                  <CategoryIcon className="size-4" aria-hidden="true" />
+                  {humanType(item.itemType)}
+                </span>
+              )}
+
+              {place && (
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="size-4" aria-hidden="true" />
+                  {place}
+                </span>
+              )}
+
+              {posted.relative && (
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock className="size-4" aria-hidden="true" />
+                  <span title={posted.absolute}>{posted.relative}</span>
+                </span>
+              )}
+
+              {resolvedAt.relative && (
+                <span className="inline-flex items-center gap-1.5 text-success">
+                  <CheckCircle2 className="size-4" aria-hidden="true" />
+                  <span title={resolvedAt.absolute}>Resolved {resolvedAt.relative}</span>
+                </span>
+              )}
             </>
-          )}
-        </div>
+          }
+        />
 
         {/* Show message if item is deleted */}
         {itemStatus === 'DELETED' && (
-          <div className="mb-6 bg-destructive/10 border-l-4 border-destructive/30 rounded-lg p-4 shadow-sm">
-            <div className="flex items-start gap-2">
-              <svg className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-              <div>
-                <p className="text-destructive font-semibold text-sm mb-0.5">
-                  Item Deleted
+          <div
+            role="status"
+            className="mt-8 flex items-start gap-3 rounded-r-lg border-l-2 border-destructive bg-destructive/5 px-4 py-3"
+          >
+            <TriangleAlert className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden="true" />
+            <div>
+              <p className="text-sm font-medium text-destructive">This item was deleted</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                It is no longer visible in search or on the map.
+              </p>
+              {canEdit && (
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Only you and moderators can still see it.
                 </p>
-                <p className="text-destructive text-xs">
-                  This item has been deleted and is no longer available.
-                </p>
-                {canEdit && (
-                  <p className="text-destructive text-xs mt-1">
-                    Only admins/moderators can see deleted items.
-                  </p>
-                )}
-              </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Main Content Grid */}
-        <div className="grid gap-5 lg:grid-cols-3">
-          {/* Left Column - Item Details */}
-          <div className="lg:col-span-2 space-y-5">
-            {/* Description - Hidden in edit mode */}
-            {!isEditMode && (
-              <div className="bg-card rounded-xl shadow-sm p-5 border border-border/60">
-                <div className="flex items-center gap-2 mb-3">
-                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-                  </svg>
-                  <h2 className="text-sm font-bold text-foreground">Description</h2>
+        <div className="mt-10 grid gap-x-12 gap-y-12 lg:grid-cols-3">
+          {/* ---------------------------------------------------------------
+              Lead: the photo, then either the description or the edit form.
+             --------------------------------------------------------------- */}
+          <div className="rise-in space-y-8 lg:col-start-1 lg:row-start-1">
+            <div className="overflow-hidden rounded-xl bg-muted">
+              {showHeroImage && heroImage ? (
+                <RemoteImage
+                  priority
+                  src={heroImage}
+                  alt={`${item.title} — photo ${activeImage + 1} of ${images.length}`}
+                  className="aspect-[4/3] w-full object-cover"
+                  onError={() => markBroken(activeImage)}
+                />
+              ) : (
+                /* No photo (or the URL is dead): a neutral tile with the category
+                   icon, never an empty gap. */
+                <div
+                  className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 text-muted-foreground"
+                  role="img"
+                  aria-label={`No photo available for ${item.title}`}
+                >
+                  <CategoryIcon className="size-14" strokeWidth={1.25} aria-hidden="true" />
+                  <p className="text-sm">{categoryName ?? humanType(item.itemType)}</p>
                 </div>
-                <div className="prose prose-sm prose-gray max-w-none">
-                  <p className="text-foreground/85 leading-relaxed whitespace-pre-wrap text-sm">
-                    {item.description}
-                  </p>
-                </div>
-              </div>
+              )}
+            </div>
+
+            {images.length > 1 && (
+              <ul className="flex gap-3 overflow-x-auto pb-1">
+                {images.map((image, index) => {
+                  const isActive = index === activeImage;
+                  const isBroken = brokenImages.includes(index);
+
+                  return (
+                    <li key={`${image}-${index}`} className="shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setActiveImage(index)}
+                        disabled={isBroken}
+                        aria-label={`Show photo ${index + 1} of ${images.length}`}
+                        aria-current={isActive ? 'true' : undefined}
+                        className={cn(
+                          'block size-20 overflow-hidden rounded-lg border bg-muted transition-colors',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                          isActive
+                            ? 'border-primary'
+                            : 'border-border-subtle hover:border-border-strong',
+                          isBroken && 'cursor-not-allowed opacity-60'
+                        )}
+                      >
+                        {isBroken ? (
+                          <span className="flex size-full items-center justify-center text-muted-foreground">
+                            <ImageOff className="size-5" aria-hidden="true" />
+                          </span>
+                        ) : (
+                          <RemoteImage src={image} alt="" className="size-full object-cover" />
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
 
-            {/* Images Section */}
-            {item.images && item.images.length > 0 && (
-              <div className="bg-card rounded-xl shadow-sm p-5 border border-border/60">
-                <div className="flex items-center gap-2 mb-4">
-                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <h2 className="text-sm font-bold text-foreground">Images</h2>
+            {isEditMode ? (
+              /* EDIT MODE — a form, not a box inside a box. */
+              <form
+                className="space-y-6"
+                aria-labelledby="edit-heading"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleSaveEdit();
+                }}
+              >
+                <SectionHeader
+                  id="edit-heading"
+                  title="Edit item details"
+                  description="Changes are visible to everyone as soon as you save."
+                  divider={false}
+                />
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-title">Title</Label>
+                  <Input
+                    id="edit-title"
+                    type="text"
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                    placeholder="Item title"
+                  />
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {item.images.map((image: string, index: number) => (
-                    <div key={index} className="group relative aspect-square bg-muted rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
-                      <img
-                        src={image}
-                        alt={`${item.title} - Image ${index + 1}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-description">Description</Label>
+                  <Textarea
+                    id="edit-description"
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    rows={5}
+                    className="resize-none"
+                    placeholder="Item description"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-location">Location</Label>
+                  <Input
+                    id="edit-location"
+                    type="text"
+                    value={editForm.location}
+                    onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                    placeholder="Where was it lost or found?"
+                  />
+                </div>
+
+                <fieldset className="space-y-3">
+                  <legend className="text-sm font-medium text-foreground">Item type</legend>
+                  <div className="flex gap-6">
+                    <label className="flex items-center gap-2 text-sm text-foreground/85">
+                      <input
+                        type="radio"
+                        name="itemType"
+                        value="LOST"
+                        checked={editForm.itemType === 'LOST'}
+                        onChange={(e) => setEditForm({ ...editForm, itemType: e.target.value as 'LOST' | 'FOUND' })}
+                        className="size-4 accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       />
-                    </div>
-                  ))}
+                      Lost
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-foreground/85">
+                      <input
+                        type="radio"
+                        name="itemType"
+                        value="FOUND"
+                        checked={editForm.itemType === 'FOUND'}
+                        onChange={(e) => setEditForm({ ...editForm, itemType: e.target.value as 'LOST' | 'FOUND' })}
+                        className="size-4 accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      />
+                      Found
+                    </label>
+                  </div>
+                </fieldset>
+
+                <div className="flex flex-wrap gap-3 border-t border-border-subtle pt-6">
+                  <Button
+                    type="submit"
+                    disabled={isSaving || !editForm.title || !editForm.description || !editForm.location}
+                  >
+                    {isSaving ? 'Saving…' : 'Save changes'}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
+                    Cancel
+                  </Button>
                 </div>
-              </div>
+              </form>
+            ) : (
+              item.description && (
+                <p className="max-w-[65ch] whitespace-pre-wrap text-base leading-relaxed text-foreground/85">
+                  {item.description}
+                </p>
+              )
+            )}
+          </div>
+
+          {/* ---------------------------------------------------------------
+              Right rail: owner, specs, actions. Sticky on desktop, second in
+              the flow on mobile so the primary action stays reachable.
+             --------------------------------------------------------------- */}
+          <aside
+            className="rise-in rise-in-delay-1 space-y-10 lg:col-start-3 lg:row-span-2 lg:row-start-1 lg:sticky lg:top-24 lg:self-start"
+            aria-label="Item details and actions"
+          >
+            {isResolved && item.claimedBy ? (
+              /* RESOLVED: the posted → claimed handover, without the boxes. */
+              <section className="space-y-5" aria-label="Resolution details">
+                <PersonRow label="Posted by" user={item.postedBy} />
+
+                <div className="flex items-center gap-2 border-l border-border-subtle pl-3 text-sm text-success">
+                  <ArrowDown className="size-4 shrink-0" aria-hidden="true" />
+                  <span className="font-medium">Returned</span>
+                  {resolvedAt.absolute && (
+                    <span className="text-muted-foreground" title={resolvedAt.absolute}>
+                      {resolvedAt.relative}
+                    </span>
+                  )}
+                </div>
+
+                <PersonRow label="Claimed by" user={item.claimedBy} />
+              </section>
+            ) : (
+              <PersonRow label="Posted by" user={item.postedBy} />
             )}
 
+            <section aria-labelledby="details-heading">
+              <h2
+                id="details-heading"
+                className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+              >
+                Details
+              </h2>
+
+              <dl className="mt-2 divide-y divide-border-subtle text-sm">
+                <SpecRow label="Location" value={item.location || 'Not specified'} />
+                {categoryName && <SpecRow label="Category" value={categoryName} />}
+                {zoneName && <SpecRow label="Zone" value={zoneName} />}
+
+                {tags.length > 0 && (
+                  <SpecRow
+                    label="Tags"
+                    value={
+                      <ul className="flex flex-wrap justify-end gap-1.5">
+                        {tags.map((tag) => (
+                          <li key={tag}>
+                            <TagPill tag={tag} />
+                          </li>
+                        ))}
+                      </ul>
+                    }
+                  />
+                )}
+
+                {posted.relative && (
+                  <SpecRow
+                    label="Posted"
+                    value={<span title={posted.absolute}>{posted.relative}</span>}
+                  />
+                )}
+
+                {claimCount !== null && (
+                  <SpecRow label="Claims" value={claimCount} />
+                )}
+              </dl>
+            </section>
+
+            {/* Step 111 & 112: Actions */}
+            {hasActions && (
+              <section className="space-y-2" aria-label="Actions">
+              {/* Fix: Add error/success message display */}
+              {error && (
+                <div
+                  role="alert"
+                  className="rounded-r-lg border-l-2 border-destructive bg-destructive/5 px-3 py-2"
+                >
+                  <p className="text-sm text-destructive">{error}</p>
+                </div>
+              )}
+
+              {success && (
+                <div
+                  role="status"
+                  className="rounded-r-lg border-l-2 border-success bg-success/5 px-3 py-2"
+                >
+                  <p className="text-sm text-success">{success}</p>
+                </div>
+              )}
+
+              {/* Step 112: Edit/Delete — the poster or a moderator, never on a
+                  resolved item. Primary filled, delete ghost + destructive. */}
+              {canEdit && itemStatus !== 'DELETED' && !isEditMode && !isResolved && (
+                <>
+                  <Button onClick={handleEdit} className="w-full">
+                    <Pencil className="size-4" aria-hidden="true" />
+                    Edit item
+                  </Button>
+                  <Button
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    variant="ghost"
+                    className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    {isDeleting ? 'Deleting…' : 'Delete item'}
+                  </Button>
+                </>
+              )}
+
+              {/* Step 111: Claim — any signed-in non-owner, on an open item. */}
+              {isLoggedIn && !isOwner && itemStatus !== 'DELETED' && !isEditMode && !isResolved && (
+                <Button onClick={() => setIsClaimsModalOpen(true)} className="w-full">
+                  <CheckCircle2 className="size-4" aria-hidden="true" />
+                  Claim this item
+                </Button>
+              )}
+
+              {!isLoggedIn && itemStatus !== 'DELETED' && !isEditMode && !isResolved && (
+                <Button asChild className="w-full">
+                  <Link href={signInHref}>
+                    <CheckCircle2 className="size-4" aria-hidden="true" />
+                    Sign in to claim
+                  </Link>
+                </Button>
+              )}
+
+              {isLoggedIn && isOwner && itemStatus !== 'DELETED' && !canEdit && (
+                <p className="flex items-center gap-2 pt-2 text-sm text-muted-foreground">
+                  <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden="true" />
+                  This is your posted item.
+                </p>
+              )}
+            </section>
+            )}
+          </aside>
+
+          {/* ---------------------------------------------------------------
+              Discussion: suggestions, then comments. No wrapper container.
+             --------------------------------------------------------------- */}
+          <div className="rise-in rise-in-delay-2 space-y-12 lg:col-start-1 lg:row-start-2">
             {/* Possible matches - only the poster can act on these */}
             {isOwner && itemStatus !== 'DELETED' && (
               <PossibleMatches itemId={item.id} />
@@ -443,310 +832,20 @@ export default function ItemDetail({ item }: ItemDetailProps) {
             {itemStatus !== 'DELETED' && isLoggedIn && (
               <CommentsSection itemId={item.id} itemStatus={itemStatus} />
             )}
-            
+
             {/* Show message for non-logged-in users */}
             {!isLoggedIn && itemStatus !== 'DELETED' && (
-              <div className="bg-card rounded-xl shadow-sm p-5 border border-border/60">
-                <div className="flex items-center gap-2 mb-3">
-                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                  <h2 className="text-sm font-bold text-foreground">Comments</h2>
-                </div>
-                <div className="text-center py-6">
-                  <p className="text-muted-foreground mb-4 text-sm">Sign in to view and add comments</p>
-                  <a
-                    href="/auth/login"
-                    className="inline-block px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm"
-                  >
-                    Sign In
-                  </a>
-                </div>
-              </div>
+              <section aria-labelledby="comments-heading">
+                <SectionHeader
+                  id="comments-heading"
+                  title="Comments"
+                  description="Sign in to read the discussion and reply."
+                />
+                <Button asChild className="mt-6">
+                  <Link href={signInHref}>Sign in</Link>
+                </Button>
+              </section>
             )}
-          </div>
-
-          {/* Right Column - User Info & Actions */}
-          <div className="space-y-5">
-            {/* User Information - Show differently if resolved */}
-            {isResolved && item.claimedBy ? (
-              /* RESOLVED: Show Lost → Found flow */
-              <div className="bg-card rounded-xl shadow-sm p-5 border border-border/60">
-                <div className="flex items-center gap-2 mb-4">
-                  <svg className="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <h2 className="text-sm font-bold text-foreground">Resolution Details</h2>
-                </div>
-
-                {/* Lost By */}
-                <div className="relative">
-                  <div className="bg-destructive/10 rounded-lg p-3 border border-destructive/30">
-                    <p className="text-xs font-medium text-destructive mb-2 flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                      Lost By
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center text-primary-foreground font-bold text-xs shadow-sm">
-                        {item.postedBy?.name?.charAt(0).toUpperCase() || 'U'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-foreground font-semibold text-xs truncate">
-                          {item.postedBy?.name || 'Anonymous'}
-                        </p>
-                        <p className="text-muted-foreground text-xs truncate">{item.postedBy?.email}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-1">
-                          {typeof item.postedBy?.reputation === 'number' && (
-                            <ReputationBadge total={item.postedBy.reputation} />
-                          )}
-                          {item.postedBy?.verifiedStudent && (
-                            <VerifiedStudentBadge />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Arrow */}
-                  <div className="flex justify-center my-2">
-                    <div className="flex flex-col items-center">
-                      <svg className="w-6 h-6 text-success animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                      </svg>
-                      <span className="text-xs font-bold text-success mt-1">FOUND</span>
-                    </div>
-                  </div>
-
-                  {/* Found By */}
-                  <div className="bg-success/10 rounded-lg p-3 border border-success/30">
-                    <p className="text-xs font-medium text-success mb-2 flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      Found By
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <div className="relative">
-                        <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-primary-foreground font-bold text-xs shadow-sm">
-                          {item.claimedBy?.name?.charAt(0).toUpperCase() || 'U'}
-                        </div>
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-success rounded-full border border-border flex items-center justify-center">
-                          <svg className="w-2 h-2 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-foreground font-semibold text-xs truncate">
-                          {item.claimedBy?.name || 'Anonymous'}
-                        </p>
-                        <p className="text-muted-foreground text-xs truncate">{item.claimedBy?.email}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-1">
-                          {typeof item.claimedBy?.reputation === 'number' && (
-                            <ReputationBadge total={item.claimedBy.reputation} />
-                          )}
-                          {item.claimedBy?.verifiedStudent && <VerifiedStudentBadge />}
-                        </div>
-                      </div>
-                    </div>
-                    {item.resolvedAt && (
-                      <div className="flex items-center gap-1 mt-2 text-xs text-success bg-success/10 px-2 py-1 rounded">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="font-medium">
-                          {new Date(item.resolvedAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* NOT RESOLVED: Show normal Posted By */
-              <div className="bg-info/10 rounded-xl shadow-sm p-5 border border-info/30">
-                <div className="flex items-center gap-2 mb-4">
-                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <h2 className="text-sm font-bold text-foreground">Posted By</h2>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-primary-foreground font-bold text-sm shadow-md">
-                      {item.postedBy?.name?.charAt(0).toUpperCase() || 'U'}
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-foreground font-semibold text-sm truncate">
-                      {item.postedBy?.name || 'Anonymous User'}
-                    </p>
-                    <p className="text-muted-foreground text-xs truncate break-all">
-                      {item.postedBy?.email || 'No email'}
-                    </p>
-                    <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span>
-                        {new Date(item.createdAt).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Item Statistics */}
-            <div className="bg-card rounded-xl shadow-sm p-5 border border-border/60">
-              <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                Statistics
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-2 bg-muted/40 rounded-lg">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                    <span className="text-xs">Views</span>
-                  </div>
-                  <span className="font-semibold text-foreground text-sm">{item.views || 0}</span>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-muted/40 rounded-lg">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                    </svg>
-                    <span className="text-xs">Comments</span>
-                  </div>
-                  <span className="font-semibold text-foreground text-sm">{item.commentCount || 0}</span>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-muted/40 rounded-lg">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="text-xs">Claims</span>
-                  </div>
-                  <span className="font-semibold text-foreground text-sm">{item.claimCount || 0}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 111 & 112: Actions */}
-            <div className="bg-card rounded-xl shadow-sm p-5 border border-border/60">
-              <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                </svg>
-                Actions
-              </h3>
-              
-              {/* Fix: Add error/success message display */}
-              {error && (
-                <div className="mb-3 bg-destructive/10 border-l-4 border-destructive/30 rounded-lg p-3 shadow-sm">
-                  <div className="flex items-start gap-2">
-                    <svg className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <p className="text-xs text-destructive font-medium">{error}</p>
-                  </div>
-                </div>
-              )}
-              
-              {success && (
-                <div className="mb-3 bg-success/10 border-l-4 border-success/30 rounded-lg p-3 shadow-sm">
-                  <div className="flex items-start gap-2">
-                    <svg className="w-4 h-4 text-success flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <p className="text-xs text-success font-medium">{success}</p>
-                  </div>
-                </div>
-              )}
-              
-              <div className="space-y-2">
-                {/* Step 112: Edit/Delete Buttons - Show if can edit and not in edit mode and not resolved */}
-                {canEdit && itemStatus !== 'DELETED' && !isEditMode && !isResolved && (
-                  <>
-                    <Button
-                      onClick={handleEdit}
-                      className="w-full"
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      Edit Item
-                    </Button>
-                    <Button
-                      onClick={handleDelete}
-                      disabled={isDeleting}
-                      variant="ghost"
-                      className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      {isDeleting ? 'Deleting...' : 'Delete Item'}
-                    </Button>
-                  </>
-                )}
-                
-                {/* Step 111: Claim Button - Show if logged in and not owner and not in edit mode and not resolved */}
-                {isLoggedIn && !isOwner && itemStatus !== 'DELETED' && !isEditMode && !isResolved && (
-                  <Button
-                    onClick={() => setIsClaimsModalOpen(true)}
-                    className="w-full"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Claim This Item
-                  </Button>
-                )}
-                
-                {/* Show login prompt if not logged in and not in edit mode and not resolved */}
-                {!isLoggedIn && itemStatus !== 'DELETED' && !isEditMode && !isResolved && (
-                  <Button
-                    onClick={() => window.location.href = '/auth/login'}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all duration-200"
-                  >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                    </svg>
-                    Sign In to Claim
-                  </Button>
-                )}
-                
-                {/* Show owner message */}
-                {isLoggedIn && isOwner && itemStatus !== 'DELETED' && !canEdit && (
-                  <div className="text-center p-4 bg-info/10 rounded-lg border border-info/30">
-                    <svg className="w-8 h-8 text-primary mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <p className="text-sm text-primary font-medium">
-                      This is your posted item
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </div>
 
@@ -759,6 +858,6 @@ export default function ItemDetail({ item }: ItemDetailProps) {
           isOwner={isOwner}
         />
       </div>
-    </div>
+    </main>
   );
 }

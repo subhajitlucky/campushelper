@@ -3,26 +3,54 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+/**
+ * Button
+ *
+ * Radius is `rounded-lg` on every control (brief §3), so nothing has to be
+ * overridden per call site. Hover is a colour change — the old `hover:scale-105`
+ * plus a shadow and a ripple overlay was the loudest generic-template tell in
+ * the app, and a filled button that grows under the cursor is not premium.
+ *
+ * Variants, in descending emphasis:
+ *   default      one per view — the primary action
+ *   destructive  delete / irreversible
+ *   success      confirm a handover
+ *   outline      secondary action next to a filled one
+ *   secondary    neutral filled, for toolbars
+ *   ghost        icon and utility buttons (transparent, fills on hover)
+ *   quiet        tertiary text actions — no fill, muted until hovered
+ *   link         inline text link styled as a button
+ */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 relative overflow-hidden",
+  [
+    "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium",
+    "transition-colors duration-150 ease-out",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    "disabled:pointer-events-none disabled:opacity-50",
+    "[&_svg]:shrink-0",
+  ].join(" "),
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 btn-enhanced ripple",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 btn-enhanced ripple",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground input-enhanced",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 btn-enhanced ripple",
-        ghost: "hover:bg-accent hover:text-accent-foreground interactive-element",
-        link: "text-primary underline-offset-4 hover:underline transition-colors duration-200",
-        success: "bg-success text-success-foreground hover:bg-success/90 btn-enhanced ripple",
-        warning: "bg-warning text-warning-foreground hover:bg-warning/90 btn-enhanced ripple",
-        info: "bg-primary text-primary-foreground hover:bg-primary/90 btn-enhanced ripple",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline:
+          "border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "text-foreground hover:bg-accent hover:text-accent-foreground",
+        quiet: "text-muted-foreground hover:text-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+        success: "bg-success text-success-foreground hover:bg-success/90",
+        warning: "bg-warning text-warning-foreground hover:bg-warning/90",
+        info: "bg-info text-info-foreground hover:bg-info/90",
       },
       size: {
         default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
+        sm: "h-9 px-3",
+        lg: "h-11 px-8",
+        icon: "size-10",
+        // Square icon button that sits flush with `size="sm"` controls.
+        "icon-sm": "size-9",
       },
     },
     defaultVariants: {
@@ -46,8 +74,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     // Loading state overrides disabled
     const isDisabled = disabled || loading;
 
-    // When asChild is true, we can't add extra children (loading, ripple)
-    // Only pass one child to Slot
+    // When asChild is true, Slot accepts exactly one child, so the spinner
+    // cannot be injected — callers that need it pass a disabled/loading label.
     if (asChild) {
       return (
         <Comp
@@ -61,7 +89,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       );
     }
 
-    // Normal button - can have multiple children
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
@@ -70,16 +97,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {loading && (
-          <div className="mr-2">
-            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          </div>
+          <span
+            aria-hidden="true"
+            className="mr-2 size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+          />
         )}
         {children}
-
-        {/* Ripple effect overlay */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-card opacity-0 hover:opacity-10 transition-opacity duration-200" />
-        </div>
       </Comp>
     );
   }

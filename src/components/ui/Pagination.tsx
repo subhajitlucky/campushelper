@@ -1,3 +1,7 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+import { cn } from '@/lib/utils';
+
 import { Button } from './button';
 
 interface PaginationProps {
@@ -11,8 +15,13 @@ interface PaginationProps {
 /**
  * Pagination Component
  *
- * Reusable pagination with previous/next buttons and page numbers.
- * Handles edge cases like first/last page, ellipsis, etc.
+ * Centred, on the page background, with the current page as a filled chip and
+ * everything else quiet. It used to be a `bg-card rounded-lg shadow p-6` box —
+ * a bordered container whose only content was pagination, which is exactly the
+ * anti-pattern the redesign removes.
+ *
+ * Props are unchanged. The count line is centred underneath rather than
+ * competing with the controls on the same row.
  */
 export default function Pagination({
   currentPage,
@@ -43,89 +52,109 @@ export default function Pagination({
     return pages;
   };
 
+  const pageChip =
+    'inline-flex size-9 items-center justify-center rounded-lg text-sm font-medium tabular-nums';
+
   return (
-    <div className={`bg-card rounded-lg shadow p-6 ${className}`}>
-      <div className="flex items-center justify-between">
-        {/* Page Info */}
-        {total && (
-          <div className="text-sm text-foreground/85">
-            Showing page <span className="font-medium">{currentPage}</span> of{' '}
-            <span className="font-medium">{totalPages}</span> ({total} total items)
-          </div>
+    <nav
+      aria-label="Pagination"
+      className={cn('flex flex-col items-center gap-3', className)}
+    >
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          aria-label="Previous page"
+        >
+          <ChevronLeft className="size-4" aria-hidden="true" />
+        </Button>
+
+        {/* First page */}
+        {currentPage > 3 && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="tabular-nums"
+              onClick={() => onPageChange(1)}
+            >
+              1
+            </Button>
+            {currentPage > 4 && (
+              <span className="px-1 text-sm text-muted-foreground" aria-hidden="true">
+                …
+              </span>
+            )}
+          </>
         )}
 
-        {/* Pagination Buttons */}
-        <div className="flex items-center space-x-2">
-          {/* Previous Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-          >
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Previous
-          </Button>
+        {/* Current page and neighbours */}
+        {getPageNumbers().map((pageNum) =>
+          pageNum === currentPage ? (
+            <span
+              key={pageNum}
+              aria-current="page"
+              className={cn(pageChip, 'bg-primary text-primary-foreground')}
+            >
+              {pageNum}
+            </span>
+          ) : (
+            <Button
+              key={pageNum}
+              variant="ghost"
+              size="icon-sm"
+              className="tabular-nums"
+              onClick={() => onPageChange(pageNum)}
+              aria-label={`Page ${pageNum}`}
+            >
+              {pageNum}
+            </Button>
+          )
+        )}
 
-          {/* Page Numbers */}
-          <div className="flex items-center space-x-1">
-            {/* First page */}
-            {currentPage > 3 && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onPageChange(1)}
-                >
-                  1
-                </Button>
-                {currentPage > 4 && <span className="text-muted-foreground/70">...</span>}
-              </>
+        {/* Last page */}
+        {currentPage < totalPages - 2 && totalPages > 5 && (
+          <>
+            {currentPage < totalPages - 3 && (
+              <span className="px-1 text-sm text-muted-foreground" aria-hidden="true">
+                …
+              </span>
             )}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="tabular-nums"
+              onClick={() => onPageChange(totalPages)}
+              aria-label={`Page ${totalPages}`}
+            >
+              {totalPages}
+            </Button>
+          </>
+        )}
 
-            {/* Current page and neighbors */}
-            {getPageNumbers().map((pageNum) => (
-              <Button
-                key={pageNum}
-                variant={pageNum === currentPage ? "default" : "outline"}
-                size="sm"
-                onClick={() => onPageChange(pageNum)}
-              >
-                {pageNum}
-              </Button>
-            ))}
-
-            {/* Last page */}
-            {currentPage < totalPages - 2 && totalPages > 5 && (
-              <>
-                {currentPage < totalPages - 3 && <span className="text-muted-foreground/70">...</span>}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onPageChange(totalPages)}
-                >
-                  {totalPages}
-                </Button>
-              </>
-            )}
-          </div>
-
-          {/* Next Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-          >
-            Next
-            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          aria-label="Next page"
+        >
+          <ChevronRight className="size-4" aria-hidden="true" />
+        </Button>
       </div>
-    </div>
+
+      {typeof total === 'number' && (
+        <p className="text-sm text-muted-foreground">
+          Page <span className="font-medium tabular-nums text-foreground">{currentPage}</span> of{' '}
+          <span className="tabular-nums">{totalPages}</span>
+          <span className="mx-1.5" aria-hidden="true">
+            ·
+          </span>
+          <span className="tabular-nums">{total}</span> items
+        </p>
+      )}
+    </nav>
   );
 }

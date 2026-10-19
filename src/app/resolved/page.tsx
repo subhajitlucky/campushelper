@@ -2,345 +2,205 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import ItemImage from "@/components/ui/ItemImage";
-import UserDisplay from "@/components/ui/UserDisplay";
+import { CircleCheck } from 'lucide-react';
 
-interface ResolvedItem {
-  id: string;
-  title: string;
-  description: string;
-  itemType: 'LOST' | 'FOUND';
-  status: string;
-  location: string;
-  createdAt: string;
-  resolvedAt: string | null;
-  images?: string[] | null;
-  postedBy: {
-    id: string;
-    name: string | null;
-    avatar: string | null;
-    // Note: email intentionally excluded for public resolved items (privacy)
-  };
-}
+import ItemListShell, {
+  type ListItem,
+  type ListSelectConfig,
+  type ListTextConfig,
+} from '@/components/ItemListShell';
+import { Button } from '@/components/ui/button';
+import ItemCard from '@/components/ui/ItemCard';
+
+type ResolvedItem = ListItem;
 
 interface ResolvedFilters {
   itemType: string;
   location: string;
 }
 
+const ITEM_TYPE_OPTIONS = [
+  { value: '', label: 'All types' },
+  { value: 'LOST', label: 'Lost items' },
+  { value: 'FOUND', label: 'Found items' },
+] as const;
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+/**
+ * How long the reunion took, in the words a person would use. Sub-day returns
+ * are the common case on a campus board, and "returned in 0 days" is not a
+ * sentence.
+ */
+function returnedInLabel(item: ResolvedItem): string | null {
+  if (!item.resolvedAt) return null;
+
+  const start = new Date(item.createdAt).getTime();
+  const end = new Date(item.resolvedAt).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
+    return null;
+  }
+
+  const hours = (end - start) / (MS_PER_DAY / 24);
+  if (hours < 24) return 'Returned within a day';
+
+  const days = Math.round(hours / 24);
+  return days === 1 ? 'Returned in 1 day' : `Returned in ${days} days`;
+}
+
+/**
+ * Resolved — the success stories, and the only list that reports how long a
+ * return took.
+ *
+ * Two long-standing bugs are fixed here rather than carried over: the page
+ * count now comes from the `pagination` envelope instead of a top-level
+ * `total` that never existed, and the filters are actually sent to the API
+ * instead of only updating local state.
+ */
 export default function ResolvedPage() {
-  // Fix hydration error by using consistent initial state
   const [items, setItems] = useState<ResolvedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  // Ensure consistent initial state for filters (critical for hydration)
-  const [filters, setFilters] = useState<ResolvedFilters>(() => ({
-    itemType: '', // Always start with empty string
-    location: '', // Always start with empty string
-  }));
+  const [filters, setFilters] = useState<ResolvedFilters>({
+    itemType: '',
+    location: '',
+  });
 
   const limit = 12;
 
-  const fetchResolvedItems = useCallback(async (page = 1) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const fetchResolvedItems = useCallback(
+    async (page = 1) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const queryParams = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        status: 'RESOLVED',
-      });
+        const queryParams = new URLSearchParams({
+          page: page.toString(),
+          limit: limit.toString(),
+          status: 'RESOLVED',
+          ...(filters.itemType && { itemType: filters.itemType }),
+          ...(filters.location && { location: filters.location }),
+        });
 
-      const response = await fetch(`/api/items?${queryParams.toString()}`);
-      if (!response.ok) {
-        throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        const response = await fetch(`/api/items?${queryParams.toString()}`);
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        setItems(data.items || []);
+        // `pagination`, not a top-level `total` — the API has never returned
+        // the latter, and reading it left totalPages at NaN.
+        setTotalPages(data.pagination?.totalPages ?? 1);
+        setTotal(data.pagination?.total ?? 0);
+      } catch {
+        setError('Failed to load resolved items. Please try again.');
+      } finally {
+        setLoading(false);
       }
+    },
+    [filters, limit]
+  );
 
-      const data = await response.json();
-      setItems(data.items || []);
-      setTotalPages(Math.ceil(data.total / limit));
-    } catch {
-      setError('Failed to load resolved items. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, [limit]);
-
-  // Fetch items when page or filters change
   useEffect(() => {
     fetchResolvedItems(currentPage);
   }, [currentPage, fetchResolvedItems]);
 
-  // Handle filter changes
   const handleFilterChange = (key: keyof ResolvedFilters, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-    setCurrentPage(1); // Reset to first page when filters change
-  };
-
-  // Apply filters
-  const applyFilters = () => {
-    fetchResolvedItems(1);
+    setFilters((prev) => ({ ...prev, [key]: value }));
     setCurrentPage(1);
   };
 
-  // Clear all filters
   const clearFilters = () => {
-    setFilters({
-      itemType: '',
-      location: '',
-    });
+    setFilters({ itemType: '', location: '' });
     setCurrentPage(1);
   };
 
-  // Pagination helpers
-  const getPageNumbers = () => {
-    const pages = [];
-    const maxVisible = 5;
-    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    const end = Math.min(totalPages, start + maxVisible - 1);
+  const selects: ListSelectConfig[] = [
+    {
+      id: 'filter-item-type',
+      label: 'Item type',
+      value: filters.itemType,
+      options: ITEM_TYPE_OPTIONS,
+      onChange: (value) => handleFilterChange('itemType', value),
+      className: 'sm:w-40',
+    },
+  ];
 
-    if (end - start + 1 < maxVisible) {
-      start = Math.max(1, end - maxVisible + 1);
-    }
+  const texts: ListTextConfig[] = [
+    {
+      id: 'filter-location',
+      label: 'Location',
+      value: filters.location,
+      placeholder: 'Filter by location…',
+      onChange: (value) => handleFilterChange('location', value),
+      className: 'sm:w-56',
+    },
+  ];
 
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-    return pages;
-  };
+  const activeFilterCount =
+    (filters.itemType ? 1 : 0) + (filters.location ? 1 : 0);
 
   return (
-    <div className="min-h-screen bg-muted/40 py-8">
-      <div className="container mx-auto px-4">
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Filter Stories</CardTitle>
-            <CardDescription>Find specific success stories</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {/* Item Type */}
-              <div>
-                <label className="block text-sm font-medium text-foreground/85 mb-1">
-                  Item Type
-                </label>
-                <select
-                  value={filters.itemType}
-                  onChange={(e) => handleFilterChange('itemType', e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring"
-                >
-                  <option value="">All Types</option>
-                  <option value="LOST">Lost Items</option>
-                  <option value="FOUND">Found Items</option>
-                </select>
-              </div>
+    <ItemListShell
+      title="Resolved"
+      description="Every report here made it back to its owner, and each card shows how long the reunion took."
+      noun={{ singular: 'resolved item', plural: 'resolved items' }}
+      actions={
+        <>
+          <Button asChild variant="outline">
+            <Link href="/search">Browse active listings</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/post">Report an item</Link>
+          </Button>
+        </>
+      }
+      items={items}
+      total={total}
+      loading={loading}
+      error={error}
+      onRetry={() => fetchResolvedItems(currentPage)}
+      texts={texts}
+      selects={selects}
+      activeFilterCount={activeFilterCount}
+      onClearFilters={clearFilters}
+      renderItem={(item) => {
+        const returned = returnedInLabel(item);
 
-              {/* Location */}
-              <div>
-                <label className="block text-sm font-medium text-foreground/85 mb-1">
-                  Location
-                </label>
-                <input
-                  type="text"
-                  value={filters.location}
-                  onChange={(e) => handleFilterChange('location', e.target.value)}
-                  placeholder="Filter by location..."
-                  className="w-full px-3 py-2 border border-border rounded-md focus:ring-2 focus:ring-ring focus:border-ring"
-                />
-              </div>
+        return (
+          <div className="relative h-full">
+            <ItemCard item={item} variant="compact" />
 
-              {/* Actions */}
-              <div className="flex gap-2 items-end">
-                <Button onClick={applyFilters} className="flex-1">
-                  Apply Filters
-                </Button>
-                <Button variant="outline" onClick={clearFilters}>
-                  Clear
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Loading State */}
-        {loading && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader>
-                  <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-muted rounded"></div>
-                    <div className="h-3 bg-muted rounded w-5/6"></div>
-                    <div className="h-8 bg-muted rounded"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {returned && (
+              <span className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-background/90 px-2.5 py-1 text-xs font-medium text-success shadow-card backdrop-blur-sm">
+                <CircleCheck className="size-3.5" aria-hidden="true" />
+                {returned}
+              </span>
+            )}
           </div>
-        )}
-
-        {/* Error State */}
-        {error && !loading && (
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-destructive mb-4">{error}</p>
-                <Button onClick={() => fetchResolvedItems(currentPage)}>
-                  Try Again
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Results */}
-        {!loading && !error && (
-          <>
-            {/* Results Header */}
-            <div className="flex justify-between items-center mb-6">
-              <p className="text-muted-foreground">
-                {items.length > 0 ? (
-                  <>
-                    Showing <span className="font-semibold">{items.length}</span> success stories
-                    {currentPage > 1 && (
-                      <span> (page {currentPage} of {totalPages})</span>
-                    )}
-                  </>
-                ) : (
-                  'No success stories found'
-                )}
-              </p>
-              <Link href="/search">
-                <Button variant="outline" size="sm">
-                  Browse Active Listings
-                </Button>
-              </Link>
-            </div>
-
-            {/* Items Grid */}
-            {items.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-                {items.map((item) => (
-                  <Card key={item.id} className="hover:shadow-md transition-shadow overflow-hidden">
-                    {/* Item Image */}
-                    <ItemImage images={item.images} alt={item.title} />
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <CardTitle className="text-lg font-semibold text-foreground line-clamp-2">
-                          {item.title}
-                        </CardTitle>
-                        <div className="flex flex-col gap-1">
-                          <Badge variant={item.itemType === 'LOST' ? 'destructive' : 'default'} className="text-xs">
-                            {item.itemType}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs border-success/30 text-success">
-                            ✅ Successfully Resolved
-                          </Badge>
-                        </div>
-                      </div>
-                      <CardDescription className="text-xs text-muted-foreground">
-                        Location: {item.location} • {new Date(item.createdAt).toLocaleDateString()}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex flex-col gap-3">
-                      <p className="text-sm text-foreground/85 line-clamp-3">
-                        {item.description}
-                      </p>
-                      {item.resolvedAt && (
-                        <div className="text-xs text-success font-medium">
-                          Resolved on {new Date(item.resolvedAt).toLocaleDateString()}
-                        </div>
-                      )}
-                      <UserDisplay
-                        user={{
-                          name: item.postedBy.name,
-                          avatar: item.postedBy.avatar
-                        }}
-                        showLabel={true}
-                        labelPrefix="Posted by"
-                        size="sm"
-                      />
-                      <Button asChild size="sm" className="w-full mt-auto">
-                        <Link href={`/item/${item.id}`}>View Full Story</Link>
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card className="mb-8">
-                <CardContent className="pt-6 text-center">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    No success stories found
-                  </h3>
-                  <p className="text-muted-foreground mb-4">
-                    Try adjusting your filters or check back later for new success stories.
-                  </p>
-                  <Button onClick={clearFilters} className="mb-4">
-                    Clear Filters
-                  </Button>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Want to help create more success stories?
-                    </p>
-                    <Link href="/post">
-                      <Button variant="outline">
-                        Report a Lost/Found Item
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                >
-                  ← Previous
-                </Button>
-
-                {getPageNumbers().map((page) => (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </Button>
-                ))}
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Next →
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
+        );
+      }}
+      emptyCopy={{
+        nothing: {
+          title: 'No reunions yet',
+          description:
+            'Nothing has been returned so far. Lost and found reports are matched automatically — the first reunion will show up here.',
+          action: { label: 'Report an item', href: '/post' },
+        },
+        noResults: {
+          title: 'No resolved items match these filters',
+          description:
+            'Try a broader location, or clear the filters to read every story.',
+        },
+      }}
+      currentPage={currentPage}
+      totalPages={totalPages}
+      onPageChange={setCurrentPage}
+    />
   );
 }

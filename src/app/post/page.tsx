@@ -27,11 +27,13 @@ export default function PostPage() {
     return () => clearTimeout(timer);
   }, []);
 
+  // The wash is opt-in on this element: a page that painted its own opaque
+  // background would hide it. The form inside owns the column width and rhythm.
   return (
-    <div className="min-h-screen bg-muted/40 py-8">
-      <div className="container mx-auto px-4">
+    <main className="page-canvas min-h-[70vh]">
+      <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:py-14">
         <PostItemForm />
       </div>
-    </div>
+    </main>
   );
 }

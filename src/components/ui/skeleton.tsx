@@ -5,6 +5,17 @@ interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
   animate?: boolean;
 }
 
+/**
+ * The shared skeleton primitive.
+ *
+ * Shimmers rather than pulses (brief §6) — a pulse reads as "something is
+ * broken", a sweep reads as "something is loading". The sweep, its two-theme
+ * highlight colour, and the prefers-reduced-motion fallback all live in
+ * globals.css under `.shimmer`.
+ *
+ * For an item list, prefer `SkeletonCard` from ./SkeletonCard, which matches
+ * the real card's geometry.
+ */
 export function Skeleton({ 
   className, 
   animate = true, 
@@ -14,7 +25,7 @@ export function Skeleton({
     <div
       className={cn(
         "rounded-md bg-muted",
-        animate && "animate-pulse",
+        animate && "shimmer",
         className
       )}
       {...props}
