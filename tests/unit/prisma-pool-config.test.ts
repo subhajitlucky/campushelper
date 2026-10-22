@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_POOLER_CONNECTION_LIMIT,
   DEFAULT_SESSION_CONNECTION_LIMIT,
+  toPgPoolConfig,
   withConnectionDefaults,
 } from "@/lib/prisma";
 
@@ -88,5 +89,38 @@ describe("withConnectionDefaults", () => {
     expect(parsed.password).toBe("secret");
     expect(parsed.hostname).toBe("host");
     expect(parsed.pathname).toBe("/mydb");
+  });
+});
+
+describe("toPgPoolConfig", () => {
+  it("maps the transaction-pooler defaults onto pg pool options", () => {
+    const config = toPgPoolConfig(
+      "postgresql://u:p@aws-1-ap-south-1.pooler.supabase.com:6543/postgres"
+    );
+    const url = new URL(config.connectionString!);
+
+    expect(config.max).toBe(DEFAULT_POOLER_CONNECTION_LIMIT);
+    expect(config.connectionTimeoutMillis).toBe(10_000);
+    expect(url.searchParams.has("connection_limit")).toBe(false);
+    expect(url.searchParams.has("pool_timeout")).toBe(false);
+    expect(url.searchParams.get("pgbouncer")).toBe("true");
+  });
+
+  it("honors explicit limits and converts the timeout to milliseconds", () => {
+    const config = toPgPoolConfig(
+      "postgresql://u:p@host:5432/postgres?connection_limit=5&pool_timeout=30"
+    );
+
+    expect(config.max).toBe(5);
+    expect(config.connectionTimeoutMillis).toBe(30_000);
+    expect(new URL(config.connectionString!).searchParams.has("connection_limit")).toBe(false);
+  });
+
+  it("leaves an absent URL undefined and uses the session budget", () => {
+    const config = toPgPoolConfig(undefined);
+
+    expect(config.connectionString).toBeUndefined();
+    expect(config.max).toBe(DEFAULT_SESSION_CONNECTION_LIMIT);
+    expect(config.connectionTimeoutMillis).toBe(10_000);
   });
 });

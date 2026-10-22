@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 type RawClient = {
   $queryRawUnsafe: (query: string) => Promise<unknown>;
@@ -471,15 +472,17 @@ async function main(): Promise<void> {
   }
 
   console.log('DATABASE_URL is used as the runtime/client URL; DIRECT_URL is preferred for migration replay and catalog checks. If only one is supplied, it is used for both. Connection strings will not be printed.');
-  runPrisma(['generate', '--schema', schemaPath]);
-  runPrisma(['migrate', 'deploy', '--schema', schemaPath]);
+  // Prisma 7 reads the schema and datasource from prisma7.config.ts.
+  runPrisma(['generate']);
+  runPrisma(['migrate', 'deploy']);
 
   const generated = await import('../src/generated/prisma/index.js');
   const previousDatabaseUrl = process.env.DATABASE_URL;
   const previousDirectUrl = process.env.DIRECT_URL;
   process.env.DATABASE_URL = runtimeUrl || migrationUrl;
   process.env.DIRECT_URL = migrationUrl;
-  const client = new generated.PrismaClient({ datasources: { db: { url: migrationUrl } } });
+  const adapter = new PrismaPg({ connectionString: migrationUrl });
+  const client = new generated.PrismaClient({ adapter });
 
   try {
     await verifyCatalog(client);
