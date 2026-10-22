@@ -1,3 +1,4 @@
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma';
 
 /**
@@ -93,12 +94,59 @@ export function withConnectionDefaults(rawUrl: string | undefined): string | und
   return url.toString();
 }
 
-function createPrismaClient(): PrismaClient {
-  const url = withConnectionDefaults(process.env.DATABASE_URL);
+/**
+ * Translate the Prisma-era connection URL into `pg` pool options.
+ *
+ * Prisma ORM 7 uses a driver adapter (`@prisma/adapter-pg`), so the old
+ * `connection_limit` and `pool_timeout` query parameters are no longer read by
+ * Prisma's Rust engine. They map to `pg`'s `max` and
+ * `connectionTimeoutMillis` instead. The parameters are stripped from the
+ * connection string so `pg` and Supabase do not have to interpret
+ * Prisma-specific keys.
+ */
+export function toPgPoolConfig(rawUrl: string | undefined): {
+  connectionString?: string;
+  max: number;
+  connectionTimeoutMillis: number;
+} {
+  const normalized = withConnectionDefaults(rawUrl);
 
-  return new PrismaClient(
-    url && url !== process.env.DATABASE_URL ? { datasources: { db: { url } } } : undefined
-  );
+  if (!normalized) {
+    return {
+      max: DEFAULT_SESSION_CONNECTION_LIMIT,
+      connectionTimeoutMillis: 10_000,
+    };
+  }
+
+  let url: URL;
+  try {
+    url = new URL(normalized);
+  } catch {
+    return {
+      connectionString: normalized,
+      max: DEFAULT_SESSION_CONNECTION_LIMIT,
+      connectionTimeoutMillis: 10_000,
+    };
+  }
+
+  const parsedMax = Number.parseInt(url.searchParams.get('connection_limit') ?? '', 10);
+  const parsedTimeout = Number.parseInt(url.searchParams.get('pool_timeout') ?? '', 10);
+
+  url.searchParams.delete('connection_limit');
+  url.searchParams.delete('pool_timeout');
+
+  return {
+    connectionString: url.toString(),
+    max: Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : DEFAULT_SESSION_CONNECTION_LIMIT,
+    connectionTimeoutMillis:
+      Number.isFinite(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout * 1000 : 10_000,
+  };
+}
+
+function createPrismaClient(): PrismaClient {
+  const adapter = new PrismaPg(toPgPoolConfig(process.env.DATABASE_URL));
+
+  return new PrismaClient({ adapter });
 }
 
 const globalForPrisma = globalThis as unknown as {
