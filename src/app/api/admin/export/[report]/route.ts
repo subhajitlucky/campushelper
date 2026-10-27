@@ -22,6 +22,27 @@ function isExportReport(value: string): value is ExportReport {
   return (EXPORT_FORMATS as readonly string[]).includes(value);
 }
 
+interface CsvExport {
+  csv: string;
+  rowCount: number;
+  truncated: boolean;
+}
+
+/**
+ * Keep the first {@link MAX_EXPORT_ROWS} rows, reporting whether more existed.
+ *
+ * The query asks for one extra row so truncation is detected without a second
+ * count query, and the caller can tell the client the download is incomplete.
+ */
+function capRows<T>(rows: T[]): { rows: T[]; truncated: boolean } {
+  const truncated = rows.length > MAX_EXPORT_ROWS;
+
+  return {
+    rows: truncated ? rows.slice(0, MAX_EXPORT_ROWS) : rows,
+    truncated,
+  };
+}
+
 /**
  * Fetch one report's rows and serialise them to CSV.
  *
@@ -29,9 +50,9 @@ function isExportReport(value: string): value is ExportReport {
  * new sensitive field into an export by default, and the row count is capped at
  * {@link MAX_EXPORT_ROWS}.
  */
-async function buildCsv(report: ExportReport): Promise<string> {
+async function buildCsv(report: ExportReport): Promise<CsvExport> {
   if (report === 'claims') {
-    const rows = await prisma.claim.findMany({
+    const fetched = await prisma.claim.findMany({
       select: {
         id: true,
         claimType: true,
@@ -44,8 +65,10 @@ async function buildCsv(report: ExportReport): Promise<string> {
         item: { select: { id: true, title: true } },
       },
       orderBy: { createdAt: 'desc' },
-      take: MAX_EXPORT_ROWS,
+      take: MAX_EXPORT_ROWS + 1,
     });
+
+    const { rows, truncated } = capRows(fetched);
 
     const columns: CsvColumn<(typeof rows)[number]>[] = [
       { key: 'id', header: 'Claim ID', value: (row) => row.id },
@@ -61,10 +84,10 @@ async function buildCsv(report: ExportReport): Promise<string> {
       { key: 'itemTitle', header: 'Item Title', value: (row) => row.item.title },
     ];
 
-    return toCsv(rows, columns);
+    return { csv: toCsv(rows, columns), rowCount: rows.length, truncated };
   }
 
-  const rows = await prisma.item.findMany({
+  const fetched = await prisma.item.findMany({
     select: {
       id: true,
       title: true,
@@ -82,8 +105,10 @@ async function buildCsv(report: ExportReport): Promise<string> {
       zone: { select: { name: true } },
     },
     orderBy: { createdAt: 'desc' },
-    take: MAX_EXPORT_ROWS,
+    take: MAX_EXPORT_ROWS + 1,
   });
+
+  const { rows, truncated } = capRows(fetched);
 
   const columns: CsvColumn<(typeof rows)[number]>[] = [
     { key: 'id', header: 'Item ID', value: (row) => row.id },
@@ -107,7 +132,7 @@ async function buildCsv(report: ExportReport): Promise<string> {
     { key: 'zoneName', header: 'Zone', value: (row) => row.zone?.name },
   ];
 
-  return toCsv(rows, columns);
+  return { csv: toCsv(rows, columns), rowCount: rows.length, truncated };
 }
 
 /**
@@ -140,7 +165,7 @@ export async function GET(
       return NotFound('Report');
     }
 
-    const csv = await buildCsv(report);
+    const { csv, rowCount, truncated } = await buildCsv(report);
     const today = new Date().toISOString().slice(0, 10);
 
     await recordAudit({
@@ -150,7 +175,7 @@ export async function GET(
       targetType: report === 'items' ? 'Item' : 'Claim',
       targetId: report,
       reason: `Exported ${report} as CSV`,
-      metadata: { rowCap: MAX_EXPORT_ROWS },
+      metadata: { rowCap: MAX_EXPORT_ROWS, rowCount, truncated },
       ip: auditIpFromRequest(request),
     });
 
@@ -159,6 +184,10 @@ export async function GET(
         'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': `attachment; filename="campushelper-${report}-${today}.csv"`,
         'Cache-Control': 'no-store',
+        // The cap is otherwise silent, so a truncated download looks complete.
+        'X-Export-Row-Count': String(rowCount),
+        'X-Export-Row-Cap': String(MAX_EXPORT_ROWS),
+        'X-Export-Truncated': String(truncated),
       },
     });
   });
