@@ -113,9 +113,10 @@ describe.skipIf(!hasDatabase)('GET /api/admin/analytics', () => {
     expect(body.totals.resolved).toBe(1);
     expect(body.totals.resolutionRate).toBeCloseTo(1 / 3, 3);
     // One resolved item, returned 1 day after posting -> 24 hours. The
-    // formatter shows hours below 48, so the label is "24.0 hours".
+    // formatter shows hours below 48 and drops a zero decimal, so the label
+    // is "24 hours".
     expect(body.medianTimeToReturnHours).toBe(24);
-    expect(body.medianTimeToReturnLabel).toBe('24.0 hours');
+    expect(body.medianTimeToReturnLabel).toBe('24 hours');
     expect(body.dailySeries.length).toBeGreaterThanOrEqual(30);
     expect(body.topZones[0]).toMatchObject({ name: 'Central Library', count: 2 });
     expect(body.topCategories[0]).toMatchObject({ name: 'Accessories', count: 2 });
