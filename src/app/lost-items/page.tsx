@@ -7,7 +7,6 @@ import CategoryFilter from '@/components/CategoryFilter';
 import ClaimsModal from '@/components/ClaimsModal';
 import ItemListShell, {
   type ListItem,
-  type ListSelectConfig,
   type ListTextConfig,
 } from '@/components/ItemListShell';
 import { Button } from '@/components/ui/button';
@@ -22,19 +21,12 @@ import { toast } from 'react-hot-toast';
 type LostItem = ListItem;
 
 interface LostFilters {
-  itemType: string;
   location: string;
   category: string;
 }
 
-const ITEM_TYPE_OPTIONS = [
-  { value: '', label: 'All types' },
-  { value: 'LOST', label: 'Lost items' },
-  { value: 'FOUND', label: 'Found items' },
-] as const;
-
 /**
- * Lost items — every open report, filtered by type, location and category.
+ * Lost items — every open report, filtered by location and category.
  *
  * The frame (header, filter bar, grid, empty and loading states, pagination)
  * lives in ItemListShell; this file owns the query. Filters are part of the
@@ -57,8 +49,9 @@ export default function LostItemsPage() {
   const [claimsModalOpen, setClaimsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<LostItem | null>(null);
 
+  // No type filter: this page is already scoped to `status=LOST`, so offering
+  // "Found items" here could only ever produce an empty list.
   const [filters, setFilters] = useState<LostFilters>({
-    itemType: '',
     location: '',
     category: '',
   });
@@ -78,7 +71,6 @@ export default function LostItemsPage() {
           page: page.toString(),
           limit: limit.toString(),
           status: 'LOST',
-          ...(filters.itemType && { itemType: filters.itemType }),
           ...(filters.location && { location: filters.location }),
           ...(filters.category && { category: filters.category }),
         });
@@ -112,7 +104,7 @@ export default function LostItemsPage() {
   };
 
   const clearFilters = () => {
-    setFilters({ itemType: '', location: '', category: '' });
+    setFilters({ location: '', category: '' });
     setCurrentPage(1);
   };
 
@@ -165,17 +157,6 @@ export default function LostItemsPage() {
     fetchLostItems(currentPage);
   }, [currentPage, fetchLostItems]);
 
-  const selects: ListSelectConfig[] = [
-    {
-      id: 'filter-item-type',
-      label: 'Item type',
-      value: filters.itemType,
-      options: ITEM_TYPE_OPTIONS,
-      onChange: (value) => handleFilterChange('itemType', value),
-      className: 'sm:w-40',
-    },
-  ];
-
   const texts: ListTextConfig[] = [
     {
       id: 'filter-location',
@@ -188,7 +169,6 @@ export default function LostItemsPage() {
   ];
 
   const activeFilterCount =
-    (filters.itemType ? 1 : 0) +
     (filters.location ? 1 : 0) +
     (filters.category ? 1 : 0);
 
@@ -211,7 +191,6 @@ export default function LostItemsPage() {
         error={error}
         onRetry={() => fetchLostItems(currentPage)}
         texts={texts}
-        selects={selects}
         facets={
           <CategoryFilter
             value={filters.category || null}

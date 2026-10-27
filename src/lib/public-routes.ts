@@ -10,8 +10,14 @@ export const PUBLIC_ROUTES = [
   '/',
   '/auth/login',
   '/auth/signup',
+  '/lost-items',
   '/search',
   '/resolved',
+  // Individual reports are public. The page and the item-detail projection
+  // already apply the anonymous visibility rules (deleted items 404, poster
+  // names truncated, emails withheld); the middleware just has to let guests
+  // reach them. Guests still have to sign in to claim, comment or edit.
+  '/item',
 ] as const;
 
 export const PUBLIC_API_ROUTES = [
@@ -20,6 +26,31 @@ export const PUBLIC_API_ROUTES = [
   '/api/auth/signin',
   '/api/auth/signout',
 ] as const;
+
+/**
+ * Read-only API endpoints that are public.
+ *
+ * The list and detail handlers already take an *optional* session and apply
+ * the anonymous visibility rules themselves. Mutations on the same paths stay
+ * behind the middleware: only GET/HEAD is opened here, and the handlers
+ * additionally require a session, CSRF and ownership for writes.
+ *
+ * `/api/items/<id>/matches` is deliberately excluded — match suggestions are
+ * derived from the full description and are owner/moderator-only.
+ */
+const PUBLIC_READ_API_PATTERNS = [
+  /^\/api\/items(?:\/[^/]+)?$/,
+  /^\/api\/categories$/,
+] as const;
+
+export function isPublicReadApiRoute(pathname: string, method: string): boolean {
+  const normalizedMethod = method.toUpperCase();
+  if (normalizedMethod !== 'GET' && normalizedMethod !== 'HEAD') {
+    return false;
+  }
+
+  return PUBLIC_READ_API_PATTERNS.some((pattern) => pattern.test(pathname));
+}
 
 export function matchesRouteBoundary(pathname: string, route: string): boolean {
   return pathname === route || pathname.startsWith(`${route}/`);

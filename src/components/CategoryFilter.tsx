@@ -51,7 +51,8 @@ export default function CategoryFilter({
   categories,
   className
 }: CategoryFilterProps) {
-  const { fetchWithAuth, isLoading: isAuthLoading } = useAuthFetch(true);
+  // The taxonomy is public and these filters render on public list pages.
+  const { fetchWithAuth, isLoading: isAuthLoading } = useAuthFetch(false);
   const [fetchedCategories, setFetchedCategories] = useState<CategoryOption[]>([]);
   const [isLoading, setIsLoading] = useState(!categories);
   const [error, setError] = useState<string | null>(null);

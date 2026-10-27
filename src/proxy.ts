@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import {
   isPublicPageRoute,
   isPublicApiRoute,
+  isPublicReadApiRoute,
   matchesRouteBoundary,
 } from '@/lib/public-routes';
 
@@ -51,16 +52,12 @@ export default withAuth(
         // Public API routes that don't require authentication
         const isPublicAPIRoute = isPublicApiRoute(pathname);
 
-        // Allow public access to resolved items API requests
-        const isResolvedItemsAPI = pathname === '/api/items' &&
-          req.nextUrl.searchParams.get('status') === 'RESOLVED' &&
-          !req.nextUrl.searchParams.get('search') &&
-          !req.nextUrl.searchParams.get('postedById') &&
-          !req.nextUrl.searchParams.get('from') &&
-          !req.nextUrl.searchParams.get('to');
+        // Public reads (item list/detail, categories). The route handlers
+        // apply the anonymous visibility rules and keep mutations protected.
+        const isPublicReadAPIRoute = isPublicReadApiRoute(pathname, req.method);
 
         // Allow public access to these routes
-        if (isPublicRoute || isPublicAPIRoute || isResolvedItemsAPI) {
+        if (isPublicRoute || isPublicAPIRoute || isPublicReadAPIRoute) {
           return true;
         }
 

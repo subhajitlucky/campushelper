@@ -6,6 +6,7 @@ import {
   matchesRouteBoundary,
   isPublicPageRoute,
   isPublicApiRoute,
+  isPublicReadApiRoute,
 } from "@/lib/public-routes";
 
 describe("matchesRouteBoundary", () => {
@@ -37,14 +38,17 @@ describe("isPublicPageRoute", () => {
     expect(isPublicPageRoute("/")).toBe(true);
     expect(isPublicPageRoute("/auth/login")).toBe(true);
     expect(isPublicPageRoute("/auth/signup")).toBe(true);
+    expect(isPublicPageRoute("/lost-items")).toBe(true);
     expect(isPublicPageRoute("/search")).toBe(true);
     expect(isPublicPageRoute("/resolved")).toBe(true);
+    expect(isPublicPageRoute("/item/123")).toBe(true);
   });
 
   it("keeps protected pages private", () => {
     expect(isPublicPageRoute("/dashboard")).toBe(false);
     expect(isPublicPageRoute("/admin")).toBe(false);
-    expect(isPublicPageRoute("/item/123")).toBe(false);
+    expect(isPublicPageRoute("/post")).toBe(false);
+    expect(isPublicPageRoute("/notifications")).toBe(false);
     expect(isPublicPageRoute("/x")).toBe(false);
   });
 });
@@ -61,6 +65,27 @@ describe("isPublicApiRoute", () => {
     expect(isPublicApiRoute("/api/items")).toBe(false);
     expect(isPublicApiRoute("/api/auth/sessions")).toBe(false);
     expect(isPublicApiRoute("/api/csrf-tokenx")).toBe(false);
+  });
+});
+
+describe("isPublicReadApiRoute", () => {
+  it("allows anonymous reads of the public item and taxonomy data", () => {
+    expect(isPublicReadApiRoute("/api/items", "GET")).toBe(true);
+    expect(isPublicReadApiRoute("/api/items/clx123", "GET")).toBe(true);
+    expect(isPublicReadApiRoute("/api/items", "HEAD")).toBe(true);
+    expect(isPublicReadApiRoute("/api/categories", "GET")).toBe(true);
+  });
+
+  it("does not open nested owner-only reads", () => {
+    expect(isPublicReadApiRoute("/api/items/clx123/matches", "GET")).toBe(false);
+    expect(isPublicReadApiRoute("/api/categories/anything", "GET")).toBe(false);
+  });
+
+  it("keeps writes behind the auth middleware", () => {
+    expect(isPublicReadApiRoute("/api/items", "POST")).toBe(false);
+    expect(isPublicReadApiRoute("/api/items/clx123", "PUT")).toBe(false);
+    expect(isPublicReadApiRoute("/api/items/clx123", "DELETE")).toBe(false);
+    expect(isPublicReadApiRoute("/api/categories", "POST")).toBe(false);
   });
 });
 
