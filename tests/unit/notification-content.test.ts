@@ -163,6 +163,20 @@ describe("truncateAtWord", () => {
     expect(result.endsWith("…")).toBe(true);
   });
 
+  it("does not split a surrogate pair at the cut", () => {
+    // The twentieth UTF-16 code unit is the high half of the emoji.
+    const result = truncateAtWord(`${"x".repeat(18)}😀 tail`, 20);
+
+    expect(result.length).toBeLessThanOrEqual(20);
+    expect(result).toBe(`${"x".repeat(18)}…`);
+    expect(result).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
+  });
+
+  it("returns an empty string for a non-positive limit", () => {
+    expect(truncateAtWord("anything", 0)).toBe("");
+    expect(truncateAtWord("anything", -5)).toBe("");
+  });
+
   it("never exceeds the maximum for a long realistic body", () => {
     const long = "A moderator took action on your item. Reason given: ".repeat(10);
     expect(truncateAtWord(long).length).toBeLessThanOrEqual(MAX_BODY_LENGTH);

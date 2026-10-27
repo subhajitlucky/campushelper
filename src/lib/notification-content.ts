@@ -43,13 +43,24 @@ export interface NotificationContent {
  * The returned string never exceeds `max`.
  */
 export function truncateAtWord(text: string, max: number = MAX_BODY_LENGTH): string {
+  if (max <= 0) return '';
   if (text.length <= max) return text;
+  if (max === 1) return '…';
 
-  const slice = text.slice(0, max - 1);
+  let slice = text.slice(0, max - 1);
   const lastSpace = slice.lastIndexOf(' ');
-  const cut = lastSpace > 0 ? slice.slice(0, lastSpace) : slice;
+  if (lastSpace > 0) {
+    slice = slice.slice(0, lastSpace);
+  }
 
-  return `${cut.trimEnd()}…`;
+  // A UTF-16 slice can end between the two halves of a surrogate pair, which
+  // stores a lone surrogate (rendered as U+FFFD). Drop the dangling high half.
+  const lastCode = slice.charCodeAt(slice.length - 1);
+  if (lastCode >= 0xd800 && lastCode <= 0xdbff) {
+    slice = slice.slice(0, -1);
+  }
+
+  return `${slice.trimEnd()}…`;
 }
 
 function actor(input: NotificationContentInput): string {
