@@ -102,6 +102,11 @@ export default function HandoverPanel({ claimId, onVerified, className }: Handov
           const remaining = data?.details?.attemptsRemaining;
           const suffix =
             typeof remaining === 'number' ? ` ${remaining} attempt${remaining === 1 ? '' : 's'} left.` : '';
+
+          // The hint line shows the budget and the code may have been burned
+          // by this attempt, so reload the authoritative state as well.
+          void load();
+
           throw new Error(`${data.error ?? 'Verification failed.'}${suffix}`);
         }
 

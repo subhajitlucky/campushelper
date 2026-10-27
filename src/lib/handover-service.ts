@@ -72,6 +72,7 @@ export async function loadHandoverClaim(claimId: string) {
       handoverCode: true,
       handoverCodeExpiresAt: true,
       handoverAttempts: true,
+      handoverVerifiedAt: true,
       item: { select: { id: true, title: true, postedById: true } },
     },
   });
@@ -81,10 +82,12 @@ export async function loadHandoverClaim(claimId: string) {
  * Issue (or re-issue) a handover code for an approved claim.
  *
  * Resets the attempt counter so a re-issue genuinely gives both parties a fresh
- * chance. Returns the plaintext code, which the caller must only ever hand to
- * an entitled party.
+ * chance. Returns the plaintext code and its expiry, which the caller must only
+ * ever hand to an entitled party.
  */
-export async function issueHandoverCode(claimId: string): Promise<string> {
+export async function issueHandoverCode(
+  claimId: string
+): Promise<{ code: string; expiresAt: Date }> {
   const code = generateHandoverCode();
   const expiresAt = new Date(Date.now() + HANDOVER_CODE_TTL_HOURS * 60 * 60 * 1000);
 
@@ -103,7 +106,8 @@ export async function issueHandoverCode(claimId: string): Promise<string> {
     },
   });
 
-  // Both parties are told a code exists; neither is ever told the code itself.
+  // Both parties are told a code exists; the code itself is only readable
+  // through the entitled handover endpoint.
   await notify({
     userId: claim.userId,
     type: 'HANDOVER_CODE_ISSUED',
@@ -120,7 +124,7 @@ export async function issueHandoverCode(claimId: string): Promise<string> {
     link: `/item/${claim.itemId}`,
   });
 
-  return code;
+  return { code, expiresAt };
 }
 
 export type HandoverVerificationResult =
@@ -156,36 +160,73 @@ export async function verifyHandover(
   }
 
   if (!handoverCodesMatch(claim.handoverCode, providedCode)) {
-    const attempts = claim.handoverAttempts + 1;
-    const exhausted = attempts >= MAX_HANDOVER_ATTEMPTS;
-
-    await prisma.claim.update({
-      where: { id: claimId },
-      data: {
-        handoverAttempts: attempts,
-        // Burn the code once the budget is gone so it cannot be retried.
-        ...(exhausted ? { handoverCode: null, handoverCodeExpiresAt: null } : {}),
+    // Atomic increment: the old read-modify-write let five concurrent attempts
+    // all write `1`, so the attempt cap could be bypassed.
+    const consumed = await prisma.claim.updateMany({
+      where: {
+        id: claimId,
+        status: 'APPROVED',
+        handoverCode: claim.handoverCode,
+        handoverAttempts: { lt: MAX_HANDOVER_ATTEMPTS },
       },
+      data: { handoverAttempts: { increment: 1 } },
     });
 
+    if (consumed.count === 0) {
+      // The claim changed, or the code was exhausted by a concurrent attempt,
+      // between the read and the write. Report the state it is actually in.
+      const current = await loadHandoverClaim(claimId);
+
+      if (
+        current?.status === 'APPROVED' &&
+        current.handoverAttempts >= MAX_HANDOVER_ATTEMPTS
+      ) {
+        return { outcome: 'exhausted' };
+      }
+
+      return { outcome: 'invalid_state' };
+    }
+
+    const updated = await prisma.claim.findUnique({
+      where: { id: claimId },
+      select: { handoverAttempts: true },
+    });
+
+    const attempts = updated?.handoverAttempts ?? MAX_HANDOVER_ATTEMPTS;
+    const exhausted = attempts >= MAX_HANDOVER_ATTEMPTS;
+
     if (exhausted) {
-      // Both parties need to know the code is dead, or they will meet up and
-      // find that neither can complete the handover.
-      await notify({
-        userId: claim.userId,
-        type: 'HANDOVER_CODE_INVALIDATED',
-        itemId: claim.itemId,
-        itemTitle: claim.item.title,
-        link: `/item/${claim.itemId}`,
+      // Burn the code once only, even if several attempts crossed the cap
+      // together. The conditional update elects a single notifier.
+      const burned = await prisma.claim.updateMany({
+        where: {
+          id: claimId,
+          status: 'APPROVED',
+          handoverCode: claim.handoverCode,
+          handoverAttempts: { gte: MAX_HANDOVER_ATTEMPTS },
+        },
+        data: { handoverCode: null, handoverCodeExpiresAt: null },
       });
 
-      await notify({
-        userId: claim.item.postedById,
-        type: 'HANDOVER_CODE_INVALIDATED',
-        itemId: claim.itemId,
-        itemTitle: claim.item.title,
-        link: `/item/${claim.itemId}`,
-      });
+      if (burned.count > 0) {
+        // Both parties need to know the code is dead, or they will meet up and
+        // find that neither can complete the handover.
+        await notify({
+          userId: claim.userId,
+          type: 'HANDOVER_CODE_INVALIDATED',
+          itemId: claim.itemId,
+          itemTitle: claim.item.title,
+          link: `/item/${claim.itemId}`,
+        });
+
+        await notify({
+          userId: claim.item.postedById,
+          type: 'HANDOVER_CODE_INVALIDATED',
+          itemId: claim.itemId,
+          itemTitle: claim.item.title,
+          link: `/item/${claim.itemId}`,
+        });
+      }
 
       return { outcome: 'exhausted' };
     }
@@ -195,9 +236,16 @@ export async function verifyHandover(
 
   const now = new Date();
 
-  await prisma.$transaction(async (tx) => {
-    await tx.claim.update({
-      where: { id: claimId },
+  const completed = await prisma.$transaction(async (tx) => {
+    // Complete only if this exact code is still the active one. Two people
+    // submitting the correct code at the same time must not both complete the
+    // claim or credit the return twice.
+    const claimUpdate = await tx.claim.updateMany({
+      where: {
+        id: claimId,
+        status: 'APPROVED',
+        handoverCode: claim.handoverCode,
+      },
       data: {
         status: 'COMPLETED',
         handoverVerifiedAt: now,
@@ -208,6 +256,8 @@ export async function verifyHandover(
       },
     });
 
+    if (claimUpdate.count === 0) return false;
+
     await tx.item.update({
       where: { id: claim.itemId },
       data: {
@@ -216,7 +266,13 @@ export async function verifyHandover(
         claimedById: claim.userId,
       },
     });
+
+    return true;
   });
+
+  if (!completed) {
+    return { outcome: 'invalid_state' };
+  }
 
   // Both sides contributed to a successful return, so both are credited.
   await awardReputation(claim.userId, 'RETURN_COMPLETED', {

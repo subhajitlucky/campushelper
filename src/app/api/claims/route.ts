@@ -229,10 +229,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if item is deleted
-    if (item.status === 'DELETED') {
+    // Only open reports can receive claims. `DELETED` was the original guard,
+    // but a `CLAIMED` or `RESOLVED` item is just as closed: approving a claim
+    // on one hit an inner guard and surfaced as a misleading 500.
+    if (item.status !== 'LOST' && item.status !== 'FOUND') {
       return NextResponse.json(
-        { error: 'Cannot create claim on deleted item' },
+        {
+          error:
+            item.status === 'DELETED'
+              ? 'Cannot create claim on deleted item'
+              : 'This item is no longer open to new claims',
+        },
         { status: 400 }
       );
     }

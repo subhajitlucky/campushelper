@@ -63,7 +63,7 @@ export async function GET(
         status: claim.status,
         code: claim.handoverCode,
         expiresAt: claim.handoverCodeExpiresAt?.toISOString() ?? null,
-        verifiedAt: null,
+        verifiedAt: claim.handoverVerifiedAt?.toISOString() ?? null,
         attemptsRemaining: Math.max(MAX_HANDOVER_ATTEMPTS - claim.handoverAttempts, 0),
         expired,
         exhausted,
@@ -141,10 +141,10 @@ export async function POST(
         );
       }
 
-      const code = await issueHandoverCode(id);
+      const { code, expiresAt } = await issueHandoverCode(id);
 
       return NextResponse.json({
-        handover: { code, expiresAt: null, reissued: true },
+        handover: { code, expiresAt: expiresAt.toISOString(), reissued: true },
         message: 'A new handover code has been issued to both parties.',
       });
     }

@@ -8,6 +8,9 @@ import { issueHandoverCode } from '@/lib/handover-service';
 import { notify } from '@/lib/notifications';
 import { awardReputation } from '@/lib/reputation-service';
 
+/** Internal signal that an approval lost a race; rolls back the transaction. */
+class ClaimConflictError extends Error {}
+
 // PUT /api/claims/[id]
 export async function PUT(
   request: NextRequest,
@@ -76,6 +79,7 @@ export async function PUT(
             title: true,
             status: true,
             postedById: true,
+            claimedById: true,
           },
         },
         user: {
@@ -112,19 +116,69 @@ export async function PUT(
       );
     }
 
-    try {
-      const updateData = {
-        status,
-        resolvedAt: new Date(),
-        updatedAt: new Date(),
-      };
+    // Give a clear conflict before the transaction. The transaction repeats
+    // these conditions atomically below, so a concurrent approval cannot slip
+    // through between this check and the write.
+    if (status === 'APPROVED') {
+      if (claim.item.status === 'DELETED' || claim.item.status === 'RESOLVED') {
+        return NextResponse.json(
+          { error: 'This item is no longer open to a claim.' },
+          { status: 409 }
+        );
+      }
 
-      // Update claim and potentially item status
+      if (claim.item.status === 'CLAIMED' || claim.item.claimedById) {
+        return NextResponse.json(
+          { error: 'This item has already been claimed.' },
+          { status: 409 }
+        );
+      }
+    }
+
+    try {
       const updatedClaim = await prisma.$transaction(async (tx) => {
-        // Update claim status
-        const claimUpdate = await tx.claim.update({
+        // Conditional on PENDING so two concurrent updates cannot both win.
+        const claimUpdate = await tx.claim.updateMany({
+          where: { id, status: 'PENDING' },
+          data: {
+            status,
+            resolvedAt: new Date(),
+            updatedAt: new Date(),
+          },
+        });
+
+        if (claimUpdate.count === 0) {
+          throw new ClaimConflictError('This claim has already been processed.');
+        }
+
+        // If claim is approved, mark the item claimed. A conditional update
+        // makes "the item is still open and unclaimed" part of the write.
+        if (status === 'APPROVED') {
+          const itemUpdate = await tx.item.updateMany({
+            where: {
+              id: claim.itemId,
+              status: { in: ['LOST', 'FOUND'] },
+              OR: [{ claimedById: null }, { claimedById: claim.userId }],
+            },
+            data: {
+              status: 'CLAIMED',
+              claimedById: claim.userId,
+            },
+          });
+
+          if (itemUpdate.count === 0) {
+            throw new ClaimConflictError(
+              'This item has already been claimed or resolved.'
+            );
+          }
+
+          // Approval means "the poster believes this claim", NOT "the item was
+          // returned". Only verifyHandover() may set RESOLVED, once the code
+          // has been exchanged in person.
+        }
+
+        return tx.claim.findUniqueOrThrow({
           where: { id },
-          data: updateData,
           include: {
             item: {
               select: {
@@ -144,48 +198,6 @@ export async function PUT(
             },
           },
         });
-
-        // If claim is approved, update item status based on claim type
-        if (status === 'APPROVED') {
-          // Security fix: Check if item is already claimed by someone else
-          const currentItem = await tx.item.findUnique({
-            where: { id: claim.itemId },
-            select: { 
-              status: true, 
-              claimedById: true,
-              postedById: true 
-            }
-          });
-          
-          if (!currentItem) {
-            throw new Error('Item not found');
-          }
-          
-          // Prevent claiming an already claimed item (unless it's the same user)
-          if (currentItem.claimedById && currentItem.claimedById !== claim.userId) {
-            throw new Error('Item has already been claimed by another user');
-          }
-          
-          // Prevent claiming a resolved item
-          if (currentItem.status === 'RESOLVED') {
-            throw new Error('Item has already been resolved');
-          }
-          
-          // Approval means "the poster believes this claim", NOT "the item was
-          // returned". Marking OWN_IT items RESOLVED here bypassed the handover
-          // code entirely -- the item was recorded as returned, and analytics
-          // counted it, before any code was verified. Only verifyHandover() may
-          // set RESOLVED, once the code has been exchanged in person.
-          await tx.item.update({
-            where: { id: claim.itemId },
-            data: {
-              status: 'CLAIMED',
-              claimedById: claim.userId,
-            },
-          });
-        }
-
-        return claimUpdate;
       });
 
       // Transform response
@@ -217,7 +229,16 @@ export async function PUT(
       // the request; each helper swallows and logs its own errors.
       if (status === 'APPROVED') {
         // Issue the proof-of-handover code that gates marking the item resolved.
-        await issueHandoverCode(id);
+        // If this fails the approval still stands and either party can reissue
+        // the code from the handover panel.
+        try {
+          await issueHandoverCode(id);
+        } catch (error) {
+          console.error('[claims] failed to issue handover code after approval', {
+            claimId: id,
+            error,
+          });
+        }
 
         await awardReputation(updatedClaim.userId, 'CLAIM_APPROVED', {
           itemId: claim.itemId,
@@ -239,7 +260,12 @@ export async function PUT(
         message: `Claim has been ${statusMessage} successfully`
       });
 
-    } catch {
+    } catch (error) {
+      if (error instanceof ClaimConflictError) {
+        return NextResponse.json({ error: error.message }, { status: 409 });
+      }
+
+      console.error('[claims] failed to update claim', { claimId: id, error });
       return NextResponse.json(
         { error: 'Failed to update claim in database' },
         { status: 500 }
