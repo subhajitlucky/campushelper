@@ -19,10 +19,18 @@ const OTHER = 'u_reg_other';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 let prisma: any;
 let itemsRoute: any;
+let itemIdRoute: any;
+let commentsRoute: any;
+let claimsRoute: any;
 let claimsIdRoute: any;
+let handoverRoute: any;
 let bulkItemsRoute: any;
 let notifications: any;
 let matchSchema: any;
+let matchService: any;
+let savedSearchService: any;
+let handoverService: any;
+let handoverPolicy: any;
 
 vi.mock('@/lib/auth', () => ({
   getSession: vi.fn(async () => ({
@@ -45,11 +53,20 @@ describe.skipIf(!hasDatabase)('v2 review regressions', () => {
   beforeAll(async () => {
     prisma = (await import('@/lib/prisma')).prisma;
     itemsRoute = await import('@/app/api/items/route');
+    itemIdRoute = await import('@/app/api/items/[id]/route');
+    commentsRoute = await import('@/app/api/comments/route');
+    claimsRoute = await import('@/app/api/claims/route');
     claimsIdRoute = await import('@/app/api/claims/[id]/route');
+    handoverRoute = await import('@/app/api/claims/[id]/handover/route');
     bulkItemsRoute = await import('@/app/api/admin/items/bulk/route');
     notifications = await import('@/lib/notifications');
     matchSchema = await import('@/lib/schemas/notification');
+    matchService = await import('@/lib/match-service');
+    savedSearchService = await import('@/lib/saved-search-service');
+    handoverService = await import('@/lib/handover-service');
+    handoverPolicy = await import('@/lib/schemas/handover');
 
+    await prisma.savedSearch.deleteMany({});
     await prisma.notification.deleteMany({});
     await prisma.auditLog.deleteMany({});
     await prisma.reputationEvent.deleteMany({});
@@ -255,5 +272,219 @@ describe.skipIf(!hasDatabase)('v2 review regressions', () => {
       req('http://localhost/api/items', post({ ...payload, postedById: undefined, acknowledgeDuplicates: true }))
     );
     expect(acknowledged.status).toBe(201);
+  });
+
+  /** m21: only open reports may receive a claim. */
+  it('m21: refuses a claim on a RESOLVED item', async () => {
+    const now = new Date();
+    await prisma.item.create({
+      data: {
+        id: 'it_m21', title: 'Returned laptop', description: 'A laptop already returned to its owner',
+        itemType: 'FOUND', status: 'RESOLVED', location: 'Library', postedById: POSTER,
+        createdAt: now, updatedAt: now,
+      },
+    });
+
+    const res = await claimsRoute.POST(
+      req('http://localhost/api/claims', post({ claimType: 'OWN_IT', itemId: 'it_m21' }))
+    );
+
+    expect(res.status).toBe(400);
+    expect(await prisma.claim.count({ where: { itemId: 'it_m21' } })).toBe(0);
+  });
+
+  /** M5: concurrent wrong codes must each consume an attempt. */
+  it('M5: five concurrent wrong codes exhaust the attempt budget', async () => {
+    const now = new Date();
+    await prisma.item.create({
+      data: {
+        id: 'it_m5', title: 'Concurrent phone', description: 'A phone used for the attempt race',
+        itemType: 'FOUND', status: 'CLAIMED', location: 'Canteen', postedById: POSTER,
+        claimedById: OTHER, createdAt: now, updatedAt: now,
+      },
+    });
+    await prisma.claim.create({
+      data: {
+        id: 'cl_m5', claimType: 'OWN_IT', status: 'APPROVED', userId: OTHER, itemId: 'it_m5',
+        handoverCode: '123456',
+        handoverCodeExpiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+
+    await Promise.all(
+      Array.from({ length: handoverPolicy.MAX_HANDOVER_ATTEMPTS }, () =>
+        handoverService.verifyHandover('cl_m5', '000000')
+      )
+    );
+
+    const claim = await prisma.claim.findUnique({ where: { id: 'cl_m5' } });
+    expect(claim.handoverAttempts).toBe(handoverPolicy.MAX_HANDOVER_ATTEMPTS);
+    expect(claim.handoverCode).toBeNull();
+  });
+
+  /** m7: a completed handover must read back its verification time. */
+  it('m7: the handover view reports verifiedAt instead of a hardcoded null', async () => {
+    const now = new Date();
+    await prisma.item.create({
+      data: {
+        id: 'it_m7', title: 'Verified umbrella', description: 'An umbrella with a verified handover',
+        itemType: 'FOUND', status: 'RESOLVED', location: 'Lab 2', postedById: POSTER,
+        claimedById: OTHER, createdAt: now, updatedAt: now,
+      },
+    });
+    await prisma.claim.create({
+      data: {
+        id: 'cl_m7', claimType: 'OWN_IT', status: 'COMPLETED', userId: OTHER, itemId: 'it_m7',
+        handoverVerifiedAt: now, completedAt: now,
+      },
+    });
+
+    const res = await handoverRoute.GET(
+      req('http://localhost/api/claims/cl_m7/handover'),
+      { params: Promise.resolve({ id: 'cl_m7' }) }
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.handover.verifiedAt).toBe(now.toISOString());
+  });
+
+  /** m8: a moderated-away counterpart must not be suggested. */
+  it('m8: hides a suggestion whose counterpart was deleted', async () => {
+    const now = new Date();
+    await prisma.item.createMany({
+      data: [
+        {
+          id: 'it_m8_lost', title: 'Black backpack', description: 'A black backpack with a laptop sleeve',
+          itemType: 'LOST', status: 'LOST', location: 'Library', postedById: POSTER,
+          createdAt: now, updatedAt: now,
+        },
+        {
+          id: 'it_m8_found', title: 'Black backpack', description: 'A black backpack found in the library',
+          itemType: 'FOUND', status: 'FOUND', location: 'Library', postedById: OTHER,
+          createdAt: now, updatedAt: now,
+        },
+      ],
+    });
+    await prisma.matchSuggestion.create({
+      data: {
+        id: 'ms_m8', lostItemId: 'it_m8_lost', foundItemId: 'it_m8_found',
+        score: 90, reasons: [], status: 'SUGGESTED',
+      },
+    });
+
+    await prisma.item.update({
+      where: { id: 'it_m8_found' },
+      data: { status: 'DELETED', deletedAt: new Date() },
+    });
+
+    expect(await matchService.getMatchesForItem('it_m8_lost')).toHaveLength(0);
+  });
+
+  /** m19: a saved search must not alert its owner about their own post. */
+  it('m19: a saved search does not notify the poster about their own item', async () => {
+    await prisma.savedSearch.deleteMany({});
+    await prisma.notification.deleteMany({});
+
+    await prisma.savedSearch.create({
+      data: {
+        id: 'ss_m19',
+        userId: POSTER,
+        name: 'Every new laptop',
+        filters: {},
+        createdAt: new Date(Date.now() - 60_000),
+      },
+    });
+
+    const createdAt = new Date();
+    await prisma.item.create({
+      data: {
+        id: 'it_m19', title: 'Lost laptop', description: 'A laptop lost in the library',
+        itemType: 'LOST', status: 'LOST', location: 'Library', postedById: POSTER,
+        createdAt, updatedAt: createdAt,
+      },
+    });
+
+    const notified = await savedSearchService.evaluateSavedSearchesForItem({
+      id: 'it_m19',
+      title: 'Lost laptop',
+      description: 'A laptop lost in the library',
+      location: 'Library',
+      itemType: 'LOST',
+      categoryId: null,
+      zoneId: null,
+      tags: [],
+      createdAt,
+      postedById: POSTER,
+    });
+
+    expect(notified).toBe(0);
+    expect(
+      await prisma.notification.count({
+        where: { userId: POSTER, type: 'SAVED_SEARCH_HIT' },
+      })
+    ).toBe(0);
+  });
+
+  /** m1: report orientation is immutable, and a same-type edit keeps status. */
+  it('m1: rejects a type change and does not reset status on a same-type edit', async () => {
+    const now = new Date();
+    await prisma.item.create({
+      data: {
+        id: 'it_m1', title: 'Immutable type', description: 'An item whose type must not change',
+        itemType: 'LOST', status: 'CLAIMED', location: 'Library', postedById: POSTER,
+        createdAt: now, updatedAt: now,
+      },
+    });
+
+    const params = { params: Promise.resolve({ id: 'it_m1' }) };
+    const put = (body: unknown) =>
+      req('http://localhost/api/items/it_m1', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+    const changed = await itemIdRoute.PUT(put({ itemType: 'FOUND' }), params);
+    expect(changed.status).toBe(400);
+
+    const same = await itemIdRoute.PUT(put({ itemType: 'LOST' }), params);
+    expect(same.status).toBe(200);
+
+    const item = await prisma.item.findUnique({ where: { id: 'it_m1' } });
+    expect(item.itemType).toBe('LOST');
+    expect(item.status).toBe('CLAIMED');
+  });
+
+  /** m27: comments notify the poster and credit the commenter. */
+  it('m27: posting a comment notifies the poster and awards comment reputation', async () => {
+    const now = new Date();
+    await prisma.item.create({
+      data: {
+        id: 'it_m27', title: 'Comment target', description: 'An item that receives a comment',
+        itemType: 'FOUND', status: 'FOUND', location: 'Library', postedById: POSTER,
+        createdAt: now, updatedAt: now,
+      },
+    });
+
+    const res = await commentsRoute.POST(
+      req(
+        'http://localhost/api/comments',
+        post({ itemId: 'it_m27', message: 'I think this is mine, here is the serial number.' })
+      )
+    );
+
+    expect(res.status).toBe(201);
+
+    const notification = await prisma.notification.findFirst({
+      where: { userId: POSTER, type: 'COMMENT_ON_ITEM', itemId: 'it_m27' },
+    });
+    expect(notification).not.toBeNull();
+    expect(notification.actorId).toBe(ADMIN);
+
+    const reputation = await prisma.reputationEvent.findFirst({
+      where: { userId: ADMIN, kind: 'COMMENT_POSTED', itemId: 'it_m27' },
+    });
+    expect(reputation).not.toBeNull();
   });
 });
