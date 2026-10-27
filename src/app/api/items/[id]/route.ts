@@ -99,7 +99,7 @@ export async function PUT(
     // Step 74: Verify user is item owner or admin/moderator
     const existingItem = await prisma.item.findUnique({
       where: { id },
-      select: { postedById: true, postedBy: { select: { role: true } } }
+      select: { postedById: true, itemType: true, postedBy: { select: { role: true } } }
     });
 
     if (!existingItem) {
@@ -149,13 +149,23 @@ export async function PUT(
       throw error;
     }
 
+    // The report type decides which side of a match pair an item is on, and the
+    // match service derives orientation from it. Letting an owner flip it made
+    // suggestions disappear or, when both sides were flipped, resurrected a
+    // dismissed pair under a reversed key.
+    if (validatedData.itemType && validatedData.itemType !== existingItem.itemType) {
+      return NextResponse.json(
+        { error: 'The report type cannot be changed after posting. Delete and repost if it is wrong.' },
+        { status: 400 }
+      );
+    }
+
     // Step 74: Update item in database
     try {
       // Prepare update data with sanitized input
       const updateData: {
         title?: string;
         description?: string;
-        itemType?: 'LOST' | 'FOUND';
         status?: 'LOST' | 'FOUND' | 'CLAIMED' | 'RESOLVED';
         location?: string;
         images?: string[];
@@ -163,23 +173,20 @@ export async function PUT(
       } = {
         title: validatedData.title ? sanitizeInput(validatedData.title) : undefined,
         description: validatedData.description ? sanitizeInput(validatedData.description) : undefined,
-        itemType: validatedData.itemType,
         location: validatedData.location ? sanitizeInput(validatedData.location) : undefined,
         images: validatedData.images?.filter(image => image && image.trim() !== '') as string[],
       };
       
-      // Handle status update
+      // Handle status update. `itemType` deliberately cannot drive this: an
+      // edit form that includes the unchanged type must not reset a CLAIMED
+      // item back to LOST/FOUND.
       if (validatedData.status) {
-        // If status is explicitly provided, use it
         updateData.status = validatedData.status;
-        
+
         // If status is RESOLVED, set resolvedAt timestamp
         if (validatedData.status === 'RESOLVED') {
           updateData.resolvedAt = new Date();
         }
-      } else if (validatedData.itemType) {
-        // Otherwise, set status based on itemType if provided
-        updateData.status = validatedData.itemType === 'LOST' ? 'LOST' : 'FOUND';
       }
 
       // Update the item
