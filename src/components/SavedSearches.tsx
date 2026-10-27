@@ -53,14 +53,14 @@ export default function SavedSearches({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [isSignedOut, setIsSignedOut] = useState(false);
 
   const load = useCallback(async () => {
     try {
+      // `fetchWithAuth(true)` throws on 401, so a 401 response can never reach
+      // this branch; the component is only rendered for signed-in visitors.
       const response = await fetchWithAuth('/api/saved-searches');
 
       if (!response.ok) {
-        if (response.status === 401) setIsSignedOut(true);
         setSearches([]);
         return;
       }
@@ -159,9 +159,6 @@ export default function SavedSearches({
     },
     [fetchWithAuth]
   );
-
-  // Signed-out visitors have nothing to save against.
-  if (isSignedOut) return null;
 
   const atLimit = searches.length >= MAX_SAVED_SEARCHES_PER_USER;
 

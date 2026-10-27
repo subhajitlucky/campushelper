@@ -5,10 +5,13 @@ import { isoDateSchema } from './query';
 /**
  * Schemas for saved searches.
  *
- * The filter payload is the *same* shape the item list accepts, so a saved
- * search can always be replayed against `GET /api/items`. Unknown keys are
- * rejected rather than ignored, so a renamed filter surfaces as a validation
- * error instead of silently never matching.
+ * The filter payload is the subset of the item-list filters that saved-search
+ * evaluation understands, so every accepted search can be replayed against
+ * `GET /api/items` and against new-item evaluation. `location`, `status`, and
+ * `postedById` are deliberately absent: the evaluator has no equivalent
+ * predicates, and storing them would produce a search that never matches.
+ * Unknown keys are rejected rather than ignored, so a renamed filter surfaces
+ * as a validation error instead of silently never matching.
  */
 
 export const savedSearchFiltersSchema = z
