@@ -23,6 +23,8 @@ export interface MatchableSavedSearchItem {
   zoneId: string | null;
   tags: string[];
   createdAt: Date;
+  /** The item's poster, so a saved search never alerts them about their own post. */
+  postedById: string;
 }
 
 interface TaxonomyLookups {
@@ -121,6 +123,9 @@ export async function evaluateSavedSearchesForItem(
     const matching: typeof searches = [];
 
     for (const search of searches) {
+      // Posting an item should not notify you through your own saved search.
+      if (search.userId === item.postedById) continue;
+
       const filters = search.filters as unknown as SavedSearchFilters;
 
       if (!itemMatchesFilters(item, filters, lookups)) continue;

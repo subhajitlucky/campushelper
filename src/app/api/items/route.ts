@@ -348,6 +348,7 @@ export async function POST(request: NextRequest) {
         zoneId: newItem.zoneId,
         tags: newItem.tags,
         createdAt: newItem.createdAt,
+        postedById: newItem.postedById,
       }),
       awardReputation(session.user.id, 'ITEM_POSTED', { itemId: newItem.id }),
     ]);
