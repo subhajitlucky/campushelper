@@ -299,9 +299,20 @@ export async function getMatchesForItem(
 
   if (!item) return [];
 
+  // A suggestion pointing at a moderated-away report is not actionable: the
+  // counterpart may still exist in the database, but every list and its detail
+  // page treat it as gone.
+  const visibleCounterpart: Prisma.ItemWhereInput = {
+    deletedAt: null,
+    status: { not: 'DELETED' },
+    moderationStatus: { not: 'REMOVED' },
+  };
+
   const rows = await prisma.matchSuggestion.findMany({
     where: {
-      ...(item.itemType === 'LOST' ? { lostItemId: itemId } : { foundItemId: itemId }),
+      ...(item.itemType === 'LOST'
+        ? { lostItemId: itemId, foundItem: visibleCounterpart }
+        : { foundItemId: itemId, lostItem: visibleCounterpart }),
       ...(options.includeDismissed ? {} : { status: { in: ['SUGGESTED', 'CONFIRMED'] } }),
     },
     orderBy: [{ score: 'desc' }, { createdAt: 'desc' }],

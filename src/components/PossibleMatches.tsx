@@ -144,11 +144,17 @@ export default function PossibleMatches({ itemId, className }: PossibleMatchesPr
 
   if (hidden || isLoading || matches.length === 0) return null;
 
+  // Dismissing is optimistic, so the dismissed row must disappear immediately
+  // rather than linger until the next reload.
+  const visibleMatches = matches.filter((match) => match.status !== 'DISMISSED');
+
+  if (visibleMatches.length === 0) return null;
+
   return (
     <section className={className} aria-labelledby="possible-matches-heading">
       <SectionHeader
         id="possible-matches-heading"
-        title={matches.length === 1 ? 'Possible match' : 'Possible matches'}
+        title={visibleMatches.length === 1 ? 'Possible match' : 'Possible matches'}
         description="These reports look like they could describe the same item."
         action={
           <Button
@@ -164,7 +170,7 @@ export default function PossibleMatches({ itemId, className }: PossibleMatchesPr
       />
 
       <ul className="mt-6 divide-y divide-border-subtle">
-        {matches.map((match) => {
+        {visibleMatches.map((match) => {
           const isPending = pendingId === match.id;
 
           return (
