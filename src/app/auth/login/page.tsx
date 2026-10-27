@@ -1,8 +1,17 @@
 import Link from "next/link";
 
 import LoginForm from "@/components/LoginForm";
+import { safeCallbackUrl } from "@/lib/redirects";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string | string[] }>;
+}) {
+  // NextAuth appends ?callbackUrl=/post when it bounces a protected page here.
+  const callbackUrl = safeCallbackUrl((await searchParams).callbackUrl);
+  const signupHref = `/auth/signup?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+
   return (
     <main className="flex min-h-[80vh] items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-sm">
@@ -27,14 +36,14 @@ export default function LoginPage() {
           </p>
 
           <div className="mt-6">
-            <LoginForm />
+            <LoginForm callbackUrl={callbackUrl} />
           </div>
         </div>
 
         <p className="mt-6 text-base text-muted-foreground">
           New here?{" "}
           <Link
-            href="/auth/signup"
+            href={signupHref}
             className="font-medium text-foreground underline-offset-4 hover:underline"
           >
             Create an account

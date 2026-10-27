@@ -1,8 +1,18 @@
 import Link from "next/link";
 
 import SignupForm from "@/components/SignupForm";
+import { safeCallbackUrl } from "@/lib/redirects";
 
-export default function SignupPage() {
+export default async function SignupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string | string[] }>;
+}) {
+  // Carried over from the login page so a new account still returns to the
+  // protected page that started the flow.
+  const callbackUrl = safeCallbackUrl((await searchParams).callbackUrl);
+  const loginHref = `/auth/login?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+
   return (
     <main className="flex min-h-[80vh] items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-sm">
@@ -27,14 +37,14 @@ export default function SignupPage() {
           </p>
 
           <div className="mt-6">
-            <SignupForm />
+            <SignupForm callbackUrl={callbackUrl} />
           </div>
         </div>
 
         <p className="mt-6 text-base text-muted-foreground">
           Already have an account?{" "}
           <Link
-            href="/auth/login"
+            href={loginHref}
             className="font-medium text-foreground underline-offset-4 hover:underline"
           >
             Sign in

@@ -58,7 +58,12 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 /** Which action is in flight, so each button reports its own progress. */
 type PendingAction = 'credentials' | 'google' | null;
 
-export default function LoginForm() {
+interface LoginFormProps {
+    /** Validated same-origin path to return to after signing in. */
+    callbackUrl?: string;
+}
+
+export default function LoginForm({ callbackUrl = '/dashboard' }: LoginFormProps) {
     const router = useRouter();
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
@@ -81,7 +86,7 @@ export default function LoginForm() {
         try {
             const result = await signIn('google', {
                 redirect: false,
-                callbackUrl: '/dashboard'
+                callbackUrl
             });
 
             if (result?.error) {
@@ -113,7 +118,8 @@ export default function LoginForm() {
                 return;
             }
 
-            router.push('/dashboard');
+            // `callbackUrl` was validated server-side by `safeCallbackUrl`.
+            router.push(callbackUrl);
         } catch {
             setErrorMessage(setSafeErrorMessage('Something went wrong. Please try again.'));
         } finally {
@@ -123,7 +129,14 @@ export default function LoginForm() {
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" noValidate>
+            {/* `method="post"` is the no-JavaScript fallback: without it the
+                browser's default GET would put the password in the URL. */}
+            <form
+                method="post"
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
+                noValidate
+            >
                 {/* Errors sit above the form, in one line of destructive text —
                     no box, so the fields stay the loudest thing on the card. */}
                 {errorMessage && (

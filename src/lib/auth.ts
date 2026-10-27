@@ -301,9 +301,10 @@ export const authOptions: NextAuthOptions = {
         },
     },
         pages: {
-                // Custom pages can be added here if needed
-                // signIn: '/auth/signin', // Custom sign in page
-                // error: '/auth/error', // Error page
+                // Protected pages redirect here instead of NextAuth's built-in
+                // /api/auth/signin screen, which has no signup link or product
+                // chrome. `/auth/login` reads the appended `callbackUrl`.
+                signIn: '/auth/login',
         },
 };
 

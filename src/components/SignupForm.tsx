@@ -69,7 +69,12 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 /** Which action is in flight, so each button reports its own progress. */
 type PendingAction = 'signup' | 'google' | null;
 
-const SignupForm = () => {
+interface SignupFormProps {
+  /** Validated same-origin path to return to after signing in. */
+  callbackUrl?: string;
+}
+
+const SignupForm = ({ callbackUrl = '/dashboard' }: SignupFormProps) => {
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -96,7 +101,7 @@ const SignupForm = () => {
     try {
       const result = await signIn('google', {
         redirect: false,
-        callbackUrl: '/dashboard',
+        callbackUrl,
       });
 
       if (result?.error) {
@@ -134,7 +139,10 @@ const SignupForm = () => {
       }
 
       setSuccess(true);
-      setTimeout(() => router.push('/auth/login'), 1500);
+      setTimeout(
+        () => router.push(`/auth/login?callbackUrl=${encodeURIComponent(callbackUrl)}`),
+        1500
+      );
     } catch {
       setServerError('Something went wrong. Please try again.');
     } finally {
@@ -144,7 +152,14 @@ const SignupForm = () => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" noValidate>
+      {/* `method="post"` is the no-JavaScript fallback: without it the
+          browser's default GET would put the password in the URL. */}
+      <form
+        method="post"
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-6"
+        noValidate
+      >
         {/* Errors and confirmations sit above the form, as plain text. */}
         {serverError && (
           <p

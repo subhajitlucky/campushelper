@@ -57,6 +57,11 @@ export default withAuth(
     return NextResponse.next();
   },
   {
+    // `withAuth` keeps its own copy of this option and does not read the
+    // NextAuth config in src/lib/auth.ts, so both must name the branded page.
+    pages: {
+      signIn: '/auth/login',
+    },
     callbacks: {
       // Decide if request should run through middleware
       authorized: ({ token, req }) => {
