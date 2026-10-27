@@ -21,6 +21,22 @@ export const PUBLIC_ROUTES = [
   '/item',
 ] as const;
 
+/**
+ * Pages that require a session.
+ *
+ * Pages are default-open so an unknown URL can reach the App Router and render
+ * the 404 page. The middleware cannot tell an unknown path from a protected one
+ * without this explicit list, and default-deny turned every typo into a
+ * redirect to sign-in. Every new protected page must be added here; API routes
+ * remain default-deny below.
+ */
+export const PROTECTED_PAGE_ROUTES = [
+  '/admin',
+  '/dashboard',
+  '/notifications',
+  '/post',
+] as const;
+
 export const PUBLIC_API_ROUTES = [
   '/api/csrf-token',
   '/api/auth/session',
@@ -60,6 +76,10 @@ export function matchesRouteBoundary(pathname: string, route: string): boolean {
 
 export function isPublicPageRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => matchesRouteBoundary(pathname, route));
+}
+
+export function isProtectedPageRoute(pathname: string): boolean {
+  return PROTECTED_PAGE_ROUTES.some((route) => matchesRouteBoundary(pathname, route));
 }
 
 export function isPublicApiRoute(pathname: string): boolean {

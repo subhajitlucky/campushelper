@@ -5,6 +5,7 @@ import {
   isStaticAssetPath,
   matchesRouteBoundary,
   isPublicPageRoute,
+  isProtectedPageRoute,
   isPublicApiRoute,
   isPublicReadApiRoute,
 } from "@/lib/public-routes";
@@ -51,6 +52,29 @@ describe("isPublicPageRoute", () => {
     expect(isPublicPageRoute("/post")).toBe(false);
     expect(isPublicPageRoute("/notifications")).toBe(false);
     expect(isPublicPageRoute("/x")).toBe(false);
+  });
+});
+
+describe("isProtectedPageRoute", () => {
+  it("gates every page that needs a session", () => {
+    expect(isProtectedPageRoute("/dashboard")).toBe(true);
+    expect(isProtectedPageRoute("/post")).toBe(true);
+    expect(isProtectedPageRoute("/notifications")).toBe(true);
+    expect(isProtectedPageRoute("/admin")).toBe(true);
+    expect(isProtectedPageRoute("/admin/dashboard")).toBe(true);
+  });
+
+  it("leaves public and unknown pages to the App Router", () => {
+    for (const pathname of ["/", "/search", "/lost-items", "/item/123", "/does-not-exist"]) {
+      expect(isProtectedPageRoute(pathname), pathname).toBe(false);
+    }
+  });
+
+  it("does not mistake a shared prefix for a protected page", () => {
+    expect(isProtectedPageRoute("/postbox")).toBe(false);
+    expect(isProtectedPageRoute("/dashboards")).toBe(false);
+    expect(isProtectedPageRoute("/notification-settings")).toBe(false);
+    expect(isProtectedPageRoute("/administrator")).toBe(false);
   });
 });
 

@@ -4,6 +4,7 @@ import {
   isPublicPageRoute,
   isPublicApiRoute,
   isPublicReadApiRoute,
+  isProtectedPageRoute,
   matchesRouteBoundary,
 } from '@/lib/public-routes';
 
@@ -28,6 +29,21 @@ export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token;
     const { pathname } = req.nextUrl;
+
+    // API routes are default-deny. `withAuth` can only redirect when its
+    // `authorized` callback says no, so protected APIs are let through to this
+    // point and answered with a 401 here instead of a 307 to an HTML page.
+    if (
+      matchesRouteBoundary(pathname, '/api') &&
+      !token &&
+      !isPublicApiRoute(pathname) &&
+      !isPublicReadApiRoute(pathname, req.method)
+    ) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
 
     // Admin route protection
     if (matchesRouteBoundary(pathname, '/admin')) {
@@ -62,9 +78,21 @@ export default withAuth(
           return true;
         }
 
-        // For all other routes, require authentication
-        // Return true if token exists (user is authenticated)
-        return !!token;
+        // API routes are default-deny: a new endpoint is protected unless it is
+        // explicitly opened above. Return true so the middleware body can
+        // answer with a 401 rather than `withAuth`'s sign-in redirect.
+        if (matchesRouteBoundary(pathname, '/api')) {
+          return true;
+        }
+
+        // Known protected pages require a session.
+        if (isProtectedPageRoute(pathname)) {
+          return !!token;
+        }
+
+        // Everything else is an unknown page. Let the App Router render its
+        // 404 instead of redirecting a mistyped public URL to sign-in.
+        return true;
       },
     },
   }
