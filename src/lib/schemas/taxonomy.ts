@@ -41,11 +41,15 @@ export const tagSchema = z
 /**
  * A tag list: normalised, de-duplicated, order-preserving, and capped.
  *
- * More than {@link MAX_TAGS_PER_ITEM} tags is an error rather than a silent
- * truncation, because dropping a user's input without telling them is worse.
+ * More than {@link MAX_TAGS_PER_ITEM} submitted entries is an error rather than
+ * a silent truncation, because dropping a user's input without telling them is
+ * worse. The cap is checked before de-duplication for the same reason: twenty
+ * entries that happen to collapse to eight unique tags are still twenty entries
+ * the user submitted.
  */
 export const tagsSchema = z
   .array(z.string())
+  .max(MAX_TAGS_PER_ITEM, `An item may have at most ${MAX_TAGS_PER_ITEM} tags`)
   .transform((raw) => {
     const seen = new Set<string>();
     const result: string[] = [];
@@ -59,19 +63,23 @@ export const tagsSchema = z
 
     return result;
   })
-  .pipe(
-    z
-      .array(tagSchema)
-      .max(MAX_TAGS_PER_ITEM, `An item may have at most ${MAX_TAGS_PER_ITEM} tags`)
-  );
+  .pipe(z.array(tagSchema));
 
-/** A category or zone slug as it appears in a URL or query string. */
+/**
+ * A category or zone slug as it appears in a URL or query string.
+ *
+ * Hyphens may only join alphanumeric runs, so `-`, `--`, and `foo--bar` are
+ * rejected rather than accepted as nonsense identifiers.
+ */
 export const slugSchema = z
   .string()
   .trim()
   .toLowerCase()
   .min(1, 'Slug is required')
   .max(64, 'Slug must not exceed 64 characters')
-  .regex(/^[a-z0-9-]+$/, 'Slug may only contain letters, numbers, and hyphens');
+  .regex(
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+    'Slug may only contain letters, numbers, and single hyphens between words'
+  );
 
 export type TagInput = z.infer<typeof tagSchema>;

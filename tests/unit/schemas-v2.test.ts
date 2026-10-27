@@ -3,6 +3,7 @@ import { createItemApiSchema, createItemSchema, itemsQuerySchema, updateItemSche
 import {
   MAX_TAGS_PER_ITEM,
   normalizeTag,
+  slugSchema,
   tagSchema,
   tagsSchema,
 } from "@/lib/schemas/taxonomy";
@@ -45,6 +46,13 @@ describe("tagsSchema", () => {
     expect(tagsSchema.safeParse(tooMany).success).toBe(false);
   });
 
+  it("rejects an oversized raw list even when it collapses to fewer unique tags", () => {
+    // Twenty submissions that normalise to eight unique tags must still be
+    // rejected: the user submitted twenty entries, not eight.
+    const raw = Array.from({ length: 20 }, (_, i) => `tag-${i % 8}`);
+    expect(tagsSchema.safeParse(raw).success).toBe(false);
+  });
+
   it("rejects a tag longer than 24 characters", () => {
     expect(tagsSchema.safeParse(["x".repeat(25)]).success).toBe(false);
   });
@@ -61,6 +69,21 @@ describe("tagsSchema", () => {
 
   it("drops empty entries, which are a form artifact rather than intent", () => {
     expect(tagsSchema.parse(["keys", "", "   "])).toEqual(["keys"]);
+  });
+});
+
+describe("slugSchema", () => {
+  it("accepts seeded category and zone slugs", () => {
+    expect(slugSchema.parse("academic-block-1")).toBe("academic-block-1");
+    expect(slugSchema.parse("id-cards")).toBe("id-cards");
+  });
+
+  it("rejects bare and repeated hyphens", () => {
+    expect(slugSchema.safeParse("-").success).toBe(false);
+    expect(slugSchema.safeParse("--").success).toBe(false);
+    expect(slugSchema.safeParse("foo--bar").success).toBe(false);
+    expect(slugSchema.safeParse("-foo").success).toBe(false);
+    expect(slugSchema.safeParse("foo-").success).toBe(false);
   });
 });
 
