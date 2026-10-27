@@ -63,6 +63,16 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<DashboardTab>('items');
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
+  // Handover notifications link to the tab that has the action: the poster's
+  // "Incoming claims" or the claimer's "My claims". Read the query on mount so
+  // those links land on the right panel without adding a Suspense boundary.
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('tab');
+    if (TABS.some((tab) => tab.id === requested)) {
+      setActiveTab(requested as DashboardTab);
+    }
+  }, []);
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (status === 'unauthenticated') {

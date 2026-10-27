@@ -12,11 +12,14 @@ import {
  *
  * A claim being "approved" only means the poster believes the claimer. The
  * handover code is what proves the item actually changed hands: it is issued at
- * approval, shared in person, and exchanged at the moment of handover. Only
- * then is the item marked resolved.
+ * approval, shown by the poster, and entered by the claimer at the moment of
+ * handover. Only then is the item marked resolved.
  *
- * The code is a short-lived shared secret, not a password, so it is compared in
+ * The code is a short-lived secret, not a password, so it is compared in
  * constant time (via fixed-length digests) to avoid leaking it digit by digit.
+ * Only the poster may read it; only the claimer may verify it. Splitting those
+ * rights is what makes the code evidence of a physical exchange rather than a
+ * confirmation either party can complete alone.
  */
 
 /** Generate a cryptographically random six-digit code. */
@@ -46,8 +49,9 @@ export interface HandoverClaimContext {
 }
 
 /**
- * The parties entitled to see or use a handover code: the claimer, the item's
- * poster, and moderators.
+ * The parties entitled to view a claim's handover status: the claimer, the
+ * item's poster, and moderators. This is access to the status page, not to the
+ * code itself: only {@link canViewHandoverCode} may see the secret.
  */
 export function canAccessHandover(
   claim: HandoverClaimContext,
@@ -58,6 +62,33 @@ export function canAccessHandover(
   if (claim.item.postedById === userId) return true;
 
   return role === 'ADMIN' || role === 'MODERATOR';
+}
+
+/** Only the poster may read the code and show it to the claimer. */
+export function canViewHandoverCode(
+  claim: HandoverClaimContext,
+  userId: string
+): boolean {
+  return claim.item.postedById === userId;
+}
+
+/**
+ * Only the claimer may enter the code. The poster showing the code and the
+ * claimer entering it is what makes the handover a two-party exchange.
+ */
+export function canVerifyHandover(
+  claim: HandoverClaimContext,
+  userId: string
+): boolean {
+  return claim.userId === userId;
+}
+
+/** Re-issuing is the poster's action, because only the poster can read the new code. */
+export function canReissueHandover(
+  claim: HandoverClaimContext,
+  userId: string
+): boolean {
+  return claim.item.postedById === userId;
 }
 
 /** Load a claim with the item facts the handover flow needs. */
@@ -82,8 +113,8 @@ export async function loadHandoverClaim(claimId: string) {
  * Issue (or re-issue) a handover code for an approved claim.
  *
  * Resets the attempt counter so a re-issue genuinely gives both parties a fresh
- * chance. Returns the plaintext code and its expiry, which the caller must only
- * ever hand to an entitled party.
+ * chance. Returns the plaintext code and its expiry; the caller must only hand
+ * the code to the poster, who shows it to the claimer.
  */
 export async function issueHandoverCode(
   claimId: string
@@ -106,14 +137,14 @@ export async function issueHandoverCode(
     },
   });
 
-  // Both parties are told a code exists; the code itself is only readable
-  // through the entitled handover endpoint.
+  // Both parties are told a code exists; only the poster can read it. Each
+  // link opens the dashboard tab where that party has an action to take.
   await notify({
     userId: claim.userId,
     type: 'HANDOVER_CODE_ISSUED',
     itemId: claim.itemId,
     itemTitle: claim.item.title,
-    link: `/item/${claim.itemId}`,
+    link: '/dashboard?tab=claims',
   });
 
   await notify({
@@ -121,7 +152,7 @@ export async function issueHandoverCode(
     type: 'HANDOVER_CODE_ISSUED',
     itemId: claim.itemId,
     itemTitle: claim.item.title,
-    link: `/item/${claim.itemId}`,
+    link: '/dashboard?tab=incoming',
   });
 
   return { code, expiresAt };
@@ -216,7 +247,7 @@ export async function verifyHandover(
           type: 'HANDOVER_CODE_INVALIDATED',
           itemId: claim.itemId,
           itemTitle: claim.item.title,
-          link: `/item/${claim.itemId}`,
+          link: '/dashboard?tab=claims',
         });
 
         await notify({
@@ -224,7 +255,7 @@ export async function verifyHandover(
           type: 'HANDOVER_CODE_INVALIDATED',
           itemId: claim.itemId,
           itemTitle: claim.item.title,
-          link: `/item/${claim.itemId}`,
+          link: '/dashboard?tab=incoming',
         });
       }
 

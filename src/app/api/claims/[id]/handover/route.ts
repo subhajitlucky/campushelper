@@ -13,6 +13,9 @@ import {
 import { handoverActionSchema, MAX_HANDOVER_ATTEMPTS } from '@/lib/schemas/handover';
 import {
   canAccessHandover,
+  canReissueHandover,
+  canVerifyHandover,
+  canViewHandoverCode,
   issueHandoverCode,
   loadHandoverClaim,
   verifyHandover,
@@ -20,10 +23,12 @@ import {
 
 /**
  * GET /api/claims/[id]/handover
- * The handover code and its status, for an entitled party only.
+ * The handover status, plus the code itself for the poster only.
  *
- * The code is never included in the shared item projection: it is readable only
- * here, by the claimer, the item's poster, or a moderator.
+ * The code is never included in the shared item projection. The claimer and
+ * moderators can see that a code exists, when it expires, and how many attempts
+ * remain, but only the poster receives the six digits. The claimer is the party
+ * who must enter them.
  */
 export async function GET(
   request: NextRequest,
@@ -51,24 +56,29 @@ export async function GET(
     };
 
     if (!canAccessHandover(context, session.user.id, session.user.role)) {
-      throw ForbiddenError('Only the parties to this claim can view its handover code.');
+      throw ForbiddenError('Only the parties to this claim can view its handover status.');
     }
 
     const expired =
       !!claim.handoverCodeExpiresAt && claim.handoverCodeExpiresAt.getTime() < Date.now();
     const exhausted = claim.handoverAttempts >= MAX_HANDOVER_ATTEMPTS;
+    const isPoster = claim.item.postedById === session.user.id;
+    const isClaimer = claim.userId === session.user.id;
 
     return NextResponse.json({
       handover: {
         status: claim.status,
-        code: claim.handoverCode,
+        // `hasCode` is deliberately separate from `code`: the claimer needs to
+        // know a code is waiting for them even though they never see the digits.
+        hasCode: Boolean(claim.handoverCode),
+        code: canViewHandoverCode(context, session.user.id) ? claim.handoverCode : null,
         expiresAt: claim.handoverCodeExpiresAt?.toISOString() ?? null,
         verifiedAt: claim.handoverVerifiedAt?.toISOString() ?? null,
         attemptsRemaining: Math.max(MAX_HANDOVER_ATTEMPTS - claim.handoverAttempts, 0),
         expired,
         exhausted,
-        isClaimer: claim.userId === session.user.id,
-        isPoster: claim.item.postedById === session.user.id,
+        isClaimer,
+        isPoster,
       },
     });
   });
@@ -78,9 +88,9 @@ export async function GET(
  * POST /api/claims/[id]/handover
  * Verify a code, or re-issue one.
  *
- * Either party may verify: whoever physically receives the item enters the code
- * the other read out. Re-issuing is likewise open to both, because either side
- * may need to recover from an expired or exhausted code.
+ * The claimer is the only party who may verify, because they are the one who
+ * receives the item and reads the poster's code. Re-issuing belongs to the
+ * poster alone: a new code is useless to the claimer if they cannot read it.
  */
 export async function POST(
   request: NextRequest,
@@ -131,8 +141,13 @@ export async function POST(
 
     const parsed = handoverActionSchema.parse(body);
 
-    // Re-issue path.
+    // Re-issue path. Only the poster can read the replacement, so only the
+    // poster may ask for one.
     if ('reissue' in parsed) {
+      if (!canReissueHandover(context, session.user.id)) {
+        throw ForbiddenError('Only the poster can issue a new handover code.');
+      }
+
       if (claim.status !== 'APPROVED') {
         return createErrorResponse(
           'A handover code can only be issued for an approved claim.',
@@ -145,11 +160,15 @@ export async function POST(
 
       return NextResponse.json({
         handover: { code, expiresAt: expiresAt.toISOString(), reissued: true },
-        message: 'A new handover code has been issued to both parties.',
+        message: 'A new handover code has been issued. Only you can view it.',
       });
     }
 
-    // Verification path.
+    // Verification path. The poster shows the code; the claimer enters it.
+    if (!canVerifyHandover(context, session.user.id)) {
+      throw ForbiddenError('Only the claimer can enter the handover code.');
+    }
+
     const result = await verifyHandover(id, parsed.code);
 
     switch (result.outcome) {
@@ -171,7 +190,7 @@ export async function POST(
 
       case 'exhausted':
         return createErrorResponse(
-          'Too many incorrect attempts. The code has been invalidated — ask the other party to re-issue one.',
+          'Too many incorrect attempts. The code has been invalidated — ask the poster to issue a new one.',
           ErrorCodes.HANDOVER_ATTEMPTS_EXHAUSTED,
           400
         );

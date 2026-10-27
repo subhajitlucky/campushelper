@@ -81,7 +81,7 @@ function claimOutcome(status: ClaimStatusForNotification | null | undefined): {
     case 'APPROVED':
       return {
         headline: 'Your claim was approved',
-        sentence: 'A handover code has been issued to both parties. Meet in person and exchange the code when the item changes hands.',
+        sentence: 'A handover code has been issued. The poster can show it to you when the item changes hands; enter it to confirm the handover.',
       };
     case 'COMPLETED':
       return {
@@ -148,12 +148,12 @@ export function formatNotification(input: NotificationContentInput): Notificatio
 
     case 'HANDOVER_CODE_ISSUED':
       title = 'Handover code issued';
-      body = `A handover code has been issued for ${what}. Share it only when the item is physically in your hands, and never before.`;
+      body = `A handover code has been issued for ${what}. The poster shows it at handover; the claimer enters it to confirm. Never share it before the handover.`;
       break;
 
     case 'HANDOVER_CODE_INVALIDATED':
       title = 'Handover code no longer valid';
-      body = `The handover code for ${what} has been invalidated after too many incorrect attempts. Ask the other party to re-issue a code before you meet.`;
+      body = `The handover code for ${what} has been invalidated after too many incorrect attempts. Ask the poster to issue a new code before you meet.`;
       break;
 
     case 'HANDOVER_VERIFIED':

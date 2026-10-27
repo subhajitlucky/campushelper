@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   canAccessHandover,
+  canReissueHandover,
+  canVerifyHandover,
+  canViewHandoverCode,
   generateHandoverCode,
   handoverCodesMatch,
   type HandoverClaimContext,
@@ -92,6 +95,26 @@ describe("canAccessHandover", () => {
 
   it("refuses a user with no role", () => {
     expect(canAccessHandover(claim(), "stranger", undefined)).toBe(false);
+  });
+});
+
+describe("handover role split", () => {
+  it("lets only the poster read the code", () => {
+    expect(canViewHandoverCode(claim(), "poster")).toBe(true);
+    expect(canViewHandoverCode(claim(), "claimer")).toBe(false);
+    expect(canViewHandoverCode(claim(), "moderator")).toBe(false);
+  });
+
+  it("lets only the claimer verify the code", () => {
+    expect(canVerifyHandover(claim(), "claimer")).toBe(true);
+    expect(canVerifyHandover(claim(), "poster")).toBe(false);
+    expect(canVerifyHandover(claim(), "moderator")).toBe(false);
+  });
+
+  it("lets only the poster re-issue the code", () => {
+    expect(canReissueHandover(claim(), "poster")).toBe(true);
+    expect(canReissueHandover(claim(), "claimer")).toBe(false);
+    expect(canReissueHandover(claim(), "moderator")).toBe(false);
   });
 });
 

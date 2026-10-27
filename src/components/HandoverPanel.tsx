@@ -11,11 +11,13 @@ import { cn } from '@/lib/utils';
  * Handover verification panel for an approved claim.
  *
  * A claim being approved only means the poster believed the claimer. This panel
- * is the step that proves the item actually changed hands: one party reads out
- * the code, the other enters it, and only then is the item marked returned.
+ * is the step that proves the item actually changed hands: the poster shows the
+ * code, the claimer enters it, and only then is the item marked returned.
  *
- * The code is fetched from a dedicated endpoint that authorises the claimer,
- * the item poster, and moderators only.
+ * The two roles are deliberately split. The endpoint gives the six digits to
+ * the poster only; the claimer sees that a code exists and enters it. A
+ * moderator can see the status but cannot read the code, issue one, or complete
+ * the handover.
  *
  * Three states, each with one tone: issued (warning — time-limited, action
  * needed), verified (success), expired or exhausted (destructive).
@@ -23,6 +25,7 @@ import { cn } from '@/lib/utils';
 
 interface HandoverState {
   status: string;
+  hasCode: boolean;
   code: string | null;
   expiresAt: string | null;
   attemptsRemaining: number;
@@ -50,6 +53,29 @@ function formatExpiry(iso: string | null): string {
   if (hours < 48) return `expires in ${hours} hours`;
 
   return `expires in ${Math.ceil(hours / 24)} days`;
+}
+
+function HandoverMeta({
+  id,
+  expiresAt,
+  attemptsRemaining,
+}: {
+  id: string;
+  expiresAt: string | null;
+  attemptsRemaining: number;
+}) {
+  const expiry = formatExpiry(expiresAt);
+
+  return (
+    <p
+      id={id}
+      className="mt-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
+    >
+      <Clock className="size-3.5 shrink-0" aria-hidden="true" />
+      {expiry && <>{expiry} · </>}
+      {attemptsRemaining} attempt{attemptsRemaining === 1 ? '' : 's'} remaining
+    </p>
+  );
 }
 
 export default function HandoverPanel({ claimId, onVerified, className }: HandoverPanelProps) {
@@ -137,10 +163,10 @@ export default function HandoverPanel({ claimId, onVerified, className }: Handov
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.error ?? 'Could not re-issue a code.');
+        throw new Error(data.error ?? 'Could not issue a new code.');
       }
 
-      showSuccess('A new handover code has been issued to both parties.');
+      showSuccess('A new handover code has been issued. Show it to the claimer when you meet.');
       await load();
     } catch (reissueError) {
       showError(reissueError instanceof Error ? reissueError.message : 'Something went wrong.');
@@ -173,10 +199,16 @@ export default function HandoverPanel({ claimId, onVerified, className }: Handov
     );
   }
 
-  // No usable code: either the attempt budget is gone, or it expired / was never
-  // issued. Both are destructive-ish; a plain "no code" state is only a warning.
-  if (!handover.code) {
+  // No usable code: the attempt budget is gone, the code expired, or no code
+  // was ever issued. Only the poster can replace it, because only the poster
+  // can read the replacement.
+  if (handover.exhausted || handover.expired || !handover.hasCode) {
     const isDead = handover.exhausted || handover.expired;
+    const guidance = handover.isPoster
+      ? 'Issue a new code and show it to the claimer when you meet.'
+      : handover.isClaimer
+        ? 'Ask the poster to issue a new code, then enter it here.'
+        : 'Only the poster can issue a new code.';
 
     return (
       <div
@@ -208,16 +240,20 @@ export default function HandoverPanel({ claimId, onVerified, className }: Handov
               : 'There is no active code for this claim right now.'}
         </p>
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="mt-3"
-          loading={isSubmitting}
-          onClick={() => void reissue()}
-        >
-          Issue a new code
-        </Button>
+        <p className="mt-2 text-sm text-muted-foreground">{guidance}</p>
+
+        {handover.isPoster && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            loading={isSubmitting}
+            onClick={() => void reissue()}
+          >
+            Issue a new code
+          </Button>
+        )}
       </div>
     );
   }
@@ -225,79 +261,124 @@ export default function HandoverPanel({ claimId, onVerified, className }: Handov
   const hintId = `handover-hint-${claimId}`;
   const errorId = `handover-error-${claimId}`;
 
+  // The claimer receives the item, so they are the one who enters the code.
+  if (handover.isClaimer) {
+    return (
+      <div className={cn('rounded-xl border border-warning/30 bg-warning/10 p-4', className)}>
+        <div className="flex items-center gap-2">
+          <KeyRound className="size-5 shrink-0 text-warning" aria-hidden="true" />
+          <h3 className="text-base font-medium text-foreground">Enter the handover code</h3>
+        </div>
+
+        <p className="mt-1.5 text-base leading-relaxed text-foreground/85">
+          Ask the poster to show you the code when the item is handed over, then enter it here.
+        </p>
+
+        <HandoverMeta
+          id={hintId}
+          expiresAt={handover.expiresAt}
+          attemptsRemaining={handover.attemptsRemaining}
+        />
+
+        <form onSubmit={submit} className="mt-4 space-y-2">
+          <label
+            htmlFor={`handover-${claimId}`}
+            className="block text-sm font-medium text-foreground"
+          >
+            Enter the code to confirm the handover
+          </label>
+
+          <div className="flex flex-wrap gap-2">
+            <input
+              id={`handover-${claimId}`}
+              value={entry}
+              onChange={(changeEvent) => {
+                // Keep it numeric and bounded so the field cannot hold junk.
+                setEntry(changeEvent.target.value.replace(/\D/g, '').slice(0, 6));
+                if (error) setError(null);
+              }}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="000000"
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? `${hintId} ${errorId}` : hintId}
+              className="w-32 rounded-lg border border-input bg-background px-3 py-2 text-center font-mono text-base tracking-widest text-foreground placeholder:text-muted-foreground focus:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            />
+
+            <Button
+              type="submit"
+              variant="success"
+              loading={isSubmitting}
+              disabled={entry.length !== 6}
+            >
+              Verify
+            </Button>
+          </div>
+        </form>
+
+        {error && (
+          <p
+            id={errorId}
+            role="alert"
+            className="mt-3 rounded-r-lg border-l-2 border-destructive bg-destructive/10 px-3 py-2 text-base text-destructive"
+          >
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // The poster hands over the item and shows the code. They must not be able
+  // to complete the handover alone, so no verification form is rendered.
+  if (handover.isPoster) {
+    return (
+      <div className={cn('rounded-xl border border-warning/30 bg-warning/10 p-4', className)}>
+        <div className="flex items-center gap-2">
+          <KeyRound className="size-5 shrink-0 text-warning" aria-hidden="true" />
+          <h3 className="text-base font-medium text-foreground">Show this code to the claimer</h3>
+        </div>
+
+        <p className="mt-1.5 text-base leading-relaxed text-foreground/85">
+          Show this code only when you hand over the item. The claimer enters it to confirm.
+        </p>
+
+        {handover.code && (
+          <p
+            className="mt-4 select-all font-mono text-3xl tracking-[0.3em] text-foreground"
+            aria-label={`Handover code ${handover.code.split('').join(' ')}`}
+          >
+            {handover.code}
+          </p>
+        )}
+
+        <HandoverMeta
+          id={hintId}
+          expiresAt={handover.expiresAt}
+          attemptsRemaining={handover.attemptsRemaining}
+        />
+      </div>
+    );
+  }
+
+  // A moderator (or another entitled viewer) can see the status but cannot
+  // read the code or act on it.
   return (
     <div className={cn('rounded-xl border border-warning/30 bg-warning/10 p-4', className)}>
       <div className="flex items-center gap-2">
         <KeyRound className="size-5 shrink-0 text-warning" aria-hidden="true" />
-        <h3 className="text-base font-medium text-foreground">Handover verification</h3>
+        <h3 className="text-base font-medium text-foreground">Handover in progress</h3>
       </div>
 
       <p className="mt-1.5 text-base leading-relaxed text-foreground/85">
-        {handover.isClaimer
-          ? 'Read this code to the other party when you receive the item. Do not share it before then.'
-          : 'Enter this code when the item is physically handed over.'}
+        A handover code is active. Only the poster and the claimer can complete this handover.
       </p>
 
-      {/* The one thing this panel exists for — it gets the largest type on the
-          panel, and `select-all` so it can be copied in one gesture. */}
-      <p
-        className="mt-4 select-all font-mono text-3xl tracking-[0.3em] text-foreground"
-        aria-label={`Handover code ${handover.code.split('').join(' ')}`}
-      >
-        {handover.code}
-      </p>
-
-      <p id={hintId} className="mt-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-        <Clock className="size-3.5 shrink-0" aria-hidden="true" />
-        {formatExpiry(handover.expiresAt)} · {handover.attemptsRemaining} attempt
-        {handover.attemptsRemaining === 1 ? '' : 's'} remaining
-      </p>
-
-      <form onSubmit={submit} className="mt-4 space-y-2">
-        <label
-          htmlFor={`handover-${claimId}`}
-          className="block text-sm font-medium text-foreground"
-        >
-          Enter the code to confirm the handover
-        </label>
-
-        <div className="flex flex-wrap gap-2">
-          <input
-            id={`handover-${claimId}`}
-            value={entry}
-            onChange={(changeEvent) => {
-              // Keep it numeric and bounded so the field cannot hold junk.
-              setEntry(changeEvent.target.value.replace(/\D/g, '').slice(0, 6));
-              if (error) setError(null);
-            }}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            placeholder="000000"
-            aria-invalid={Boolean(error)}
-            aria-describedby={error ? `${hintId} ${errorId}` : hintId}
-            className="w-32 rounded-lg border border-input bg-background px-3 py-2 text-center font-mono text-base tracking-widest text-foreground placeholder:text-muted-foreground focus:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          />
-
-          <Button
-            type="submit"
-            variant="success"
-            loading={isSubmitting}
-            disabled={entry.length !== 6}
-          >
-            Verify
-          </Button>
-        </div>
-      </form>
-
-      {error && (
-        <p
-          id={errorId}
-          role="alert"
-          className="mt-3 rounded-r-lg border-l-2 border-destructive bg-destructive/10 px-3 py-2 text-base text-destructive"
-        >
-          {error}
-        </p>
-      )}
+      <HandoverMeta
+        id={hintId}
+        expiresAt={handover.expiresAt}
+        attemptsRemaining={handover.attemptsRemaining}
+      />
     </div>
   );
 }

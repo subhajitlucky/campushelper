@@ -8,11 +8,12 @@ import { Button } from '@/components/ui/button';
 import EmptyState from '@/components/ui/EmptyState';
 import SectionHeader from '@/components/ui/SectionHeader';
 import { Skeleton } from '@/components/ui/skeleton';
+import HandoverPanel from '@/components/HandoverPanel';
 
 interface UserClaim {
   id: string;
   claimType: 'FOUND_IT' | 'OWN_IT';
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'REJECTED';
   message: string | null;
   itemId: string;
   userId: string;
@@ -43,6 +44,8 @@ const CLAIM_TYPE_LABEL: Record<UserClaim['claimType'], string> = {
 const STATUS_LABEL: Record<UserClaim['status'], string> = {
   PENDING: 'Pending',
   APPROVED: 'Approved',
+  /** An approved claim whose handover code has been exchanged. */
+  COMPLETED: 'Returned',
   REJECTED: 'Rejected',
 };
 
@@ -58,6 +61,7 @@ const PILL = 'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs
 const STATUS_CLASSES: Record<UserClaim['status'], string> = {
   PENDING: `${PILL} border-warning/30 bg-warning/10 text-warning`,
   APPROVED: `${PILL} border-success/30 bg-success/10 text-success`,
+  COMPLETED: `${PILL} border-info/30 bg-info/10 text-info`,
   REJECTED: `${PILL} border-destructive/30 bg-destructive/10 text-destructive`,
 };
 
@@ -225,60 +229,70 @@ export default function UserClaimsSection({ userId }: UserClaimsSectionProps) {
 
       <ul className="mt-6 divide-y divide-border-subtle">
         {claims.map((claim) => (
-          <li
-            key={claim.id}
-            className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 py-5"
-          >
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <Link
-                  href={`/item/${claim.itemId}`}
-                  className="text-base font-medium text-foreground underline-offset-4 hover:underline"
-                >
-                  {claim.item.title}
-                </Link>
-                <span className={STATUS_CLASSES[claim.status]}>
-                  {STATUS_LABEL[claim.status]}
-                </span>
+          <li key={claim.id} className="py-5">
+            <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <Link
+                    href={`/item/${claim.itemId}`}
+                    className="text-base font-medium text-foreground underline-offset-4 hover:underline"
+                  >
+                    {claim.item.title}
+                  </Link>
+                  <span className={STATUS_CLASSES[claim.status]}>
+                    {STATUS_LABEL[claim.status]}
+                  </span>
+                </div>
+
+                {claim.message && (
+                  <p className="mt-2 max-w-2xl text-base text-foreground/85">{claim.message}</p>
+                )}
+
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {CLAIM_TYPE_LABEL[claim.claimType]}
+                  <span className="mx-1.5" aria-hidden="true">
+                    ·
+                  </span>
+                  Claimed <time dateTime={claim.createdAt}>{formatDate(claim.createdAt)}</time>
+                  {claim.resolvedAt && (
+                    <>
+                      <span className="mx-1.5" aria-hidden="true">
+                        ·
+                      </span>
+                      Resolved{' '}
+                      <time dateTime={claim.resolvedAt}>{formatDate(claim.resolvedAt)}</time>
+                    </>
+                  )}
+                </p>
               </div>
 
-              {claim.message && (
-                <p className="mt-2 max-w-2xl text-base text-foreground/85">{claim.message}</p>
-              )}
-
-              <p className="mt-2 text-sm text-muted-foreground">
-                {CLAIM_TYPE_LABEL[claim.claimType]}
-                <span className="mx-1.5" aria-hidden="true">
-                  ·
-                </span>
-                Claimed <time dateTime={claim.createdAt}>{formatDate(claim.createdAt)}</time>
-                {claim.resolvedAt && (
-                  <>
-                    <span className="mx-1.5" aria-hidden="true">
-                      ·
-                    </span>
-                    Resolved <time dateTime={claim.resolvedAt}>{formatDate(claim.resolvedAt)}</time>
-                  </>
-                )}
-              </p>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-1">
-              <Button variant="quiet" size="sm" asChild>
-                <Link href={`/item/${claim.itemId}`}>View item</Link>
-              </Button>
-
-              {claim.status === 'PENDING' && (
-                <Button
-                  variant="quiet"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => handleCancelClaim(claim.id)}
-                >
-                  Cancel claim
+              <div className="flex shrink-0 items-center gap-1">
+                <Button variant="quiet" size="sm" asChild>
+                  <Link href={`/item/${claim.itemId}`}>View item</Link>
                 </Button>
-              )}
+
+                {claim.status === 'PENDING' && (
+                  <Button
+                    variant="quiet"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => handleCancelClaim(claim.id)}
+                  >
+                    Cancel claim
+                  </Button>
+                )}
+              </div>
             </div>
+
+            {/* The claimer is the party who enters the code, so this is the
+                claimer-side surface for an approved handover. */}
+            {(claim.status === 'APPROVED' || claim.status === 'COMPLETED') && (
+              <HandoverPanel
+                claimId={claim.id}
+                className="mt-3"
+                onVerified={fetchUserClaims}
+              />
+            )}
           </li>
         ))}
       </ul>

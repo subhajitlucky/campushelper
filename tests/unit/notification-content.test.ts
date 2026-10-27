@@ -121,7 +121,7 @@ describe("formatNotification", () => {
 
   it("asks the recipient not to share the code early", () => {
     const { body } = formatNotification({ type: "HANDOVER_CODE_ISSUED" });
-    expect(body).toMatch(/only when|never before/i);
+    expect(body).toMatch(/never share it before/i);
   });
 
   it("passes HTML-ish characters through unchanged", () => {
