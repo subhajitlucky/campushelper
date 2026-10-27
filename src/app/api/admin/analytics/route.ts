@@ -72,11 +72,11 @@ function rangeFilter(start: Date | null, end: Date): { gte?: Date; lte?: Date } 
  * Report volume, resolution rate, time-to-return, daily series, top zones and
  * categories, the claims funnel, and active users for `?range=`.
  *
- * Every number is produced by a `count`, `groupBy`, `aggregate` or a capped
- * column-only fetch — rows are never loaded just to be counted in memory. The
- * two exceptions are the daily series and the time-to-return durations, which
- * both need per-row timestamps to bucket, and both are capped at
- * {@link MAX_EXPORT_ROWS} so a large window cannot pull the table into the app.
+ * Every number is produced by a `count`, `groupBy`, `aggregate`, or a SQL
+ * aggregate — rows are never loaded just to be counted or bucketed in memory.
+ * The daily series is grouped in the database, and the median is computed by
+ * PostgreSQL over the whole population, so every figure describes the same
+ * cohort even when a window spans more rows than an export would.
  */
 export async function GET(request: NextRequest) {
   return safeApiHandler(async () => {
@@ -99,7 +99,14 @@ export async function GET(request: NextRequest) {
     const { start, end } = resolveRange(range, now);
 
     const createdAtFilter = rangeFilter(start, end);
-    const itemWhere: Prisma.ItemWhereInput = { createdAt: createdAtFilter, deletedAt: null };
+    // A user delete sets `status = 'DELETED'` and leaves `deletedAt` null, so
+    // both representations have to be excluded or the dashboard counts reports
+    // that every list and the campus map already hide.
+    const itemWhere: Prisma.ItemWhereInput = {
+      createdAt: createdAtFilter,
+      deletedAt: null,
+      status: { not: 'DELETED' },
+    };
     const claimWhere: Prisma.ClaimWhereInput = { createdAt: createdAtFilter };
 
     const [
@@ -139,7 +146,8 @@ export async function GET(request: NextRequest) {
 
       dailyCounts(
         'createdAt',
-        `"createdAt" >= $1 AND "createdAt" <= $2 AND "deletedAt" IS NULL`,
+        `"createdAt" >= $1 AND "createdAt" <= $2 AND "deletedAt" IS NULL
+           AND "status" <> 'DELETED'`,
         [createdAtFilter.gte ?? new Date(0), end]
       ),
 
@@ -150,7 +158,10 @@ export async function GET(request: NextRequest) {
         [createdAtFilter.gte ?? new Date(0), end]
       ),
 
-      prisma.item.aggregate({ _min: { createdAt: true }, where: { deletedAt: null } }),
+      prisma.item.aggregate({
+        _min: { createdAt: true },
+        where: { deletedAt: null, status: { not: 'DELETED' } },
+      }),
 
       prisma.item.groupBy({
         by: ['zoneId'],

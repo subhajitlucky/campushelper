@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollText } from 'lucide-react';
 import EmptyState from '@/components/ui/EmptyState';
 import Pagination from '@/components/ui/Pagination';
@@ -103,7 +103,12 @@ export default function AuditLogTable({ className }: { className?: string }) {
   const [targetType, setTargetType] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Only the newest request may write state; a slow earlier page or filter
+  // response must not render under the current selection.
+  const requestSeq = useRef(0);
+
   const load = useCallback(async () => {
+    const requestId = ++requestSeq.current;
     setIsLoading(true);
 
     try {
@@ -113,22 +118,31 @@ export default function AuditLogTable({ className }: { className?: string }) {
 
       const response = await fetchWithAuth(`/api/admin/audit?${params.toString()}`);
 
+      if (requestId !== requestSeq.current) return;
+
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error ?? 'Could not load the audit log.');
       }
 
       const data = await response.json();
+
+      if (requestId !== requestSeq.current) return;
+
       setEntries(Array.isArray(data.entries) ? data.entries : []);
       setTotal(data.pagination?.total ?? 0);
       setTotalPages(data.pagination?.totalPages ?? 1);
     } catch (error) {
+      if (requestId !== requestSeq.current) return;
+
       showError(error instanceof Error ? error.message : 'Could not load the audit log.');
       setEntries([]);
       setTotal(0);
       setTotalPages(1);
     } finally {
-      setIsLoading(false);
+      if (requestId === requestSeq.current) {
+        setIsLoading(false);
+      }
     }
   }, [action, fetchWithAuth, page, targetType]);
 

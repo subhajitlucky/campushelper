@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Download, Loader2, TrendingUp } from 'lucide-react';
 import BarChart from '@/components/ui/BarChart';
 import EmptyState from '@/components/ui/EmptyState';
@@ -178,11 +178,23 @@ export default function AnalyticsPanel({ className }: { className?: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState<string | null>(null);
 
+  // Switching range quickly must not let a slow, older response render under
+  // the new selection. The previous request is aborted before each new one.
+  const inFlight = useRef<AbortController | null>(null);
+
   const load = useCallback(async () => {
+    inFlight.current?.abort();
+
+    const controller = new AbortController();
+    inFlight.current = controller;
     setIsLoading(true);
 
     try {
-      const response = await fetchWithAuth(`/api/admin/analytics?range=${range}`);
+      const response = await fetchWithAuth(`/api/admin/analytics?range=${range}`, {
+        signal: controller.signal,
+      });
+
+      if (controller.signal.aborted) return;
 
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
@@ -191,15 +203,21 @@ export default function AnalyticsPanel({ className }: { className?: string }) {
 
       setData(await response.json());
     } catch (error) {
+      if (controller.signal.aborted) return;
+
       showError(error instanceof Error ? error.message : 'Could not load analytics.');
       setData(null);
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted) {
+        setIsLoading(false);
+      }
     }
   }, [fetchWithAuth, range]);
 
   useEffect(() => {
     void load();
+
+    return () => inFlight.current?.abort();
   }, [load]);
 
   const exportCsv = useCallback(
