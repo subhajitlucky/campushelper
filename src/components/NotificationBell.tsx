@@ -47,8 +47,15 @@ export default function NotificationBell() {
 
         const data = await response.json();
 
-        if (!cancelled && typeof data.unreadCount === 'number') {
-          setUnreadCount(data.unreadCount);
+        if (!cancelled) {
+          // A later successful poll means the earlier 401 was transient (for
+          // example a token refresh), so the bell must come back without a
+          // hard reload.
+          setIsSignedOut(false);
+
+          if (typeof data.unreadCount === 'number') {
+            setUnreadCount(data.unreadCount);
+          }
         }
       } catch (error) {
         // A background poll must never break the navbar, so failures stay silent.

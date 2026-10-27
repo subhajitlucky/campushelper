@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Bell,
@@ -225,12 +225,18 @@ export default function NotificationsPage() {
   const [signInRequired, setSignInRequired] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
 
+  // A slow response for an older page or filter must not overwrite the newer
+  // selection (for example when the unread filter is toggled quickly).
+  const requestSeq = useRef(0);
+
   const loadNotifications = useCallback(
     async (
       targetPage: number,
       targetFilter: NotificationFilter,
       options: { silent?: boolean } = {}
     ) => {
+      const requestId = ++requestSeq.current;
+
       if (!options.silent) {
         setLoading(true);
       }
@@ -248,11 +254,15 @@ export default function NotificationsPage() {
 
         const response = await fetchWithAuth(`/api/notifications?${params.toString()}`);
 
+        if (requestId !== requestSeq.current) return;
+
         if (!response.ok) {
           throw new Error('Failed to load notifications');
         }
 
         const data = await response.json();
+
+        if (requestId !== requestSeq.current) return;
 
         setNotifications(data.notifications ?? []);
         setPagination(
@@ -260,6 +270,8 @@ export default function NotificationsPage() {
         );
         setUnreadCount(typeof data.unreadCount === 'number' ? data.unreadCount : 0);
       } catch (err) {
+        if (requestId !== requestSeq.current) return;
+
         const needsSignIn = isAuthenticationError(err);
         setSignInRequired(needsSignIn);
         setError(
@@ -268,7 +280,7 @@ export default function NotificationsPage() {
             : 'Failed to load notifications. Please try again.'
         );
       } finally {
-        if (!options.silent) {
+        if (requestId === requestSeq.current && !options.silent) {
           setLoading(false);
         }
       }
