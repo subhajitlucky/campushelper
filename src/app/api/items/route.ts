@@ -12,6 +12,7 @@ import {
 import { limitItems } from '@/lib/rateLimit';
 import { checkCSRF } from '@/lib/csrf-middleware';
 import { createItemApiSchema } from '@/lib/schemas/item';
+import { isoDateSchema, limitSchema, pageSchema } from '@/lib/schemas/query';
 import { findLikelyDuplicates, type MatchableItem } from '@/lib/matching';
 import { computeMatchesForItem } from '@/lib/match-service';
 import { evaluateSavedSearchesForItem } from '@/lib/saved-search-service';
@@ -65,14 +66,16 @@ export async function GET(request: NextRequest) {
           .filter((tag) => tag.length > 0)
       : undefined;
 
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    // Strict parsing: `parseInt('1abc')` silently meant page 1, and a page
+    // beyond the safe integer range produced a `skip` Prisma cannot represent.
+    const page = pageSchema.parse(searchParams.get('page') ?? undefined);
+    const limit = limitSchema(20).parse(searchParams.get('limit') ?? undefined);
 
-    if (isNaN(page) || page < 1) {
-      throw ValidationError('Page must be a positive number');
+    if (from && !isoDateSchema.safeParse(from).success) {
+      throw ValidationError('From date must be a valid ISO date');
     }
-    if (isNaN(limit) || limit < 1 || limit > 100) {
-      throw ValidationError('Limit must be between 1 and 100');
+    if (to && !isoDateSchema.safeParse(to).success) {
+      throw ValidationError('To date must be a valid ISO date');
     }
     /*
      * Bound the offset, because `skip` is O(offset) in Postgres and this is a
@@ -99,12 +102,6 @@ export async function GET(request: NextRequest) {
     }
 
     const skip = (page - 1) * limit;
-    if (from && isNaN(Date.parse(from))) {
-      throw ValidationError('From date must be valid');
-    }
-    if (to && isNaN(Date.parse(to))) {
-      throw ValidationError('To date must be valid');
-    }
 
     const session = await getSession();
     const isLoggedIn = !!session?.user?.id;

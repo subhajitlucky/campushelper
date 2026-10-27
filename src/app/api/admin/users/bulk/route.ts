@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { notify } from '@/lib/notifications';
 import { auditIpFromRequest, recordBulkAudit, type AuditEntry } from '@/lib/audit';
 import { bulkUserActionSchema, type BulkUserActionInput } from '@/lib/schemas/admin';
+import { readJsonBody } from '@/lib/request-body';
 import {
   AdminAccessRequired,
   AuthenticationRequired,
@@ -78,7 +79,10 @@ export async function POST(request: NextRequest) {
     const callerId = session.user.id;
     const callerRole = session.user.role;
 
-    const { ids, action, reason } = bulkUserActionSchema.parse(await request.json());
+    const json = await readJsonBody(request);
+    if (!json.ok) return json.response;
+
+    const { ids, action, reason } = bulkUserActionSchema.parse(json.body);
 
     // Self-modification is refused for every role: a bulk run must never be able
     // to lock the caller out of the console they are moderating from.

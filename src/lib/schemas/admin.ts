@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AuditAction } from '@/generated/prisma';
+import { isoDateSchema, limitSchema, pageSchema } from './query';
 
 /**
  * Schemas for the admin audit log and bulk moderation endpoints.
@@ -41,29 +42,10 @@ export const bulkUserActionSchema = z
     path: ['reason'],
   });
 
-const pageSchema = z
-  .string()
-  .optional()
-  .transform((value) => (value ? Number.parseInt(value, 10) : 1))
-  .refine((value) => Number.isInteger(value) && value > 0, 'Page must be greater than 0');
-
-const limitSchema = z
-  .string()
-  .optional()
-  .transform((value) => (value ? Number.parseInt(value, 10) : 50))
-  .refine(
-    (value) => Number.isInteger(value) && value > 0 && value <= 100,
-    'Limit must be between 1 and 100'
-  );
-
-const isoDateSchema = z
-  .string()
-  .refine((value) => !Number.isNaN(Date.parse(value)), 'Must be a valid ISO date');
-
 export const auditQuerySchema = z
   .object({
     page: pageSchema,
-    limit: limitSchema,
+    limit: limitSchema(50),
     actorId: z.string().min(1).optional(),
     action: z.nativeEnum(AuditAction).optional(),
     targetType: z.enum(['Item', 'User', 'Claim']).optional(),

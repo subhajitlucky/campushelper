@@ -1,28 +1,13 @@
 import { z } from 'zod';
+import { limitSchema, pageSchema } from './query';
 
 /**
  * Schemas for the notification inbox.
  */
 
-/** Shared pagination parsing, matching the convention used by the item list. */
-const pageSchema = z
-  .string()
-  .optional()
-  .transform((value) => (value ? Number.parseInt(value, 10) : 1))
-  .refine((value) => Number.isInteger(value) && value > 0, 'Page must be greater than 0');
-
-const limitSchema = z
-  .string()
-  .optional()
-  .transform((value) => (value ? Number.parseInt(value, 10) : 20))
-  .refine(
-    (value) => Number.isInteger(value) && value > 0 && value <= 100,
-    'Limit must be between 1 and 100'
-  );
-
 export const notificationsQuerySchema = z.object({
   page: pageSchema,
-  limit: limitSchema,
+  limit: limitSchema(20),
   unread: z
     .enum(['true', 'false'])
     .optional()

@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { notify } from '@/lib/notifications';
 import { auditIpFromRequest, recordBulkAudit, type AuditEntry } from '@/lib/audit';
 import { bulkItemActionSchema, type BulkItemActionInput } from '@/lib/schemas/admin';
+import { readJsonBody } from '@/lib/request-body';
 import {
   AdminAccessRequired,
   AuthenticationRequired,
@@ -92,7 +93,10 @@ export async function POST(request: NextRequest) {
 
     await limitV2('bulkAdmin', session.user.id);
 
-    const { ids, action, reason } = bulkItemActionSchema.parse(await request.json());
+    const json = await readJsonBody(request);
+    if (!json.ok) return json.response;
+
+    const { ids, action, reason } = bulkItemActionSchema.parse(json.body);
 
     const items = await prisma.item.findMany({
       where: { id: { in: ids } },

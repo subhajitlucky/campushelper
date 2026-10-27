@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { isSafeUrl } from '@/lib/security';
 import { slugSchema, tagsSchema } from './taxonomy';
+import { isoDateSchema, limitSchema, pageSchema } from './query';
 
 /**
  * Item Zod Schemas
@@ -94,17 +95,9 @@ export const updateItemRequestSchema = z.object({
 
 // Schema for query parameters (filtering, pagination)
 export const itemsQuerySchema = z.object({
-  page: z
-    .string()
-    .optional()
-    .transform((val) => val ? parseInt(val, 10) : 1)
-    .refine((val) => val > 0, 'Page must be greater than 0'),
-  
-  limit: z
-    .string()
-    .optional()
-    .transform((val) => val ? parseInt(val, 10) : 20)
-    .refine((val) => val > 0 && val <= 100, 'Limit must be between 1 and 100'),
+  page: pageSchema,
+
+  limit: limitSchema(20),
   
   itemType: z
     .enum(['LOST', 'FOUND'])
@@ -141,15 +134,9 @@ export const itemsQuerySchema = z.object({
     .transform((val) => val?.trim())
     .refine((val) => !val || val.length >= 2, 'Search term must be at least 2 characters'),
   
-  from: z
-    .string()
-    .optional()
-    .refine((val) => !val || !isNaN(Date.parse(val)), 'From date must be a valid ISO date'),
+  from: isoDateSchema.optional(),
   
-  to: z
-    .string()
-    .optional()
-    .refine((val) => !val || !isNaN(Date.parse(val)), 'To date must be a valid ISO date'),
+  to: isoDateSchema.optional(),
   
   postedById: z
     .string()

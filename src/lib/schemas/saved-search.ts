@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { tagSchema } from './taxonomy';
+import { isoDateSchema } from './query';
 
 /**
  * Schemas for saved searches.
@@ -9,10 +10,6 @@ import { tagSchema } from './taxonomy';
  * rejected rather than ignored, so a renamed filter surfaces as a validation
  * error instead of silently never matching.
  */
-
-const isoDateSchema = z
-  .string()
-  .refine((value) => !Number.isNaN(Date.parse(value)), 'Must be a valid ISO date');
 
 export const savedSearchFiltersSchema = z
   .object({

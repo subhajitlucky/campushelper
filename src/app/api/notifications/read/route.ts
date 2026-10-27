@@ -5,6 +5,7 @@ import { checkCSRF } from '@/lib/csrf-middleware';
 import { limitV2 } from '@/lib/rateLimit';
 import { AuthenticationRequired, safeApiHandler } from '@/lib/errors';
 import { markNotificationsReadSchema } from '@/lib/schemas/notification';
+import { readJsonBody } from '@/lib/request-body';
 
 /**
  * POST /api/notifications/read
@@ -28,7 +29,10 @@ export async function POST(request: NextRequest) {
 
     await limitV2('notificationsRead', session.user.id);
 
-    const payload = markNotificationsReadSchema.parse(await request.json());
+    const json = await readJsonBody(request);
+    if (!json.ok) return json.response;
+
+    const payload = markNotificationsReadSchema.parse(json.body);
 
     const result = await prisma.notification.updateMany({
       where:

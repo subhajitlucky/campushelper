@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { limitSchema, pageSchema } from '@/lib/schemas/query';
 import type { Prisma, ItemStatus } from '@/generated/prisma';
 
 /**
@@ -30,8 +31,18 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const parsedPage = pageSchema.safeParse(searchParams.get('page') ?? undefined);
+    const parsedLimit = limitSchema(20).safeParse(searchParams.get('limit') ?? undefined);
+
+    if (!parsedPage.success || !parsedLimit.success) {
+      return NextResponse.json(
+        { error: 'Page must be a whole number and limit must be between 1 and 100' },
+        { status: 400 }
+      );
+    }
+
+    const page = parsedPage.data;
+    const limit = parsedLimit.data;
     const status = searchParams.get('status') || undefined;
     const search = searchParams.get('search') || undefined;
 

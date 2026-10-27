@@ -13,6 +13,7 @@ import {
   MAX_SAVED_SEARCHES_PER_USER,
   createSavedSearchSchema,
 } from '@/lib/schemas/saved-search';
+import { readJsonBody } from '@/lib/request-body';
 
 /** The fields every saved search is returned with. */
 const savedSearchSelect = {
@@ -63,7 +64,10 @@ export async function POST(request: NextRequest) {
 
     await limitV2('savedSearches', session.user.id);
 
-    const { name, filters } = createSavedSearchSchema.parse(await request.json());
+    const json = await readJsonBody(request);
+    if (!json.ok) return json.response;
+
+    const { name, filters } = createSavedSearchSchema.parse(json.body);
 
     const existingCount = await prisma.savedSearch.count({
       where: { userId: session.user.id },

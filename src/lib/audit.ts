@@ -1,3 +1,5 @@
+import { isIP } from 'node:net';
+
 import { prisma } from './prisma';
 import type { AuditAction, Prisma } from '../generated/prisma';
 
@@ -21,6 +23,20 @@ export interface AuditEntry {
 
 /** Longest reason we persist; the API already caps this, this is defence in depth. */
 const MAX_REASON_LENGTH = 500;
+
+/** Generous ceiling for an IPv6 literal, including any zone suffix. */
+const MAX_IP_LENGTH = 64;
+
+function normalizeIp(ip?: string | null): string | null {
+  if (!ip) return null;
+
+  const trimmed = ip.trim();
+  if (trimmed.length === 0 || trimmed.length > MAX_IP_LENGTH) return null;
+
+  // Audit rows are read by moderators; never store an arbitrary header value
+  // (which can contain commas, control characters, or an injected payload).
+  return isIP(trimmed) ? trimmed : null;
+}
 
 function normalizeReason(reason?: string | null): string | null {
   if (!reason) return null;
@@ -49,7 +65,7 @@ export async function recordAudit(entry: AuditEntry): Promise<boolean> {
         targetId: entry.targetId,
         reason: normalizeReason(entry.reason),
         metadata: entry.metadata ?? undefined,
-        ip: entry.ip ?? null,
+        ip: normalizeIp(entry.ip),
       },
     });
 
@@ -92,7 +108,7 @@ export async function recordBulkAudit(
  */
 export function auditIpFromRequest(request: Request): string | null {
   const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim() || null;
+  if (forwarded) return normalizeIp(forwarded.split(',')[0]);
 
-  return request.headers.get('x-real-ip') ?? null;
+  return normalizeIp(request.headers.get('x-real-ip'));
 }
