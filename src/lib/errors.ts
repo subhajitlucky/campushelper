@@ -261,7 +261,10 @@ export async function safeApiHandler<T>(
     // Handle validation errors
     if (error instanceof ZodError) {
       const validationErrors = error.issues
-        .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+        .map((issue) => {
+          const path = issue.path.join('.');
+          return path ? `${path}: ${issue.message}` : issue.message;
+        })
         .join(', ');
       return ValidationError(`Validation failed: ${validationErrors}`, { issues: error.issues });
     }
