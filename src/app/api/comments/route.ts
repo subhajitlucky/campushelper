@@ -8,6 +8,8 @@ import {
 import { sanitizeInput } from '@/lib/security';
 import { limitComments } from '@/lib/rateLimit';
 import { checkCSRF } from '@/lib/csrf-middleware';
+import { notify } from '@/lib/notifications';
+import { awardReputation } from '@/lib/reputation-service';
 
 // GET /api/comments?itemId=xxx
 export async function GET(request: NextRequest) {
@@ -176,7 +178,7 @@ export async function POST(request: NextRequest) {
     // Check if item exists
     const item = await prisma.item.findUnique({
       where: { id: itemId },
-      select: { id: true, title: true, status: true }
+      select: { id: true, title: true, status: true, postedById: true }
     });
 
     if (!item) {
@@ -219,6 +221,24 @@ export async function POST(request: NextRequest) {
             },
           },
         },
+      });
+
+      // A comment is a notification to the poster (the helper suppresses
+      // self-notifications) and the documented reputation event for the
+      // commenter. Both are best-effort: neither may fail the comment itself.
+      await notify({
+        userId: item.postedById,
+        actorId: session.user.id,
+        actorName: session.user.name ?? null,
+        type: 'COMMENT_ON_ITEM',
+        itemId,
+        itemTitle: item.title,
+        link: `/item/${itemId}`,
+      });
+
+      await awardReputation(session.user.id, 'COMMENT_POSTED', {
+        itemId,
+        note: 'Comment posted',
       });
 
       // Transform comment to match response schema

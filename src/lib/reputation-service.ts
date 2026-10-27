@@ -12,8 +12,14 @@ import { REPUTATION_POINTS, type ReputationKind } from './reputation';
  */
 
 export interface AwardOptions {
-  /** Scopes idempotency. Omit only for awards that are not item-scoped. */
-  itemId?: string | null;
+  /**
+   * Scopes idempotency.
+   *
+   * Required on purpose: the unique index is on `(userId, kind, itemId)` and a
+   * plain unique index treats `NULL` values as distinct, so an omitted item id
+   * let the same award be credited repeatedly.
+   */
+  itemId: string;
   note?: string | null;
 }
 
@@ -27,13 +33,13 @@ export interface AwardOptions {
 export async function awardReputation(
   userId: string,
   kind: ReputationKind,
-  options: AwardOptions = {}
+  options: AwardOptions
 ): Promise<number> {
   const points = REPUTATION_POINTS[kind];
 
   if (points === 0) return 0;
 
-  const itemId = options.itemId ?? null;
+  const itemId = options.itemId;
 
   try {
     await prisma.$transaction(async (tx) => {
