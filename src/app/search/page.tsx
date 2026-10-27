@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { PackageSearch } from 'lucide-react';
 
@@ -77,68 +77,98 @@ export default function SearchPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [searchNonce, setSearchNonce] = useState(0);
   const limit = 20;
 
-  const fetchItems = useCallback(
-    async (page?: number) => {
-      try {
-        setLoading(true);
-        setSearchError(null);
-        setHasSearched(true);
+  // Every fetch gets a sequence number and owns an AbortController. A slow
+  // response for an older filter can then neither overwrite newer results nor
+  // leave the spinner running.
+  const requestSeq = useRef(0);
+  const inFlight = useRef<AbortController | null>(null);
 
-        const queryParams = new URLSearchParams({
-          page: (page || currentPage).toString(),
-          limit: limit.toString(),
-          ...(filters.search && { search: filters.search }),
-          ...(filters.itemType && { itemType: filters.itemType }),
-          ...(filters.status && { status: filters.status }),
-          ...(filters.location && { location: filters.location }),
-          ...(filters.from && { from: filters.from }),
-          ...(filters.to && { to: filters.to }),
-          ...(filters.category && { category: filters.category }),
-        });
-
-        const response = await fetch(`/api/items?${queryParams.toString()}`);
-
-        if (!response.ok) {
-          // Handle HTTP errors gracefully without throwing
-          let errorMessage = 'Failed to search items. Please try again.';
-
-          if (response.status >= 500) {
-            errorMessage = 'Server error. Please try again later.';
-          } else if (response.status >= 400) {
-            errorMessage = 'Search request failed. Please check your input.';
-          }
-
-          setSearchError(errorMessage);
-          setItems([]);
-          return;
-        }
-
-        const data = await response.json();
-
-        setItems(data.items || []);
-        setCurrentPage(data.pagination?.page || 1);
-        setTotalPages(data.pagination?.totalPages || 1);
-        setTotal(data.pagination?.total || 0);
-
-        setUser(data.user || { isLoggedIn: false });
-      } catch {
-        setItems([]);
-        setSearchError('Network error. Please check your connection and try again.');
-      } finally {
-        setLoading(false);
-      }
+  useEffect(
+    () => () => {
+      inFlight.current?.abort();
+      requestSeq.current += 1;
     },
-    [filters, currentPage, limit]
+    []
   );
 
-  // Don't auto-load on mount — wait for the first search, then track filters.
+  const fetchItems = useCallback(async () => {
+    inFlight.current?.abort();
+
+    const controller = new AbortController();
+    inFlight.current = controller;
+    const requestId = ++requestSeq.current;
+
+    try {
+      setLoading(true);
+      setSearchError(null);
+      setHasSearched(true);
+
+      const queryParams = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: limit.toString(),
+        ...(filters.search && { search: filters.search }),
+        ...(filters.itemType && { itemType: filters.itemType }),
+        ...(filters.status && { status: filters.status }),
+        ...(filters.location && { location: filters.location }),
+        ...(filters.from && { from: filters.from }),
+        ...(filters.to && { to: filters.to }),
+        ...(filters.category && { category: filters.category }),
+      });
+
+      const response = await fetch(`/api/items?${queryParams.toString()}`, {
+        signal: controller.signal,
+      });
+
+      if (requestId !== requestSeq.current) return;
+
+      if (!response.ok) {
+        // Handle HTTP errors gracefully without throwing
+        let errorMessage = 'Failed to search items. Please try again.';
+
+        if (response.status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (response.status >= 400) {
+          errorMessage = 'Search request failed. Please check your input.';
+        }
+
+        setSearchError(errorMessage);
+        setItems([]);
+        return;
+      }
+
+      const data = await response.json();
+
+      if (requestId !== requestSeq.current) return;
+
+      setItems(data.items || []);
+      setCurrentPage(data.pagination?.page || 1);
+      setTotalPages(data.pagination?.totalPages || 1);
+      setTotal(data.pagination?.total || 0);
+
+      setUser(data.user || { isLoggedIn: false });
+    } catch {
+      if (controller.signal.aborted || requestId !== requestSeq.current) return;
+
+      setItems([]);
+      setSearchError('Network error. Please check your connection and try again.');
+    } finally {
+      if (requestId === requestSeq.current) {
+        setLoading(false);
+      }
+    }
+  }, [filters, currentPage, limit]);
+
+  // Don't auto-load on mount — wait for the first search, then refetch when the
+  // filters, page, or an explicit submit change. `onPageChange` only sets the
+  // page; this effect performs the single GET for it.
   useEffect(() => {
     if (hasSearched) {
-      fetchItems(currentPage);
+      void fetchItems();
     }
-  }, [fetchItems, currentPage, hasSearched]);
+  }, [fetchItems, searchNonce, hasSearched]);
 
   const updateFilters = (newFilters: Partial<SearchFilters>) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
@@ -220,7 +250,7 @@ export default function SearchPage() {
       total={total}
       loading={loading}
       error={searchError}
-      onRetry={() => fetchItems(currentPage)}
+      onRetry={() => setSearchNonce((value) => value + 1)}
       search={{
         id: 'search',
         label: 'Search items',
@@ -231,7 +261,10 @@ export default function SearchPage() {
         placeholder: 'Search reports…',
         value: filters.search,
         onChange: (value) => updateFilters({ search: value }),
-        onSubmit: () => fetchItems(),
+        onSubmit: () => {
+          setHasSearched(true);
+          setSearchNonce((value) => value + 1);
+        },
         submitLabel: 'Search',
         busy: loading,
       }}
@@ -248,15 +281,23 @@ export default function SearchPage() {
         user.isLoggedIn ? (
           <SavedSearches
             currentFilters={savedSearchFilters}
-            onApply={(applied) =>
-              updateFilters({
+            onApply={(applied) => {
+              // Replace the whole filter state. A saved search is a complete
+              // query; merging it left a stale Status or Location behind, so
+              // the results were not the search the user just applied.
+              setFilters({
                 search: applied.search ?? '',
                 itemType: applied.itemType ?? '',
+                status: '',
+                location: '',
                 category: applied.category ?? '',
                 from: applied.from ?? '',
                 to: applied.to ?? '',
-              })
-            }
+              });
+              setCurrentPage(1);
+              setHasSearched(true);
+              setSearchNonce((value) => value + 1);
+            }}
           />
         ) : undefined
       }
@@ -279,8 +320,9 @@ export default function SearchPage() {
       currentPage={currentPage}
       totalPages={totalPages}
       onPageChange={(page) => {
+        // The effect above performs the fetch; calling it here too sent two
+        // requests for every page change.
         setCurrentPage(page);
-        fetchItems(page);
       }}
     />
   );
