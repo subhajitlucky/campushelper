@@ -39,6 +39,7 @@ describe("isPublicPageRoute", () => {
     expect(isPublicPageRoute("/auth/login")).toBe(true);
     expect(isPublicPageRoute("/auth/signup")).toBe(true);
     expect(isPublicPageRoute("/lost-items")).toBe(true);
+    expect(isPublicPageRoute("/map")).toBe(true);
     expect(isPublicPageRoute("/search")).toBe(true);
     expect(isPublicPageRoute("/resolved")).toBe(true);
     expect(isPublicPageRoute("/item/123")).toBe(true);
@@ -69,16 +70,19 @@ describe("isPublicApiRoute", () => {
 });
 
 describe("isPublicReadApiRoute", () => {
-  it("allows anonymous reads of the public item and taxonomy data", () => {
+  it("allows anonymous reads of the public item, taxonomy and zone data", () => {
     expect(isPublicReadApiRoute("/api/items", "GET")).toBe(true);
     expect(isPublicReadApiRoute("/api/items/clx123", "GET")).toBe(true);
     expect(isPublicReadApiRoute("/api/items", "HEAD")).toBe(true);
     expect(isPublicReadApiRoute("/api/categories", "GET")).toBe(true);
+    expect(isPublicReadApiRoute("/api/zones", "GET")).toBe(true);
+    expect(isPublicReadApiRoute("/api/zones", "HEAD")).toBe(true);
   });
 
   it("does not open nested owner-only reads", () => {
     expect(isPublicReadApiRoute("/api/items/clx123/matches", "GET")).toBe(false);
     expect(isPublicReadApiRoute("/api/categories/anything", "GET")).toBe(false);
+    expect(isPublicReadApiRoute("/api/zones/anything", "GET")).toBe(false);
   });
 
   it("keeps writes behind the auth middleware", () => {
@@ -86,6 +90,7 @@ describe("isPublicReadApiRoute", () => {
     expect(isPublicReadApiRoute("/api/items/clx123", "PUT")).toBe(false);
     expect(isPublicReadApiRoute("/api/items/clx123", "DELETE")).toBe(false);
     expect(isPublicReadApiRoute("/api/categories", "POST")).toBe(false);
+    expect(isPublicReadApiRoute("/api/zones", "POST")).toBe(false);
   });
 });
 

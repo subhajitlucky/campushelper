@@ -11,6 +11,7 @@ export const PUBLIC_ROUTES = [
   '/auth/login',
   '/auth/signup',
   '/lost-items',
+  '/map',
   '/search',
   '/resolved',
   // Individual reports are public. The page and the item-detail projection
@@ -41,6 +42,7 @@ export const PUBLIC_API_ROUTES = [
 const PUBLIC_READ_API_PATTERNS = [
   /^\/api\/items(?:\/[^/]+)?$/,
   /^\/api\/categories$/,
+  /^\/api\/zones$/,
 ] as const;
 
 export function isPublicReadApiRoute(pathname: string, method: string): boolean {

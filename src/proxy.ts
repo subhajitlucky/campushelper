@@ -52,8 +52,9 @@ export default withAuth(
         // Public API routes that don't require authentication
         const isPublicAPIRoute = isPublicApiRoute(pathname);
 
-        // Public reads (item list/detail, categories). The route handlers
-        // apply the anonymous visibility rules and keep mutations protected.
+        // Public reads (item list/detail, categories, zones). The route
+        // handlers apply the anonymous visibility rules and keep mutations
+        // protected.
         const isPublicReadAPIRoute = isPublicReadApiRoute(pathname, req.method);
 
         // Allow public access to these routes

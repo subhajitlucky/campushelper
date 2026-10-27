@@ -44,11 +44,11 @@ const ITEMS_PER_ZONE = 12;
  * rail on desktop and a bottom sheet on mobile, and the zone's reports follow
  * below.
  *
- * Both endpoints require authentication, so `useAuthFetch(true)` guards the
- * page and reports an authentication error rather than an empty map.
+ * The map is public: zones and aggregate counts are browse data. Signed-out
+ * visitors can open a report but still have to sign in to claim it.
  */
 export default function MapPage() {
-  const { fetchWithAuth } = useAuthFetch(true);
+  const { fetchWithAuth } = useAuthFetch(false);
 
   const [zones, setZones] = useState<CampusMapZone[]>([]);
   const [zonesLoading, setZonesLoading] = useState(true);

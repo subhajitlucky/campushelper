@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { AuthenticationRequired, safeApiHandler } from '@/lib/errors';
+import { safeApiHandler } from '@/lib/errors';
 
 /**
  * GET /api/zones
  * Campus zones with live item counts and a lost/found split for the map view.
+ *
+ * Public: the map is a browse surface, and zone names plus aggregate counts
+ * reveal nothing about an individual report. Only non-deleted reports are
+ * counted, matching the default visibility of `GET /api/items`.
  *
  * The zone list and the counts are fetched together, and one grouped query by
  * zone *and* item type supplies both the per-zone total and the split, so this
@@ -13,11 +16,6 @@ import { AuthenticationRequired, safeApiHandler } from '@/lib/errors';
  */
 export async function GET() {
   return safeApiHandler(async () => {
-    const session = await getSession();
-    if (!session?.user?.id) {
-      throw AuthenticationRequired();
-    }
-
     const [zones, counts] = await Promise.all([
       prisma.campusZone.findMany({
         orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
@@ -34,7 +32,7 @@ export async function GET() {
       prisma.item.groupBy({
         by: ['zoneId', 'itemType'],
         _count: { _all: true },
-        where: { deletedAt: null, zoneId: { not: null } },
+        where: { deletedAt: null, status: { not: 'DELETED' }, zoneId: { not: null } },
       }),
     ]);
 
